@@ -133,7 +133,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
         /// </summary>
         protected static IEqualityComparer<object[]> CreateEqualityComparer([NotNull] IReadOnlyList<IProperty> properties)
         {
-            var comparers = properties.Select(p => p.GetKeyValueComparer() ?? p.FindMapping()?.KeyComparer).ToList();
+            var comparers = properties.Select(p => p.GetKeyValueComparer() ?? p.FindTypeMapping()?.KeyComparer).ToList();
 
             return comparers.All(c => c != null)
                 ? new CompositeCustomComparer(comparers)
@@ -218,16 +218,13 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
 
             public int GetHashCode(object[] obj)
             {
-                var hashCode = 0;
-
-                // ReSharper disable once ForCanBeConvertedToForeach
-                // ReSharper disable once LoopCanBeConvertedToQuery
-                for (var i = 0; i < obj.Length; i++)
+                var hash = new HashCode();
+                foreach (var value in obj)
                 {
-                    hashCode = (hashCode * 397) ^ (obj[i]?.GetHashCode() ?? 0);
+                    hash.Add(value);
                 }
 
-                return hashCode;
+                return hash.ToHashCode();
             }
         }
 

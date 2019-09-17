@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -11,32 +12,34 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
+using Microsoft.EntityFrameworkCore.Infrastructure.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.EntityFrameworkCore.Query.Internal;
-using Microsoft.EntityFrameworkCore.Query.ResultOperators.Internal;
+using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Update;
-using Remotion.Linq;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.EntityFrameworkCore.Diagnostics
 {
     /// <summary>
-    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-    ///     any release. You should only use it directly in your code with extreme caution and knowing that
-    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    ///     <para>
+    ///         This class contains static methods used by EF Core internals and database providers to
+    ///         write information to an <see cref="ILogger" /> and a <see cref="DiagnosticListener" /> for
+    ///         well-known events.
+    ///     </para>
+    ///     <para>
+    ///         This type is typically used by database providers (and other extensions). It is generally
+    ///         not used in application code.
+    ///     </para>
     /// </summary>
     public static class CoreLoggerExtensions
     {
-        private const int QueryModelStringLengthLimit = 100;
-
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.SaveChangesFailed" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="context"> The context in use. </param>
+        /// <param name="exception"> The exception that caused this event. </param>
         public static void SaveChangesFailed(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Update> diagnostics,
             [NotNull] DbContext context,
@@ -74,11 +77,11 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.OptimisticConcurrencyException" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="context"> The context in use. </param>
+        /// <param name="exception"> The exception that caused this event. </param>
         public static void OptimisticConcurrencyException(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Update> diagnostics,
             [NotNull] DbContext context,
@@ -115,11 +118,11 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.DuplicateDependentEntityTypeInstanceWarning" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="dependent1"> The first dependent type. </param>
+        /// <param name="dependent2"> The second dependent type. </param>
         public static void DuplicateDependentEntityTypeInstanceWarning(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Update> diagnostics,
             [NotNull] IEntityType dependent1,
@@ -156,11 +159,11 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.QueryIterationFailed" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="contextType"> The <see cref="DbContext" /> type being used. </param>
+        /// <param name="exception"> The exception that caused this failure. </param>
         public static void QueryIterationFailed(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Query> diagnostics,
             [NotNull] Type contextType,
@@ -197,210 +200,206 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
             return d.GenerateMessage(p.ContextType, Environment.NewLine, p.Exception);
         }
 
-        /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
-        /// </summary>
-        public static void QueryModelCompiling(
-            [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Query> diagnostics,
-            [NotNull] QueryModel queryModel)
-        {
-            var definition = CoreResources.LogCompilingQueryModel(diagnostics);
+        // TODO: Commenting this since we need to add similar logging in ExpressionTrees
+        ///// <summary>
+        /////     Logs for the <see cref="CoreEventId.QueryModelCompiling" /> event.
+        ///// </summary>
+        ///// <param name="diagnostics"> The diagnostics logger to use. </param>
+        ///// <param name="queryModel"> The query model. </param>
+        //public static void QueryModelCompiling(
+        //    [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Query> diagnostics,
+        //    [NotNull] QueryModel queryModel)
+        //{
+        //    var definition = CoreResources.LogCompilingQueryModel(diagnostics);
 
-            var warningBehavior = definition.GetLogBehavior(diagnostics);
-            if (warningBehavior != WarningBehavior.Ignore)
-            {
-                definition.Log(
-                    diagnostics,
-                    warningBehavior,
-                    Environment.NewLine, queryModel.Print());
-            }
+        //    var warningBehavior = definition.GetLogBehavior(diagnostics);
+        //    if (warningBehavior != WarningBehavior.Ignore)
+        //    {
+        //        definition.Log(
+        //            diagnostics,
+        //            warningBehavior,
+        //            Environment.NewLine, queryModel.Print());
+        //    }
 
-            if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
-            {
-                diagnostics.DiagnosticSource.Write(
-                    definition.EventId.Name,
-                    new QueryModelEventData(
-                        definition,
-                        QueryModelCompiling,
-                        queryModel));
-            }
-        }
+        //    if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
+        //    {
+        //        diagnostics.DiagnosticSource.Write(
+        //            definition.EventId.Name,
+        //            new QueryModelEventData(
+        //                definition,
+        //                QueryModelCompiling,
+        //                queryModel));
+        //    }
+        //}
 
-        private static string QueryModelCompiling(EventDefinitionBase definition, EventData payload)
-        {
-            var d = (EventDefinition<string, string>)definition;
-            var p = (QueryModelEventData)payload;
-            return d.GenerateMessage(Environment.NewLine, p.QueryModel.Print());
-        }
+        //private static string QueryModelCompiling(EventDefinitionBase definition, EventData payload)
+        //{
+        //    var d = (EventDefinition<string, string>)definition;
+        //    var p = (QueryModelEventData)payload;
+        //    return d.GenerateMessage(Environment.NewLine, p.QueryModel.Print());
+        //}
 
-        /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
-        /// </summary>
-        public static void RowLimitingOperationWithoutOrderByWarning(
-            [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Query> diagnostics,
-            [NotNull] QueryModel queryModel)
-        {
-            var definition = CoreResources.LogRowLimitingOperationWithoutOrderBy(diagnostics);
+        ///// <summary>
+        /////     Logs for the <see cref="CoreEventId.RowLimitingOperationWithoutOrderByWarning" /> event.
+        ///// </summary>
+        ///// <param name="diagnostics"> The diagnostics logger to use. </param>
+        ///// <param name="queryModel"> The query model. </param>
+        //public static void RowLimitingOperationWithoutOrderByWarning(
+        //    [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Query> diagnostics,
+        //    [NotNull] QueryModel queryModel)
+        //{
+        //    var definition = CoreResources.LogRowLimitingOperationWithoutOrderBy(diagnostics);
 
-            var warningBehavior = definition.GetLogBehavior(diagnostics);
-            if (warningBehavior != WarningBehavior.Ignore)
-            {
-                definition.Log(
-                    diagnostics,
-                    warningBehavior,
-                    queryModel.Print(removeFormatting: true, characterLimit: QueryModelStringLengthLimit));
-            }
+        //    var warningBehavior = definition.GetLogBehavior(diagnostics);
+        //    if (warningBehavior != WarningBehavior.Ignore)
+        //    {
+        //        definition.Log(
+        //            diagnostics,
+        //            warningBehavior,
+        //            queryModel.Print(removeFormatting: true, characterLimit: QueryModelStringLengthLimit));
+        //    }
 
-            if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
-            {
-                diagnostics.DiagnosticSource.Write(
-                    definition.EventId.Name,
-                    new QueryModelEventData(
-                        definition,
-                        RowLimitingOperationWithoutOrderByWarning,
-                        queryModel));
-            }
-        }
+        //    if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
+        //    {
+        //        diagnostics.DiagnosticSource.Write(
+        //            definition.EventId.Name,
+        //            new QueryModelEventData(
+        //                definition,
+        //                RowLimitingOperationWithoutOrderByWarning,
+        //                queryModel));
+        //    }
+        //}
 
-        private static string RowLimitingOperationWithoutOrderByWarning(EventDefinitionBase definition, EventData payload)
-        {
-            var d = (EventDefinition<string>)definition;
-            var p = (QueryModelEventData)payload;
-            return d.GenerateMessage(p.QueryModel.Print(removeFormatting: true, characterLimit: QueryModelStringLengthLimit));
-        }
+        //private static string RowLimitingOperationWithoutOrderByWarning(EventDefinitionBase definition, EventData payload)
+        //{
+        //    var d = (EventDefinition<string>)definition;
+        //    var p = (QueryModelEventData)payload;
+        //    return d.GenerateMessage(p.QueryModel.Print(removeFormatting: true, characterLimit: QueryModelStringLengthLimit));
+        //}
 
-        /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
-        /// </summary>
-        public static void FirstWithoutOrderByAndFilterWarning(
-            [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Query> diagnostics,
-            [NotNull] QueryModel queryModel)
-        {
-            var definition = CoreResources.LogFirstWithoutOrderByAndFilter(diagnostics);
+        ///// <summary>
+        /////     Logs for the <see cref="CoreEventId.FirstWithoutOrderByAndFilterWarning" /> event.
+        ///// </summary>
+        ///// <param name="diagnostics"> The diagnostics logger to use. </param>
+        ///// <param name="queryModel"> The query model. </param>
+        //public static void FirstWithoutOrderByAndFilterWarning(
+        //    [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Query> diagnostics,
+        //    [NotNull] QueryModel queryModel)
+        //{
+        //    var definition = CoreResources.LogFirstWithoutOrderByAndFilter(diagnostics);
 
-            var warningBehavior = definition.GetLogBehavior(diagnostics);
-            if (warningBehavior != WarningBehavior.Ignore)
-            {
-                definition.Log(
-                    diagnostics,
-                    warningBehavior,
-                    queryModel.Print(removeFormatting: true, characterLimit: QueryModelStringLengthLimit));
-            }
+        //    var warningBehavior = definition.GetLogBehavior(diagnostics);
+        //    if (warningBehavior != WarningBehavior.Ignore)
+        //    {
+        //        definition.Log(
+        //            diagnostics,
+        //            warningBehavior,
+        //            queryModel.Print(removeFormatting: true, characterLimit: QueryModelStringLengthLimit));
+        //    }
 
-            if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
-            {
-                diagnostics.DiagnosticSource.Write(
-                    definition.EventId.Name,
-                    new QueryModelEventData(
-                        definition,
-                        FirstWithoutOrderByAndFilterWarning,
-                        queryModel));
-            }
-        }
+        //    if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
+        //    {
+        //        diagnostics.DiagnosticSource.Write(
+        //            definition.EventId.Name,
+        //            new QueryModelEventData(
+        //                definition,
+        //                FirstWithoutOrderByAndFilterWarning,
+        //                queryModel));
+        //    }
+        //}
 
-        private static string FirstWithoutOrderByAndFilterWarning(EventDefinitionBase definition, EventData payload)
-        {
-            var d = (EventDefinition<string>)definition;
-            var p = (QueryModelEventData)payload;
-            return d.GenerateMessage(p.QueryModel.Print(removeFormatting: true, characterLimit: QueryModelStringLengthLimit));
-        }
+        //private static string FirstWithoutOrderByAndFilterWarning(EventDefinitionBase definition, EventData payload)
+        //{
+        //    var d = (EventDefinition<string>)definition;
+        //    var p = (QueryModelEventData)payload;
+        //    return d.GenerateMessage(p.QueryModel.Print(removeFormatting: true, characterLimit: QueryModelStringLengthLimit));
+        //}
 
-        /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
-        /// </summary>
-        public static void QueryModelOptimized(
-            [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Query> diagnostics,
-            [NotNull] QueryModel queryModel)
-        {
-            var definition = CoreResources.LogOptimizedQueryModel(diagnostics);
+        ///// <summary>
+        /////     Logs for the <see cref="CoreEventId.QueryModelOptimized" /> event.
+        ///// </summary>
+        ///// <param name="diagnostics"> The diagnostics logger to use. </param>
+        ///// <param name="queryModel"> The query model. </param>
+        //public static void QueryModelOptimized(
+        //    [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Query> diagnostics,
+        //    [NotNull] QueryModel queryModel)
+        //{
+        //    var definition = CoreResources.LogOptimizedQueryModel(diagnostics);
 
-            var warningBehavior = definition.GetLogBehavior(diagnostics);
-            if (warningBehavior != WarningBehavior.Ignore)
-            {
-                definition.Log(
-                    diagnostics,
-                    warningBehavior,
-                    Environment.NewLine, queryModel.Print());
-            }
+        //    var warningBehavior = definition.GetLogBehavior(diagnostics);
+        //    if (warningBehavior != WarningBehavior.Ignore)
+        //    {
+        //        definition.Log(
+        //            diagnostics,
+        //            warningBehavior,
+        //            Environment.NewLine, queryModel.Print());
+        //    }
 
-            if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
-            {
-                diagnostics.DiagnosticSource.Write(
-                    definition.EventId.Name,
-                    new QueryModelEventData(
-                        definition,
-                        QueryModelOptimized,
-                        queryModel));
-            }
-        }
+        //    if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
+        //    {
+        //        diagnostics.DiagnosticSource.Write(
+        //            definition.EventId.Name,
+        //            new QueryModelEventData(
+        //                definition,
+        //                QueryModelOptimized,
+        //                queryModel));
+        //    }
+        //}
 
-        private static string QueryModelOptimized(EventDefinitionBase definition, EventData payload)
-        {
-            var d = (EventDefinition<string, string>)definition;
-            var p = (QueryModelEventData)payload;
-            return d.GenerateMessage(Environment.NewLine, p.QueryModel.Print());
-        }
+        //private static string QueryModelOptimized(EventDefinitionBase definition, EventData payload)
+        //{
+        //    var d = (EventDefinition<string, string>)definition;
+        //    var p = (QueryModelEventData)payload;
+        //    return d.GenerateMessage(Environment.NewLine, p.QueryModel.Print());
+        //}
 
-        /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
-        /// </summary>
-        public static void NavigationIncluded(
-            [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Query> diagnostics,
-            [NotNull] IncludeResultOperator includeResultOperator)
-        {
-            var definition = CoreResources.LogIncludingNavigation(diagnostics);
+        ///// <summary>
+        /////     Logs for the <see cref="CoreEventId.NavigationIncluded" /> event.
+        ///// </summary>
+        ///// <param name="diagnostics"> The diagnostics logger to use. </param>
+        ///// <param name="includeResultOperator"> The result operator for the Include. </param>
+        //public static void NavigationIncluded(
+        //    [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Query> diagnostics,
+        //    [NotNull] IncludeResultOperator includeResultOperator)
+        //{
+        //    var definition = CoreResources.LogIncludingNavigation(diagnostics);
 
-            var warningBehavior = definition.GetLogBehavior(diagnostics);
-            if (warningBehavior != WarningBehavior.Ignore)
-            {
-                definition.Log(
-                    diagnostics,
-                    warningBehavior,
-                    includeResultOperator.DisplayString());
-            }
+        //    var warningBehavior = definition.GetLogBehavior(diagnostics);
+        //    if (warningBehavior != WarningBehavior.Ignore)
+        //    {
+        //        definition.Log(
+        //            diagnostics,
+        //            warningBehavior,
+        //            includeResultOperator.DisplayString());
+        //    }
 
-            if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
-            {
-                diagnostics.DiagnosticSource.Write(
-                    definition.EventId.Name,
-                    new IncludeEventData(
-                        definition,
-                        NavigationIncluded,
-                        includeResultOperator));
-            }
-        }
+        //    if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
+        //    {
+        //        diagnostics.DiagnosticSource.Write(
+        //            definition.EventId.Name,
+        //            new IncludeEventData(
+        //                definition,
+        //                NavigationIncluded,
+        //                includeResultOperator));
+        //    }
+        //}
 
-        private static string NavigationIncluded(EventDefinitionBase definition, EventData payload)
-        {
-            var d = (EventDefinition<string>)definition;
-            var p = (IncludeEventData)payload;
-            return d.GenerateMessage(p.IncludeResultOperator.DisplayString());
-        }
+        //private static string NavigationIncluded(EventDefinitionBase definition, EventData payload)
+        //{
+        //    var d = (EventDefinition<string>)definition;
+        //    var p = (IncludeEventData)payload;
+        //    return d.GenerateMessage(p.IncludeResultOperator.DisplayString());
+        //}
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.QueryExecutionPlanned" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="expressionPrinter"> Used to create a human-readable representation of the expression tree. </param>
+        /// <param name="queryExecutorExpression"> The query expression tree. </param>
         public static void QueryExecutionPlanned(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Query> diagnostics,
-            [NotNull] IExpressionPrinter expressionPrinter,
+            [NotNull] ExpressionPrinter expressionPrinter,
             [NotNull] Expression queryExecutorExpression)
         {
             var definition = CoreResources.LogQueryExecutionPlanned(diagnostics);
@@ -434,11 +433,10 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.SensitiveDataLoggingEnabledWarning" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <typeparam name="TLoggerCategory"> The logger category for which to log the warning. </typeparam>
         public static void SensitiveDataLoggingEnabledWarning<TLoggerCategory>(
             [NotNull] this IDiagnosticsLogger<TLoggerCategory> diagnostics)
             where TLoggerCategory : LoggerCategory<TLoggerCategory>, new()
@@ -461,54 +459,52 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
             }
         }
 
+        ///// <summary>
+        /////     Logs for the <see cref="CoreEventId.IncludeIgnoredWarning" /> event.
+        ///// </summary>
+        ///// <param name="diagnostics"> The diagnostics logger to use. </param>
+        ///// <param name="includeResultOperator"> The result operator for the Include. </param>
+        //public static void IncludeIgnoredWarning(
+        //    [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Query> diagnostics,
+        //    [NotNull] IncludeResultOperator includeResultOperator)
+        //{
+        //    var definition = CoreResources.LogIgnoredInclude(diagnostics);
+
+        //    var warningBehavior = definition.GetLogBehavior(diagnostics);
+        //    if (warningBehavior != WarningBehavior.Ignore)
+        //    {
+        //        definition.Log(
+        //            diagnostics,
+        //            warningBehavior,
+        //            includeResultOperator.DisplayString());
+        //    }
+
+        //    if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
+        //    {
+        //        diagnostics.DiagnosticSource.Write(
+        //            definition.EventId.Name,
+        //            new IncludeEventData(
+        //                definition,
+        //                IncludeIgnoredWarning,
+        //                includeResultOperator));
+        //    }
+        //}
+
+        //private static string IncludeIgnoredWarning(EventDefinitionBase definition, EventData payload)
+        //{
+        //    var d = (EventDefinition<string>)definition;
+        //    var p = (IncludeEventData)payload;
+        //    return d.GenerateMessage(p.IncludeResultOperator.DisplayString());
+        //}
+
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.PossibleUnintendedCollectionNavigationNullComparisonWarning" /> event.
         /// </summary>
-        public static void IncludeIgnoredWarning(
-            [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Query> diagnostics,
-            [NotNull] IncludeResultOperator includeResultOperator)
-        {
-            var definition = CoreResources.LogIgnoredInclude(diagnostics);
-
-            var warningBehavior = definition.GetLogBehavior(diagnostics);
-            if (warningBehavior != WarningBehavior.Ignore)
-            {
-                definition.Log(
-                    diagnostics,
-                    warningBehavior,
-                    includeResultOperator.DisplayString());
-            }
-
-            if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
-            {
-                diagnostics.DiagnosticSource.Write(
-                    definition.EventId.Name,
-                    new IncludeEventData(
-                        definition,
-                        IncludeIgnoredWarning,
-                        includeResultOperator));
-            }
-        }
-
-        private static string IncludeIgnoredWarning(EventDefinitionBase definition, EventData payload)
-        {
-            var d = (EventDefinition<string>)definition;
-            var p = (IncludeEventData)payload;
-            return d.GenerateMessage(p.IncludeResultOperator.DisplayString());
-        }
-
-        /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
-        /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="navigation"> The navigation being used. </param>
         public static void PossibleUnintendedCollectionNavigationNullComparisonWarning(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Query> diagnostics,
-            [NotNull] IReadOnlyList<IPropertyBase> navigationPath)
+            [NotNull] INavigation navigation)
         {
             var definition = CoreResources.LogPossibleUnintendedCollectionNavigationNullComparison(diagnostics);
 
@@ -518,33 +514,33 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                 definition.Log(
                     diagnostics,
                     warningBehavior,
-                    string.Join(".", navigationPath.Select(p => p.Name)));
+                    $"{navigation.DeclaringEntityType.Name}.{navigation.GetTargetType().Name}");
             }
 
             if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
             {
                 diagnostics.DiagnosticSource.Write(
                     definition.EventId.Name,
-                    new NavigationPathEventData(
+                    new NavigationEventData(
                         definition,
                         PossibleUnintendedCollectionNavigationNullComparisonWarning,
-                        navigationPath));
+                        navigation));
             }
         }
 
         private static string PossibleUnintendedCollectionNavigationNullComparisonWarning(EventDefinitionBase definition, EventData payload)
         {
             var d = (EventDefinition<string>)definition;
-            var p = (NavigationPathEventData)payload;
-            return d.GenerateMessage(string.Join(".", p.NavigationPath.Select(pb => pb.Name)));
+            var p = (NavigationEventData)payload;
+            return d.GenerateMessage($"{p.Navigation.DeclaringEntityType.Name}.{p.Navigation.GetTargetType().Name}");
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.PossibleUnintendedReferenceComparisonWarning" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="left"> The left side expression. </param>
+        /// <param name="right"> The right side expression. </param>
         public static void PossibleUnintendedReferenceComparisonWarning(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Query> diagnostics,
             [NotNull] Expression left,
@@ -581,11 +577,10 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.ServiceProviderCreated" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="serviceProvider"> The service provider. </param>
         public static void ServiceProviderCreated(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Infrastructure> diagnostics,
             [NotNull] IServiceProvider serviceProvider)
@@ -610,11 +605,10 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.ManyServiceProvidersCreatedWarning" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="serviceProviders"> The service providers that have been created. </param>
         public static void ManyServiceProvidersCreatedWarning(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Infrastructure> diagnostics,
             [NotNull] ICollection<IServiceProvider> serviceProviders)
@@ -639,11 +633,11 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.ServiceProviderDebugInfo" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="newDebugInfo"> Debug information for the new service providers. </param>
+        /// <param name="cachedDebugInfos"> Debug information for existing service providers. </param>
         public static void ServiceProviderDebugInfo(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Infrastructure> diagnostics,
             [NotNull] IDictionary<string, string> newDebugInfo,
@@ -724,11 +718,11 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.ContextInitialized" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="context"> The context being used. </param>
+        /// <param name="contextOptions"> The context options being used. </param>
         public static void ContextInitialized(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Infrastructure> diagnostics,
             [NotNull] DbContext context,
@@ -772,11 +766,12 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.ExecutionStrategyRetrying" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="exceptionsEncountered"> The exceptions(s) that caused the failure. </param>
+        /// <param name="delay"> The delay that before the next retry. </param>
+        /// <param name="async"> Indicates whether execution is asynchronous or not. </param>
         public static void ExecutionStrategyRetrying(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Infrastructure> diagnostics,
             [NotNull] IReadOnlyList<Exception> exceptionsEncountered,
@@ -818,11 +813,12 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.LazyLoadOnDisposedContextWarning" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="context"> The context being used. </param>
+        /// <param name="entityType"> The entity type. </param>
+        /// <param name="navigationName"> The name of the navigation property. </param>
         public static void LazyLoadOnDisposedContextWarning(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Infrastructure> diagnostics,
             [NotNull] DbContext context,
@@ -861,11 +857,12 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.NavigationLazyLoading" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="context"> The context being used. </param>
+        /// <param name="entityType"> The entity type. </param>
+        /// <param name="navigationName"> The name of the navigation property. </param>
         public static void NavigationLazyLoading(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Infrastructure> diagnostics,
             [NotNull] DbContext context,
@@ -904,11 +901,12 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.DetachedLazyLoadingWarning" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="context"> The context being used. </param>
+        /// <param name="entityType"> The entity type. </param>
+        /// <param name="navigationName"> The name of the navigation property. </param>
         public static void DetachedLazyLoadingWarning(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Infrastructure> diagnostics,
             [NotNull] DbContext context,
@@ -947,13 +945,12 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.ShadowPropertyCreated" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="property"> The property. </param>
         public static void ShadowPropertyCreated(
-            [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
+            [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model.Validation> diagnostics,
             [NotNull] IProperty property)
         {
             var definition = CoreResources.LogShadowPropertyCreated(diagnostics);
@@ -986,11 +983,11 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.RedundantIndexRemoved" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="redundantIndex"> The redundant index. </param>
+        /// <param name="otherIndex"> The other index. </param>
         public static void RedundantIndexRemoved(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
             [NotNull] IReadOnlyList<IPropertyBase> redundantIndex,
@@ -1030,13 +1027,12 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.RedundantForeignKeyWarning" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="redundantForeignKey"> The redundant foreign key. </param>
         public static void RedundantForeignKeyWarning(
-            [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
+            [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model.Validation> diagnostics,
             [NotNull] IForeignKey redundantForeignKey)
         {
             var definition = CoreResources.LogRedundantForeignKey(diagnostics);
@@ -1071,11 +1067,11 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.IncompatibleMatchingForeignKeyProperties" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="foreignKeyProperties"> The properties that make up the foreign key. </param>
+        /// <param name="principalKeyProperties"> The corresponding keys on the principal side. </param>
         public static void IncompatibleMatchingForeignKeyProperties(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
             [NotNull] IReadOnlyList<IPropertyBase> foreignKeyProperties,
@@ -1115,16 +1111,15 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.RequiredAttributeInverted" /> event.
         /// </summary>
-        public static void RequiredAttributeOnDependent(
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="navigation"> The navigation property. </param>
+        public static void RequiredAttributeInverted(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
             [NotNull] INavigation navigation)
         {
-            var definition = CoreResources.LogRequiredAttributeOnDependent(diagnostics);
+            var definition = CoreResources.LogRequiredAttributeInverted(diagnostics);
 
             var warningBehavior = definition.GetLogBehavior(diagnostics);
             if (warningBehavior != WarningBehavior.Ignore)
@@ -1141,12 +1136,12 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                     definition.EventId.Name,
                     new NavigationEventData(
                         definition,
-                        RequiredAttributeOnDependent,
+                        RequiredAttributeInverted,
                         navigation));
             }
         }
 
-        private static string RequiredAttributeOnDependent(EventDefinitionBase definition, EventData payload)
+        private static string RequiredAttributeInverted(EventDefinitionBase definition, EventData payload)
         {
             var d = (EventDefinition<string, string>)definition;
             var p = (NavigationEventData)payload;
@@ -1154,11 +1149,49 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.NonNullableInverted" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="navigation"> The navigation property. </param>
+        public static void NonNullableInverted(
+            [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
+            [NotNull] INavigation navigation)
+        {
+            var definition = CoreResources.LogNonNullableInverted(diagnostics);
+
+            var warningBehavior = definition.GetLogBehavior(diagnostics);
+            if (warningBehavior != WarningBehavior.Ignore)
+            {
+                definition.Log(
+                    diagnostics,
+                    warningBehavior,
+                    navigation.Name, navigation.DeclaringEntityType.DisplayName());
+            }
+
+            if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
+            {
+                diagnostics.DiagnosticSource.Write(
+                    definition.EventId.Name,
+                    new NavigationEventData(
+                        definition,
+                        NonNullableInverted,
+                        navigation));
+            }
+        }
+
+        private static string NonNullableInverted(EventDefinitionBase definition, EventData payload)
+        {
+            var d = (EventDefinition<string, string>)definition;
+            var p = (NavigationEventData)payload;
+            return d.GenerateMessage(p.Navigation.Name, p.Navigation.DeclaringEntityType.DisplayName());
+        }
+
+        /// <summary>
+        ///     Logs for the <see cref="CoreEventId.RequiredAttributeOnBothNavigations" /> event.
+        /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="firstNavigation"> The first navigation property. </param>
+        /// <param name="secondNavigation"> The second navigation property. </param>
         public static void RequiredAttributeOnBothNavigations(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
             [NotNull] INavigation firstNavigation,
@@ -1204,11 +1237,174 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.NonNullableReferenceOnBothNavigations" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="firstNavigation"> The first navigation property. </param>
+        /// <param name="secondNavigation"> The second navigation property. </param>
+        public static void NonNullableReferenceOnBothNavigations(
+            [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
+            [NotNull] INavigation firstNavigation,
+            [NotNull] INavigation secondNavigation)
+        {
+            var definition = CoreResources.LogNonNullableReferenceOnBothNavigations(diagnostics);
+
+            var warningBehavior = definition.GetLogBehavior(diagnostics);
+            if (warningBehavior != WarningBehavior.Ignore)
+            {
+                definition.Log(
+                    diagnostics,
+                    warningBehavior,
+                    firstNavigation.DeclaringEntityType.DisplayName(),
+                    firstNavigation.Name,
+                    secondNavigation.DeclaringEntityType.DisplayName(),
+                    secondNavigation.Name);
+            }
+
+            if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
+            {
+                diagnostics.DiagnosticSource.Write(
+                    definition.EventId.Name,
+                    new TwoPropertyBaseCollectionsEventData(
+                        definition,
+                        NonNullableReferenceOnBothNavigations,
+                        new[] { firstNavigation },
+                        new[] { secondNavigation }));
+            }
+        }
+
+        private static string NonNullableReferenceOnBothNavigations(EventDefinitionBase definition, EventData payload)
+        {
+            var d = (EventDefinition<string, string, string, string>)definition;
+            var p = (TwoPropertyBaseCollectionsEventData)payload;
+            var firstNavigation = p.FirstPropertyCollection[0];
+            var secondNavigation = p.SecondPropertyCollection[0];
+            return d.GenerateMessage(
+                firstNavigation.DeclaringType.DisplayName(),
+                firstNavigation.Name,
+                secondNavigation.DeclaringType.DisplayName(),
+                secondNavigation.Name);
+        }
+
+        /// <summary>
+        ///     Logs for the <see cref="CoreEventId.RequiredAttributeOnDependent" /> event.
+        /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="navigation"> The navigation property. </param>
+        public static void RequiredAttributeOnDependent(
+            [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
+            [NotNull] INavigation navigation)
+        {
+            var definition = CoreResources.LogRequiredAttributeOnDependent(diagnostics);
+
+            var warningBehavior = definition.GetLogBehavior(diagnostics);
+            if (warningBehavior != WarningBehavior.Ignore)
+            {
+                definition.Log(
+                    diagnostics,
+                    warningBehavior,
+                    navigation.Name, navigation.DeclaringEntityType.DisplayName());
+            }
+
+            if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
+            {
+                diagnostics.DiagnosticSource.Write(
+                    definition.EventId.Name,
+                    new NavigationEventData(
+                        definition,
+                        RequiredAttributeOnDependent,
+                        navigation));
+            }
+        }
+
+        private static string RequiredAttributeOnDependent(EventDefinitionBase definition, EventData payload)
+        {
+            var d = (EventDefinition<string, string>)definition;
+            var p = (NavigationEventData)payload;
+            return d.GenerateMessage(p.Navigation.Name, p.Navigation.DeclaringEntityType.DisplayName());
+        }
+
+        /// <summary>
+        ///     Logs for the <see cref="CoreEventId.NonNullableReferenceOnDependent" /> event.
+        /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="navigation"> The navigation property. </param>
+        public static void NonNullableReferenceOnDependent(
+            [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
+            [NotNull] INavigation navigation)
+        {
+            var definition = CoreResources.LogNonNullableReferenceOnDependent(diagnostics);
+
+            var warningBehavior = definition.GetLogBehavior(diagnostics);
+            if (warningBehavior != WarningBehavior.Ignore)
+            {
+                definition.Log(
+                    diagnostics,
+                    warningBehavior,
+                    navigation.Name, navigation.DeclaringEntityType.DisplayName());
+            }
+
+            if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
+            {
+                diagnostics.DiagnosticSource.Write(
+                    definition.EventId.Name,
+                    new NavigationEventData(
+                        definition,
+                        NonNullableReferenceOnDependent,
+                        navigation));
+            }
+        }
+
+        private static string NonNullableReferenceOnDependent(EventDefinitionBase definition, EventData payload)
+        {
+            var d = (EventDefinition<string, string>)definition;
+            var p = (NavigationEventData)payload;
+            return d.GenerateMessage(p.Navigation.Name, p.Navigation.DeclaringEntityType.DisplayName());
+        }
+
+        /// <summary>
+        ///     Logs for the <see cref="CoreEventId.RequiredAttributeOnCollection" /> event.
+        /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="navigation"> The navigation property. </param>
+        public static void RequiredAttributeOnCollection(
+            [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
+            [NotNull] INavigation navigation)
+        {
+            var definition = CoreResources.LogRequiredAttributeOnCollection(diagnostics);
+
+            var warningBehavior = definition.GetLogBehavior(diagnostics);
+            if (warningBehavior != WarningBehavior.Ignore)
+            {
+                definition.Log(
+                    diagnostics,
+                    warningBehavior,
+                    navigation.Name, navigation.DeclaringEntityType.DisplayName());
+            }
+
+            if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
+            {
+                diagnostics.DiagnosticSource.Write(
+                    definition.EventId.Name,
+                    new NavigationEventData(
+                        definition,
+                        RequiredAttributeOnCollection,
+                        navigation));
+            }
+        }
+
+        private static string RequiredAttributeOnCollection(EventDefinitionBase definition, EventData payload)
+        {
+            var d = (EventDefinition<string, string>)definition;
+            var p = (NavigationEventData)payload;
+            return d.GenerateMessage(p.Navigation.Name, p.Navigation.DeclaringEntityType.DisplayName());
+        }
+
+        /// <summary>
+        ///     Logs for the <see cref="CoreEventId.ConflictingShadowForeignKeysWarning" /> event.
+        /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="foreignKey"> The foreign key. </param>
         public static void ConflictingShadowForeignKeysWarning(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
             [NotNull] IForeignKey foreignKey)
@@ -1249,11 +1445,11 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.MultiplePrimaryKeyCandidates" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="firstProperty"> The first property. </param>
+        /// <param name="secondProperty"> The second property. </param>
         public static void MultiplePrimaryKeyCandidates(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
             [NotNull] IProperty firstProperty,
@@ -1297,11 +1493,11 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.MultipleNavigationProperties" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="firstPropertyCollection"> The first set of properties. </param>
+        /// <param name="secondPropertyCollection"> The second set of properties. </param>
         public static void MultipleNavigationProperties(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
             [NotNull] IEnumerable<Tuple<MemberInfo, Type>> firstPropertyCollection,
@@ -1345,11 +1541,12 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.MultipleInversePropertiesSameTargetWarning" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="conflictingNavigations"> The list of conflicting navigation properties. </param>
+        /// <param name="inverseNavigation"> The inverse navigation property. </param>
+        /// <param name="targetType"> The target type. </param>
         public static void MultipleInversePropertiesSameTargetWarning(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
             [NotNull] IEnumerable<Tuple<MemberInfo, Type>> conflictingNavigations,
@@ -1391,11 +1588,14 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.NonDefiningInverseNavigationWarning" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="declaringType"> The declaring entity type. </param>
+        /// <param name="navigation"> The navigation property. </param>
+        /// <param name="targetType"> The target type. </param>
+        /// <param name="inverseNavigation"> The inverse navigation property. </param>
+        /// <param name="definingNavigation"> The defining navigation property. </param>
         public static void NonDefiningInverseNavigationWarning(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
             [NotNull] IEntityType declaringType,
@@ -1427,7 +1627,11 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                         definition,
                         NonDefiningInverseNavigationWarning,
                         new[] { new Tuple<MemberInfo, Type>(navigation, declaringType.ClrType) },
-                        new[] { new Tuple<MemberInfo, Type>(inverseNavigation, targetType.ClrType), new Tuple<MemberInfo, Type>(definingNavigation, targetType.ClrType) }));
+                        new[]
+                        {
+                            new Tuple<MemberInfo, Type>(inverseNavigation, targetType.ClrType),
+                            new Tuple<MemberInfo, Type>(definingNavigation, targetType.ClrType)
+                        }));
             }
         }
 
@@ -1447,11 +1651,14 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.NonOwnershipInverseNavigationWarning" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="declaringType"> The declaring entity type. </param>
+        /// <param name="navigation"> The navigation property. </param>
+        /// <param name="targetType"> The target type. </param>
+        /// <param name="inverseNavigation"> The inverse navigation property. </param>
+        /// <param name="ownershipNavigation"> The ownership navigation property. </param>
         public static void NonOwnershipInverseNavigationWarning(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
             [NotNull] IEntityType declaringType,
@@ -1483,7 +1690,11 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                         definition,
                         NonOwnershipInverseNavigationWarning,
                         new[] { new Tuple<MemberInfo, Type>(navigation, declaringType.ClrType) },
-                        new[] { new Tuple<MemberInfo, Type>(inverseNavigation, targetType.ClrType), new Tuple<MemberInfo, Type>(ownershipNavigation, targetType.ClrType) }));
+                        new[]
+                        {
+                            new Tuple<MemberInfo, Type>(inverseNavigation, targetType.ClrType),
+                            new Tuple<MemberInfo, Type>(ownershipNavigation, targetType.ClrType)
+                        }));
             }
         }
 
@@ -1503,11 +1714,13 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.ForeignKeyAttributesOnBothPropertiesWarning" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="firstNavigation"> The first navigation property. </param>
+        /// <param name="secondNavigation"> The second navigation property. </param>
+        /// <param name="firstProperty"> The first property. </param>
+        /// <param name="secondProperty"> The second property. </param>
         public static void ForeignKeyAttributesOnBothPropertiesWarning(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
             [NotNull] INavigation firstNavigation,
@@ -1538,8 +1751,18 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                     new TwoUnmappedPropertyCollectionsEventData(
                         definition,
                         ForeignKeyAttributesOnBothPropertiesWarning,
-                        new[] { new Tuple<MemberInfo, Type>(firstNavigation.GetIdentifyingMemberInfo(), firstNavigation.DeclaringEntityType.ClrType), new Tuple<MemberInfo, Type>(firstProperty, firstNavigation.DeclaringEntityType.ClrType) },
-                        new[] { new Tuple<MemberInfo, Type>(secondNavigation.GetIdentifyingMemberInfo(), secondNavigation.DeclaringEntityType.ClrType), new Tuple<MemberInfo, Type>(secondProperty, secondNavigation.DeclaringEntityType.ClrType) }));
+                        new[]
+                        {
+                            new Tuple<MemberInfo, Type>(
+                                firstNavigation.GetIdentifyingMemberInfo(), firstNavigation.DeclaringEntityType.ClrType),
+                            new Tuple<MemberInfo, Type>(firstProperty, firstNavigation.DeclaringEntityType.ClrType)
+                        },
+                        new[]
+                        {
+                            new Tuple<MemberInfo, Type>(
+                                secondNavigation.GetIdentifyingMemberInfo(), secondNavigation.DeclaringEntityType.ClrType),
+                            new Tuple<MemberInfo, Type>(secondProperty, secondNavigation.DeclaringEntityType.ClrType)
+                        }));
             }
         }
 
@@ -1561,11 +1784,11 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.ForeignKeyAttributesOnBothNavigationsWarning" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="firstNavigation"> The first navigation property. </param>
+        /// <param name="secondNavigation"> The second navigation property. </param>
         public static void ForeignKeyAttributesOnBothNavigationsWarning(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
             [NotNull] INavigation firstNavigation,
@@ -1611,11 +1834,11 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.ConflictingForeignKeyAttributesOnNavigationAndPropertyWarning" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="navigation"> The navigation property. </param>
+        /// <param name="property"> The property. </param>
         public static void ConflictingForeignKeyAttributesOnNavigationAndPropertyWarning(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Model> diagnostics,
             [NotNull] INavigation navigation,
@@ -1642,12 +1865,16 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                     new TwoUnmappedPropertyCollectionsEventData(
                         definition,
                         ConflictingForeignKeyAttributesOnNavigationAndPropertyWarning,
-                        new[] { new Tuple<MemberInfo, Type>(navigation.GetIdentifyingMemberInfo(), navigation.DeclaringEntityType.ClrType) },
+                        new[]
+                        {
+                            new Tuple<MemberInfo, Type>(navigation.GetIdentifyingMemberInfo(), navigation.DeclaringEntityType.ClrType)
+                        },
                         new[] { new Tuple<MemberInfo, Type>(property, property.DeclaringType) }));
             }
         }
 
-        private static string ConflictingForeignKeyAttributesOnNavigationAndPropertyWarning(EventDefinitionBase definition, EventData payload)
+        private static string ConflictingForeignKeyAttributesOnNavigationAndPropertyWarning(
+            EventDefinitionBase definition, EventData payload)
         {
             var d = (EventDefinition<string, string, string, string>)definition;
             var p = (TwoUnmappedPropertyCollectionsEventData)payload;
@@ -1661,11 +1888,10 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.DetectChangesStarting" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="context"> The context being used. </param>
         public static void DetectChangesStarting(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.ChangeTracking> diagnostics,
             [NotNull] DbContext context)
@@ -1700,11 +1926,10 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.DetectChangesCompleted" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="context"> The context being used. </param>
         public static void DetectChangesCompleted(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.ChangeTracking> diagnostics,
             [NotNull] DbContext context)
@@ -1739,11 +1964,13 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.PropertyChangeDetected" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalEntityEntry"> The internal entity entry. </param>
+        /// <param name="property"> The property. </param>
+        /// <param name="oldValue"> The old value. </param>
+        /// <param name="newValue"> The new value. </param>
         public static void PropertyChangeDetected(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.ChangeTracking> diagnostics,
             [NotNull] InternalEntityEntry internalEntityEntry,
@@ -1787,11 +2014,13 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.PropertyChangeDetected" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalEntityEntry"> The internal entity entry. </param>
+        /// <param name="property"> The property. </param>
+        /// <param name="oldValue"> The old value. </param>
+        /// <param name="newValue"> The new value. </param>
         public static void PropertyChangeDetectedSensitive(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.ChangeTracking> diagnostics,
             [NotNull] InternalEntityEntry internalEntityEntry,
@@ -1841,11 +2070,13 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.ForeignKeyChangeDetected" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalEntityEntry"> The internal entity entry. </param>
+        /// <param name="property"> The property. </param>
+        /// <param name="oldValue"> The old value. </param>
+        /// <param name="newValue"> the new value. </param>
         public static void ForeignKeyChangeDetected(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.ChangeTracking> diagnostics,
             [NotNull] InternalEntityEntry internalEntityEntry,
@@ -1889,11 +2120,13 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.ForeignKeyChangeDetected" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalEntityEntry"> The internal entity entry. </param>
+        /// <param name="property"> The property. </param>
+        /// <param name="oldValue"> The old value. </param>
+        /// <param name="newValue"> The new value. </param>
         public static void ForeignKeyChangeDetectedSensitive(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.ChangeTracking> diagnostics,
             [NotNull] InternalEntityEntry internalEntityEntry,
@@ -1943,11 +2176,13 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.CollectionChangeDetected" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalEntityEntry"> The internal entity entry. </param>
+        /// <param name="navigation"> The navigation property. </param>
+        /// <param name="added"> The added values. </param>
+        /// <param name="removed"> The removed values. </param>
         public static void CollectionChangeDetected(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.ChangeTracking> diagnostics,
             [NotNull] InternalEntityEntry internalEntityEntry,
@@ -1995,11 +2230,13 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.CollectionChangeDetected" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalEntityEntry"> The internal entity entry. </param>
+        /// <param name="navigation"> The navigation property. </param>
+        /// <param name="added"> The added values. </param>
+        /// <param name="removed"> The removed values. </param>
         public static void CollectionChangeDetectedSensitive(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.ChangeTracking> diagnostics,
             [NotNull] InternalEntityEntry internalEntityEntry,
@@ -2049,11 +2286,13 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.ReferenceChangeDetected" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalEntityEntry"> The internal entity entry. </param>
+        /// <param name="navigation"> The navigation property. </param>
+        /// <param name="oldValue"> The old value. </param>
+        /// <param name="newValue"> The new value. </param>
         public static void ReferenceChangeDetected(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.ChangeTracking> diagnostics,
             [NotNull] InternalEntityEntry internalEntityEntry,
@@ -2097,11 +2336,13 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.ReferenceChangeDetected" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalEntityEntry"> The internal entity entry. </param>
+        /// <param name="navigation"> The navigation property. </param>
+        /// <param name="oldValue"> The old value. </param>
+        /// <param name="newValue"> The new value. </param>
         public static void ReferenceChangeDetectedSensitive(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.ChangeTracking> diagnostics,
             [NotNull] InternalEntityEntry internalEntityEntry,
@@ -2147,14 +2388,13 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.StartedTracking" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalEntityEntry"> The internal entity entry. </param>
         public static void StartedTracking(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.ChangeTracking> diagnostics,
-            [NotNull] InternalEntityEntry entry)
+            [NotNull] InternalEntityEntry internalEntityEntry)
         {
             var definition = CoreResources.LogStartedTracking(diagnostics);
 
@@ -2164,8 +2404,8 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                 definition.Log(
                     diagnostics,
                     warningBehavior,
-                    entry.StateManager.Context.GetType().ShortDisplayName(),
-                    entry.EntityType.ShortName());
+                    internalEntityEntry.StateManager.Context.GetType().ShortDisplayName(),
+                    internalEntityEntry.EntityType.ShortName());
             }
 
             if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
@@ -2175,7 +2415,7 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                     new EntityEntryEventData(
                         definition,
                         StartedTracking,
-                        new EntityEntry(entry)));
+                        new EntityEntry(internalEntityEntry)));
             }
         }
 
@@ -2189,14 +2429,13 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.StartedTracking" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalEntityEntry"> The internal entity entry. </param>
         public static void StartedTrackingSensitive(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.ChangeTracking> diagnostics,
-            [NotNull] InternalEntityEntry entry)
+            [NotNull] InternalEntityEntry internalEntityEntry)
         {
             var definition = CoreResources.LogStartedTrackingSensitive(diagnostics);
 
@@ -2206,9 +2445,9 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                 definition.Log(
                     diagnostics,
                     warningBehavior,
-                    entry.StateManager.Context.GetType().ShortDisplayName(),
-                    entry.EntityType.ShortName(),
-                    entry.BuildCurrentValuesString(entry.EntityType.FindPrimaryKey().Properties));
+                    internalEntityEntry.StateManager.Context.GetType().ShortDisplayName(),
+                    internalEntityEntry.EntityType.ShortName(),
+                    internalEntityEntry.BuildCurrentValuesString(internalEntityEntry.EntityType.FindPrimaryKey().Properties));
             }
 
             if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
@@ -2218,7 +2457,7 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                     new EntityEntryEventData(
                         definition,
                         StartedTrackingSensitive,
-                        new EntityEntry(entry)));
+                        new EntityEntry(internalEntityEntry)));
             }
         }
 
@@ -2233,14 +2472,15 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.StateChanged" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalEntityEntry"> The internal entity entry. </param>
+        /// <param name="oldState"> The old value. </param>
+        /// <param name="newState"> The new value. </param>
         public static void StateChanged(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.ChangeTracking> diagnostics,
-            [NotNull] InternalEntityEntry entry,
+            [NotNull] InternalEntityEntry internalEntityEntry,
             EntityState oldState,
             EntityState newState)
         {
@@ -2252,8 +2492,8 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                 definition.Log(
                     diagnostics,
                     warningBehavior,
-                    entry.EntityType.ShortName(),
-                    entry.StateManager.Context.GetType().ShortDisplayName(),
+                    internalEntityEntry.EntityType.ShortName(),
+                    internalEntityEntry.StateManager.Context.GetType().ShortDisplayName(),
                     oldState,
                     newState);
             }
@@ -2265,7 +2505,7 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                     new StateChangedEventData(
                         definition,
                         StateChanged,
-                        new EntityEntry(entry),
+                        new EntityEntry(internalEntityEntry),
                         oldState,
                         newState));
             }
@@ -2283,14 +2523,15 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.StateChanged" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalEntityEntry"> The internal entity entry. </param>
+        /// <param name="oldState"> The old state. </param>
+        /// <param name="newState"> The new state. </param>
         public static void StateChangedSensitive(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.ChangeTracking> diagnostics,
-            [NotNull] InternalEntityEntry entry,
+            [NotNull] InternalEntityEntry internalEntityEntry,
             EntityState oldState,
             EntityState newState)
         {
@@ -2302,9 +2543,9 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                 definition.Log(
                     diagnostics,
                     warningBehavior,
-                    entry.EntityType.ShortName(),
-                    entry.BuildCurrentValuesString(entry.EntityType.FindPrimaryKey().Properties),
-                    entry.StateManager.Context.GetType().ShortDisplayName(),
+                    internalEntityEntry.EntityType.ShortName(),
+                    internalEntityEntry.BuildCurrentValuesString(internalEntityEntry.EntityType.FindPrimaryKey().Properties),
+                    internalEntityEntry.StateManager.Context.GetType().ShortDisplayName(),
                     oldState,
                     newState);
             }
@@ -2316,7 +2557,7 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                     new StateChangedEventData(
                         definition,
                         StateChangedSensitive,
-                        new EntityEntry(entry),
+                        new EntityEntry(internalEntityEntry),
                         oldState,
                         newState));
             }
@@ -2335,14 +2576,16 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.ValueGenerated" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalEntityEntry"> The internal entity entry. </param>
+        /// <param name="property"> The property. </param>
+        /// <param name="value"> The value generated. </param>
+        /// <param name="temporary"> Indicates whether or not the value is a temporary or permanent value. </param>
         public static void ValueGenerated(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.ChangeTracking> diagnostics,
-            [NotNull] InternalEntityEntry entry,
+            [NotNull] InternalEntityEntry internalEntityEntry,
             [NotNull] IProperty property,
             [CanBeNull] object value,
             bool temporary)
@@ -2357,9 +2600,9 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                 definition.Log(
                     diagnostics,
                     warningBehavior,
-                    entry.StateManager.Context.GetType().ShortDisplayName(),
+                    internalEntityEntry.StateManager.Context.GetType().ShortDisplayName(),
                     property.Name,
-                    entry.EntityType.ShortName());
+                    internalEntityEntry.EntityType.ShortName());
             }
 
             if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
@@ -2369,7 +2612,7 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                     new PropertyValueEventData(
                         definition,
                         ValueGenerated,
-                        new EntityEntry(entry),
+                        new EntityEntry(internalEntityEntry),
                         property,
                         value));
             }
@@ -2386,14 +2629,16 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.ValueGenerated" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalEntityEntry"> The internal entity entry. </param>
+        /// <param name="property"> The property. </param>
+        /// <param name="value"> The value generated. </param>
+        /// <param name="temporary"> Indicates whether or not the value is a temporary or permanent value. </param>
         public static void ValueGeneratedSensitive(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.ChangeTracking> diagnostics,
-            [NotNull] InternalEntityEntry entry,
+            [NotNull] InternalEntityEntry internalEntityEntry,
             [NotNull] IProperty property,
             [CanBeNull] object value,
             bool temporary)
@@ -2408,10 +2653,10 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                 definition.Log(
                     diagnostics,
                     warningBehavior,
-                    entry.StateManager.Context.GetType().ShortDisplayName(),
+                    internalEntityEntry.StateManager.Context.GetType().ShortDisplayName(),
                     value,
                     property.Name,
-                    entry.EntityType.ShortName());
+                    internalEntityEntry.EntityType.ShortName());
             }
 
             if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
@@ -2421,7 +2666,7 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                     new PropertyValueEventData(
                         definition,
                         ValueGeneratedSensitive,
-                        new EntityEntry(entry),
+                        new EntityEntry(internalEntityEntry),
                         property,
                         value));
             }
@@ -2439,15 +2684,16 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.CascadeDelete" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalChildEntry"> The child internal entity entry. </param>
+        /// <param name="internalParentEntry"> The parent internal entity entry. </param>
+        /// <param name="state"> The target state. </param>
         public static void CascadeDelete(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Update> diagnostics,
-            [NotNull] InternalEntityEntry childEntry,
-            [NotNull] InternalEntityEntry parentEntry,
+            [NotNull] InternalEntityEntry internalChildEntry,
+            [NotNull] InternalEntityEntry internalParentEntry,
             EntityState state)
         {
             var definition = CoreResources.LogCascadeDelete(diagnostics);
@@ -2458,9 +2704,9 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                 definition.Log(
                     diagnostics,
                     warningBehavior,
-                    childEntry.EntityType.ShortName(),
+                    internalChildEntry.EntityType.ShortName(),
                     state,
-                    parentEntry.EntityType.ShortName());
+                    internalParentEntry.EntityType.ShortName());
             }
 
             if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
@@ -2470,8 +2716,8 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                     new CascadeDeleteEventData(
                         definition,
                         CascadeDelete,
-                        new EntityEntry(childEntry),
-                        new EntityEntry(parentEntry),
+                        new EntityEntry(internalChildEntry),
+                        new EntityEntry(internalParentEntry),
                         state));
             }
         }
@@ -2487,15 +2733,16 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.CascadeDelete" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalChildEntry"> The child internal entity entry. </param>
+        /// <param name="internalParentEntry"> The parent internal entity entry. </param>
+        /// <param name="state"> The target state. </param>
         public static void CascadeDeleteSensitive(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Update> diagnostics,
-            [NotNull] InternalEntityEntry childEntry,
-            [NotNull] InternalEntityEntry parentEntry,
+            [NotNull] InternalEntityEntry internalChildEntry,
+            [NotNull] InternalEntityEntry internalParentEntry,
             EntityState state)
         {
             var definition = CoreResources.LogCascadeDeleteSensitive(diagnostics);
@@ -2506,11 +2753,11 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                 definition.Log(
                     diagnostics,
                     warningBehavior,
-                    childEntry.EntityType.ShortName(),
-                    childEntry.BuildCurrentValuesString(childEntry.EntityType.FindPrimaryKey().Properties),
+                    internalChildEntry.EntityType.ShortName(),
+                    internalChildEntry.BuildCurrentValuesString(internalChildEntry.EntityType.FindPrimaryKey().Properties),
                     state,
-                    parentEntry.EntityType.ShortName(),
-                    parentEntry.BuildCurrentValuesString(parentEntry.EntityType.FindPrimaryKey().Properties));
+                    internalParentEntry.EntityType.ShortName(),
+                    internalParentEntry.BuildCurrentValuesString(internalParentEntry.EntityType.FindPrimaryKey().Properties));
             }
 
             if (diagnostics.DiagnosticSource.IsEnabled(definition.EventId.Name))
@@ -2520,8 +2767,8 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                     new CascadeDeleteEventData(
                         definition,
                         CascadeDeleteSensitive,
-                        new EntityEntry(childEntry),
-                        new EntityEntry(parentEntry),
+                        new EntityEntry(internalChildEntry),
+                        new EntityEntry(internalParentEntry),
                         state));
             }
         }
@@ -2539,14 +2786,15 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.CascadeDeleteOrphan" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalChildEntry"> The child internal entity entry. </param>
+        /// <param name="parentEntityType"> The parent entity type. </param>
+        /// <param name="state"> The target state. </param>
         public static void CascadeDeleteOrphan(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Update> diagnostics,
-            [NotNull] InternalEntityEntry childEntry,
+            [NotNull] InternalEntityEntry internalChildEntry,
             [NotNull] IEntityType parentEntityType,
             EntityState state)
         {
@@ -2558,7 +2806,7 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                 definition.Log(
                     diagnostics,
                     warningBehavior,
-                    childEntry.EntityType.ShortName(),
+                    internalChildEntry.EntityType.ShortName(),
                     state,
                     parentEntityType.ShortName());
             }
@@ -2570,7 +2818,7 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                     new CascadeDeleteOrphanEventData(
                         definition,
                         CascadeDeleteOrphan,
-                        new EntityEntry(childEntry),
+                        new EntityEntry(internalChildEntry),
                         parentEntityType,
                         state));
             }
@@ -2587,14 +2835,15 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.CascadeDeleteOrphan" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="internalChildEntry"> The child internal entity entry. </param>
+        /// <param name="parentEntityType"> The parent entity type. </param>
+        /// <param name="state"> The target state. </param>
         public static void CascadeDeleteOrphanSensitive(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Update> diagnostics,
-            [NotNull] InternalEntityEntry childEntry,
+            [NotNull] InternalEntityEntry internalChildEntry,
             [NotNull] IEntityType parentEntityType,
             EntityState state)
         {
@@ -2606,8 +2855,8 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                 definition.Log(
                     diagnostics,
                     warningBehavior,
-                    childEntry.EntityType.ShortName(),
-                    childEntry.BuildCurrentValuesString(childEntry.EntityType.FindPrimaryKey().Properties),
+                    internalChildEntry.EntityType.ShortName(),
+                    internalChildEntry.BuildCurrentValuesString(internalChildEntry.EntityType.FindPrimaryKey().Properties),
                     state,
                     parentEntityType.ShortName());
             }
@@ -2619,7 +2868,7 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                     new CascadeDeleteOrphanEventData(
                         definition,
                         CascadeDeleteOrphanSensitive,
-                        new EntityEntry(childEntry),
+                        new EntityEntry(internalChildEntry),
                         parentEntityType,
                         state));
             }
@@ -2637,11 +2886,10 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.SaveChangesStarting" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="context"> The context being used. </param>
         public static void SaveChangesStarting(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Update> diagnostics,
             [NotNull] DbContext context)
@@ -2676,11 +2924,11 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.SaveChangesCompleted" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="context"> The context being used. </param>
+        /// <param name="entitiesSavedCount"> The number of entities saved. </param>
         public static void SaveChangesCompleted(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Update> diagnostics,
             [NotNull] DbContext context,
@@ -2720,11 +2968,10 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Logs for the <see cref="CoreEventId.ContextDisposed" /> event.
         /// </summary>
+        /// <param name="diagnostics"> The diagnostics logger to use. </param>
+        /// <param name="context"> The context being used. </param>
         public static void ContextDisposed(
             [NotNull] this IDiagnosticsLogger<DbLoggerCategory.Infrastructure> diagnostics,
             [NotNull] DbContext context)

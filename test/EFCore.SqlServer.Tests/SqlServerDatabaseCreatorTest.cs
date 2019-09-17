@@ -3,10 +3,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal;
@@ -24,61 +23,61 @@ namespace Microsoft.EntityFrameworkCore
 {
     public class SqlServerDatabaseCreatorTest
     {
-        [Fact]
+        [ConditionalFact]
         public Task Create_checks_for_existence_and_retries_if_no_proccess_until_it_passes()
         {
             return Create_checks_for_existence_and_retries_until_it_passes(233, async: false);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Create_checks_for_existence_and_retries_if_timeout_until_it_passes()
         {
             return Create_checks_for_existence_and_retries_until_it_passes(-2, async: false);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Create_checks_for_existence_and_retries_if_cannot_open_until_it_passes()
         {
             return Create_checks_for_existence_and_retries_until_it_passes(4060, async: false);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Create_checks_for_existence_and_retries_if_cannot_attach_file_until_it_passes()
         {
             return Create_checks_for_existence_and_retries_until_it_passes(1832, async: false);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Create_checks_for_existence_and_retries_if_cannot_open_file_until_it_passes()
         {
             return Create_checks_for_existence_and_retries_until_it_passes(5120, async: false);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task CreateAsync_checks_for_existence_and_retries_if_no_proccess_until_it_passes()
         {
             return Create_checks_for_existence_and_retries_until_it_passes(233, async: true);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task CreateAsync_checks_for_existence_and_retries_if_timeout_until_it_passes()
         {
             return Create_checks_for_existence_and_retries_until_it_passes(-2, async: true);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task CreateAsync_checks_for_existence_and_retries_if_cannot_open_until_it_passes()
         {
             return Create_checks_for_existence_and_retries_until_it_passes(4060, async: true);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task CreateAsync_checks_for_existence_and_retries_if_cannot_attach_file_until_it_passes()
         {
             return Create_checks_for_existence_and_retries_until_it_passes(1832, async: true);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task CreateAsync_checks_for_existence_and_retries_if_cannot_open_file_until_it_passes()
         {
             return Create_checks_for_existence_and_retries_until_it_passes(5120, async: true);
@@ -115,13 +114,13 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Equal(2, connection.OpenCount);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Create_checks_for_existence_and_ultimately_gives_up_waiting()
         {
             return Create_checks_for_existence_and_ultimately_gives_up_waiting_test(async: false);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task CreateAsync_checks_for_existence_and_ultimately_gives_up_waiting()
         {
             return Create_checks_for_existence_and_ultimately_gives_up_waiting_test(async: true);
@@ -261,47 +260,35 @@ namespace Microsoft.EntityFrameworkCore
 
             public IReadOnlyDictionary<string, object> ParameterValues => throw new NotImplementedException();
 
-            public int ExecuteNonQuery(
-                IRelationalConnection connection,
-                IReadOnlyDictionary<string, object> parameterValues,
-                IDiagnosticsLogger<DbLoggerCategory.Database.Command> logger)
+            public int ExecuteNonQuery(RelationalCommandParameterObject parameterObject)
             {
                 return 0;
             }
 
             public Task<int> ExecuteNonQueryAsync(
-                IRelationalConnection connection, IReadOnlyDictionary<string, object> parameterValues,
-                IDiagnosticsLogger<DbLoggerCategory.Database.Command> logger,
+                RelationalCommandParameterObject parameterObject,
                 CancellationToken cancellationToken = default)
                 => Task.FromResult(0);
 
-            public RelationalDataReader ExecuteReader(
-                IRelationalConnection connection,
-                IReadOnlyDictionary<string, object> parameterValues,
-                IDiagnosticsLogger<DbLoggerCategory.Database.Command> logger)
+            public RelationalDataReader ExecuteReader(RelationalCommandParameterObject parameterObject)
             {
                 throw new NotImplementedException();
             }
 
             public Task<RelationalDataReader> ExecuteReaderAsync(
-                IRelationalConnection connection, IReadOnlyDictionary<string, object> parameterValues,
-                IDiagnosticsLogger<DbLoggerCategory.Database.Command> logger,
+                RelationalCommandParameterObject parameterObject,
                 CancellationToken cancellationToken = default)
             {
                 throw new NotImplementedException();
             }
 
-            public object ExecuteScalar(
-                IRelationalConnection connection,
-                IReadOnlyDictionary<string, object> parameterValues,
-                IDiagnosticsLogger<DbLoggerCategory.Database.Command> logger)
+            public object ExecuteScalar(RelationalCommandParameterObject parameterObject)
             {
                 throw new NotImplementedException();
             }
 
             public Task<object> ExecuteScalarAsync(
-                IRelationalConnection connection, IReadOnlyDictionary<string, object> parameterValues,
-                IDiagnosticsLogger<DbLoggerCategory.Database.Command> logger,
+                RelationalCommandParameterObject parameterObject,
                 CancellationToken cancellationToken = default)
             {
                 throw new NotImplementedException();

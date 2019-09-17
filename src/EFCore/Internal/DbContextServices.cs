@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata.Conventions.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,8 +21,8 @@ namespace Microsoft.EntityFrameworkCore.Internal
     ///         doing so can result in application failures when updating to a new Entity Framework Core release.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Scoped"/>. This means that each
-    ///         <see cref="DbContext"/> instance will use its own instance of this service.
+    ///         The service lifetime is <see cref="ServiceLifetime.Scoped" />. This means that each
+    ///         <see cref="DbContext" /> instance will use its own instance of this service.
     ///         The implementation may depend on other services registered with any lifetime.
     ///         The implementation does not need to be thread-safe.
     ///     </para>
@@ -84,11 +83,7 @@ namespace Microsoft.EntityFrameworkCore.Internal
 
                 return _scopedProvider.GetService<IModelSource>().GetModel(
                     _currentContext.Context,
-                    _scopedProvider.GetService<IConventionSetBuilder>(),
-                    _scopedProvider.GetService<IModelValidator>(),
-                    new DiagnosticsLoggers(
-                        _scopedProvider.GetService<IDiagnosticsLogger<DbLoggerCategory.Model>>(),
-                        _scopedProvider.GetService<IDiagnosticsLogger<DbLoggerCategory.Model.Validation>>()));
+                    _scopedProvider.GetService<IConventionSetBuilder>());
             }
             finally
             {

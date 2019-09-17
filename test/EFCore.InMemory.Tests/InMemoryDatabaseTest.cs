@@ -8,9 +8,9 @@ using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.InMemory.Diagnostics.Internal;
 using Microsoft.EntityFrameworkCore.InMemory.Internal;
+using Microsoft.EntityFrameworkCore.InMemory.Metadata.Conventions;
 using Microsoft.EntityFrameworkCore.InMemory.Storage.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -22,7 +22,7 @@ namespace Microsoft.EntityFrameworkCore
 {
     public class InMemoryDatabaseTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Uses_persistent_database_by_default()
         {
             var serviceProvider = InMemoryTestHelpers.Instance.CreateServiceProvider();
@@ -35,7 +35,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Same(store1.Store, store2.Store);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Uses_persistent_database_if_configured_as_persistent()
         {
             var serviceProvider = InMemoryTestHelpers.Instance.CreateServiceProvider();
@@ -45,7 +45,7 @@ namespace Microsoft.EntityFrameworkCore
                 CreateStore(serviceProvider).Store);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void EnsureDatabaseCreated_returns_true_for_first_use_of_persistent_database_and_false_thereafter()
         {
             var serviceProvider = InMemoryTestHelpers.Instance.CreateServiceProvider();
@@ -71,15 +71,11 @@ namespace Microsoft.EntityFrameworkCore
             return InMemoryTestHelpers.Instance.CreateContextServices(serviceProvider, optionsBuilder.Options);
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Save_changes_adds_new_objects_to_store()
         {
             var serviceProvider = InMemoryTestHelpers.Instance.CreateContextServices(CreateModel());
-            var customer = new Customer
-            {
-                Id = 42,
-                Name = "Unikorn"
-            };
+            var customer = new Customer { Id = 42, Name = "Unikorn" };
             var entityEntry = serviceProvider.GetRequiredService<IStateManager>().GetOrCreateEntry(customer);
             entityEntry.SetEntityState(EntityState.Added);
 
@@ -87,20 +83,16 @@ namespace Microsoft.EntityFrameworkCore
 
             await inMemoryDatabase.SaveChangesAsync(new[] { entityEntry });
 
-            Assert.Equal(1, inMemoryDatabase.Store.GetTables(entityEntry.EntityType).SelectMany(t => t.Rows).Count());
+            Assert.Single(inMemoryDatabase.Store.GetTables(entityEntry.EntityType).SelectMany(t => t.Rows));
             Assert.Equal(new object[] { 42, "Unikorn" }, inMemoryDatabase.Store.GetTables(entityEntry.EntityType).Single().Rows.Single());
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Save_changes_updates_changed_objects_in_store()
         {
             var serviceProvider = InMemoryTestHelpers.Instance.CreateContextServices(CreateModel());
 
-            var customer = new Customer
-            {
-                Id = 42,
-                Name = "Unikorn"
-            };
+            var customer = new Customer { Id = 42, Name = "Unikorn" };
             var entityEntry = serviceProvider.GetRequiredService<IStateManager>().GetOrCreateEntry(customer);
             entityEntry.SetEntityState(EntityState.Added);
 
@@ -113,22 +105,18 @@ namespace Microsoft.EntityFrameworkCore
 
             await inMemoryDatabase.SaveChangesAsync(new[] { entityEntry });
 
-            Assert.Equal(1, inMemoryDatabase.Store.GetTables(entityEntry.EntityType).SelectMany(t => t.Rows).Count());
+            Assert.Single(inMemoryDatabase.Store.GetTables(entityEntry.EntityType).SelectMany(t => t.Rows));
             Assert.Equal(
                 new object[] { 42, "Unikorn, The Return" },
                 inMemoryDatabase.Store.GetTables(entityEntry.EntityType).Single().Rows.Single());
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Save_changes_removes_deleted_objects_from_store()
         {
             var serviceProvider = InMemoryTestHelpers.Instance.CreateContextServices(CreateModel());
 
-            var customer = new Customer
-            {
-                Id = 42,
-                Name = "Unikorn"
-            };
+            var customer = new Customer { Id = 42, Name = "Unikorn" };
             var entityEntry = serviceProvider.GetRequiredService<IStateManager>().GetOrCreateEntry(customer);
             entityEntry.SetEntityState(EntityState.Added);
 
@@ -144,10 +132,10 @@ namespace Microsoft.EntityFrameworkCore
 
             await inMemoryDatabase.SaveChangesAsync(new[] { entityEntry });
 
-            Assert.Equal(0, inMemoryDatabase.Store.GetTables(entityEntry.EntityType).SelectMany(t => t.Rows).Count());
+            Assert.Empty(inMemoryDatabase.Store.GetTables(entityEntry.EntityType).SelectMany(t => t.Rows));
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Should_log_writes()
         {
             var loggerFactory = new ListLoggerFactory();
@@ -157,11 +145,7 @@ namespace Microsoft.EntityFrameworkCore
 
             var scopedServices = InMemoryTestHelpers.Instance.CreateContextServices(serviceCollection, CreateModel());
 
-            var customer = new Customer
-            {
-                Id = 42,
-                Name = "Unikorn"
-            };
+            var customer = new Customer { Id = 42, Name = "Unikorn" };
             var entityEntry = scopedServices.GetRequiredService<IStateManager>().GetOrCreateEntry(customer);
             entityEntry.SetEntityState(EntityState.Added);
 
@@ -177,7 +161,7 @@ namespace Microsoft.EntityFrameworkCore
 
         private static IModel CreateModel()
         {
-            var modelBuilder = new ModelBuilder(new ConventionSet());
+            var modelBuilder = new ModelBuilder(InMemoryConventionSetBuilder.Build());
 
             modelBuilder.Entity<Customer>(
                 b =>
@@ -186,7 +170,7 @@ namespace Microsoft.EntityFrameworkCore
                     b.Property(c => c.Name);
                 });
 
-            return modelBuilder.Model;
+            return modelBuilder.Model.FinalizeModel();
         }
 
         private class Customer

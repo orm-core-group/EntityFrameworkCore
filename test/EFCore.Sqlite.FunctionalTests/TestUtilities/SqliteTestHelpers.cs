@@ -3,11 +3,7 @@
 
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Sqlite.Diagnostics.Internal;
-using Microsoft.EntityFrameworkCore.Sqlite.Storage.Internal;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.EntityFrameworkCore.TestUtilities
@@ -25,14 +21,6 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
 
         protected override void UseProviderOptions(DbContextOptionsBuilder optionsBuilder)
             => optionsBuilder.UseSqlite(new SqliteConnection("Data Source=:memory:"));
-
-        public override IModelValidator CreateModelValidator()
-            => new SqliteModelValidator(
-                new ModelValidatorDependencies(),
-                new RelationalModelValidatorDependencies(
-                    new SqliteTypeMappingSource(
-                        TestServiceFactory.Instance.Create<TypeMappingSourceDependencies>(),
-                        TestServiceFactory.Instance.Create<RelationalTypeMappingSourceDependencies>())));
 
         public override LoggingDefinitions LoggingDefinitions { get; } = new SqliteLoggingDefinitions();
     }

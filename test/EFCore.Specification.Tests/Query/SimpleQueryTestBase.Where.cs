@@ -6,8 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.TestModels.Northwind;
-using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
 using Xunit;
 
 // ReSharper disable AccessToModifiedClosure
@@ -28,7 +28,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
         private static readonly Expression<Func<Order, bool>> _filter = o => o.CustomerID == "ALFKI";
 
-        [ConditionalTheory(Skip = "TaskItem#6")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_as_queryable_expression(bool isAsync)
         {
@@ -67,10 +67,7 @@ namespace Microsoft.EntityFrameworkCore.Query
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_dictionary_key_access_closure(bool isAsync)
         {
-            var predicateMap = new Dictionary<string, string>
-            {
-                ["City"] = "London"
-            };
+            var predicateMap = new Dictionary<string, string> { ["City"] = "London" };
 
             return AssertQuery<Customer>(
                 isAsync,
@@ -138,10 +135,7 @@ namespace Microsoft.EntityFrameworkCore.Query
         [MemberData(nameof(IsAsyncData))]
         public virtual async Task Where_method_call_nullable_type_closure_via_query_cache(bool isAsync)
         {
-            var city = new City
-            {
-                Int = 2
-            };
+            var city = new City { Int = 2 };
 
             await AssertQuery<Employee>(
                 isAsync,
@@ -160,10 +154,7 @@ namespace Microsoft.EntityFrameworkCore.Query
         [MemberData(nameof(IsAsyncData))]
         public virtual async Task Where_method_call_nullable_type_reverse_closure_via_query_cache(bool isAsync)
         {
-            var city = new City
-            {
-                NullableInt = 1
-            };
+            var city = new City { NullableInt = 1 };
 
             await AssertQuery<Employee>(
                 isAsync,
@@ -182,10 +173,7 @@ namespace Microsoft.EntityFrameworkCore.Query
         [MemberData(nameof(IsAsyncData))]
         public virtual async Task Where_method_call_closure_via_query_cache(bool isAsync)
         {
-            var city = new City
-            {
-                InstanceFieldValue = "London"
-            };
+            var city = new City { InstanceFieldValue = "London" };
 
             await AssertQuery<Customer>(
                 isAsync,
@@ -204,10 +192,7 @@ namespace Microsoft.EntityFrameworkCore.Query
         [MemberData(nameof(IsAsyncData))]
         public virtual async Task Where_field_access_closure_via_query_cache(bool isAsync)
         {
-            var city = new City
-            {
-                InstanceFieldValue = "London"
-            };
+            var city = new City { InstanceFieldValue = "London" };
 
             await AssertQuery<Customer>(
                 isAsync,
@@ -226,10 +211,7 @@ namespace Microsoft.EntityFrameworkCore.Query
         [MemberData(nameof(IsAsyncData))]
         public virtual async Task Where_property_access_closure_via_query_cache(bool isAsync)
         {
-            var city = new City
-            {
-                InstancePropertyValue = "London"
-            };
+            var city = new City { InstancePropertyValue = "London" };
 
             await AssertQuery<Customer>(
                 isAsync,
@@ -286,13 +268,7 @@ namespace Microsoft.EntityFrameworkCore.Query
         [MemberData(nameof(IsAsyncData))]
         public virtual async Task Where_nested_field_access_closure_via_query_cache(bool isAsync)
         {
-            var city = new City
-            {
-                Nested = new City
-                {
-                    InstanceFieldValue = "London"
-                }
-            };
+            var city = new City { Nested = new City { InstanceFieldValue = "London" } };
 
             await AssertQuery<Customer>(
                 isAsync,
@@ -311,13 +287,7 @@ namespace Microsoft.EntityFrameworkCore.Query
         [MemberData(nameof(IsAsyncData))]
         public virtual async Task Where_nested_property_access_closure_via_query_cache(bool isAsync)
         {
-            var city = new City
-            {
-                Nested = new City
-                {
-                    InstancePropertyValue = "London"
-                }
-            };
+            var city = new City { Nested = new City { InstancePropertyValue = "London" } };
 
             await AssertQuery<Customer>(
                 isAsync,
@@ -397,19 +367,13 @@ namespace Microsoft.EntityFrameworkCore.Query
             await AssertQuery<Customer>(
                 isAsync,
                 cs => cs.Where(
-                    c => c.City == new City
-                    {
-                        InstanceFieldValue = "London"
-                    }.InstanceFieldValue),
+                    c => c.City == new City { InstanceFieldValue = "London" }.InstanceFieldValue),
                 entryCount: 6);
 
             await AssertQuery<Customer>(
                 isAsync,
                 cs => cs.Where(
-                    c => c.City == new City
-                    {
-                        InstanceFieldValue = "Seattle"
-                    }.InstanceFieldValue),
+                    c => c.City == new City { InstanceFieldValue = "Seattle" }.InstanceFieldValue),
                 entryCount: 1);
         }
 
@@ -421,20 +385,14 @@ namespace Microsoft.EntityFrameworkCore.Query
             await AssertQuery<Customer>(
                 isAsync,
                 cs => cs.Where(
-                    c => c.City == new City
-                    {
-                        InstanceFieldValue = city
-                    }.InstanceFieldValue),
+                    c => c.City == new City { InstanceFieldValue = city }.InstanceFieldValue),
                 entryCount: 6);
 
             city = "Seattle";
             await AssertQuery<Customer>(
                 isAsync,
                 cs => cs.Where(
-                    c => c.City == new City
-                    {
-                        InstanceFieldValue = city
-                    }.InstanceFieldValue),
+                    c => c.City == new City { InstanceFieldValue = city }.InstanceFieldValue),
                 entryCount: 1);
         }
 
@@ -465,7 +423,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalTheory(Skip = "TaskList#8")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual async Task Where_simple_closure_via_query_cache_nullable_type(bool isAsync)
         {
@@ -491,7 +449,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 1);
         }
 
-        [ConditionalTheory(Skip = "TaskList#8")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual async Task Where_simple_closure_via_query_cache_nullable_type_reverse(bool isAsync)
         {
@@ -517,7 +475,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 5);
         }
 
-        [ConditionalFact(Skip = "TaskList#11")]
+        [ConditionalFact]
         public virtual void Where_subquery_closure_via_query_cache()
         {
             using (var context = CreateContext())
@@ -530,7 +488,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
                 var customers = context.Customers.Where(c => orders.Any(o => o.CustomerID == c.CustomerID)).ToList();
 
-                Assert.Equal(1, customers.Count);
+                Assert.Single(customers);
 
                 customerID = "ANATR";
 
@@ -559,7 +517,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 cs => cs.Where(c => c.CustomerID == "ALFKI" & c.CustomerID == "ANATR"));
         }
 
-        [ConditionalTheory(Skip = "Issue #14935. Cannot eval 'where (([c].CustomerID == \"ALFKI\") ^ True)'")]
+        [ConditionalTheory(Skip = "Issue #16645. Cannot eval 'where (([c].CustomerID == \"ALFKI\") ^ True)'")]
         [InlineData(false)]
         public virtual Task Where_bitwise_xor(bool isAsync)
         {
@@ -597,11 +555,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 isAsync,
                 es => es.Where(e => EF.Property<string>(e, "Title") == "Sales Representative")
                     .Select(
-                        e => new
-                        {
-                            e,
-                            Title = EF.Property<string>(e, "Title")
-                        }),
+                        e => new { e, Title = EF.Property<string>(e, "Title") }),
                 e => e.e.EmployeeID,
                 entryCount: 6);
         }
@@ -618,7 +572,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 3);
         }
 
-        [ConditionalTheory(Skip = "TaskList#14")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_shadow_subquery_FirstOrDefault(bool isAsync)
         {
@@ -632,17 +586,21 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 1);
         }
 
-        [ConditionalTheory(Skip = "Issue #14935. Cannot eval 'where [c].IsLondon'")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
-        public virtual Task Where_client(bool isAsync)
+        public virtual async Task Where_client(bool isAsync)
         {
-            return AssertQuery<Customer>(
-                isAsync,
-                cs => cs.Where(c => c.IsLondon),
-                entryCount: 6);
+            Assert.Equal(
+                CoreStrings.TranslationFailed("Where<Customer>(    source: DbSet<Customer>,     predicate: (c) => c.IsLondon)"),
+                RemoveNewLines(
+                    (await Assert.ThrowsAsync<InvalidOperationException>(
+                        () => AssertQuery<Customer>(
+                            isAsync,
+                            cs => cs.Where(c => c.IsLondon),
+                            entryCount: 6))).Message));
         }
 
-        [ConditionalTheory(Skip = "TaskList#11")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_subquery_correlated(bool isAsync)
         {
@@ -652,54 +610,76 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 91);
         }
 
-        [ConditionalTheory(Skip = "Issue #14935. Cannot eval 'where {from Customer c2 in value(Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryable`1[Microsoft.EntityFrameworkCore.TestModels.Northwind.Customer]) where (([c1].CustomerID == [c2].CustomerID) AndAlso [c2].IsLondon) select [c2] => Any()}''")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
-        public virtual Task Where_subquery_correlated_client_eval(bool isAsync)
+        public virtual async Task Where_subquery_correlated_client_eval(bool isAsync)
         {
-            return AssertQuery<Customer>(
-                isAsync,
-                cs => cs.OrderBy(c1 => c1.CustomerID).Take(5).Where(c1 => cs.Any(c2 => c1.CustomerID == c2.CustomerID && c2.IsLondon)),
-                entryCount: 1);
+            Assert.Equal(
+                CoreStrings.TranslationFailed("Any<Customer>(    source: DbSet<Customer>,     predicate: (c0) => EntityShaperExpression:         EntityType: Customer        ValueBufferExpression:             ProjectionBindingExpression: EmptyProjectionMember        IsNullable: False    .CustomerID == c0.CustomerID && c0.IsLondon)"),
+                RemoveNewLines(
+                    (await Assert.ThrowsAsync<InvalidOperationException>(
+                        () => AssertQuery<Customer>(
+                            isAsync,
+                            cs => cs.OrderBy(c1 => c1.CustomerID).Take(5)
+                                .Where(c1 => cs.Any(c2 => c1.CustomerID == c2.CustomerID && c2.IsLondon)),
+                            entryCount: 1))).Message));
         }
 
-        [ConditionalTheory(Skip = "Issue #14935. Cannot eval 'where [c].IsLondon'")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
-        public virtual Task Where_client_and_server_top_level(bool isAsync)
+        public virtual async Task Where_client_and_server_top_level(bool isAsync)
         {
-            return AssertQuery<Customer>(
-                isAsync,
-                cs => cs.Where(c => c.IsLondon && c.CustomerID != "AROUT"),
-                entryCount: 5);
+            Assert.Equal(
+                CoreStrings.TranslationFailed("Where<Customer>(    source: DbSet<Customer>,     predicate: (c) => c.IsLondon && c.CustomerID != \"AROUT\")"),
+                RemoveNewLines(
+                    (await Assert.ThrowsAsync<InvalidOperationException>(
+                        () => AssertQuery<Customer>(
+                            isAsync,
+                            cs => cs.Where(c => c.IsLondon && c.CustomerID != "AROUT"),
+                            entryCount: 5))).Message));
         }
 
-        [ConditionalTheory(Skip = "Issue #14935. Cannot eval 'where ([c].IsLondon OrElse ([c].CustomerID == \"ALFKI\"))'")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
-        public virtual Task Where_client_or_server_top_level(bool isAsync)
+        public virtual async Task Where_client_or_server_top_level(bool isAsync)
         {
-            return AssertQuery<Customer>(
-                isAsync,
-                cs => cs.Where(c => c.IsLondon || c.CustomerID == "ALFKI"),
-                entryCount: 7);
+            Assert.Equal(
+                CoreStrings.TranslationFailed("Where<Customer>(    source: DbSet<Customer>,     predicate: (c) => c.IsLondon || c.CustomerID == \"ALFKI\")"),
+                RemoveNewLines(
+                    (await Assert.ThrowsAsync<InvalidOperationException>(
+                        () => AssertQuery<Customer>(
+                            isAsync,
+                            cs => cs.Where(c => c.IsLondon || c.CustomerID == "ALFKI"),
+                            entryCount: 7))).Message));
         }
 
-        [ConditionalTheory(Skip = "Issue #14935. Cannot eval 'where (([c].CustomerID != \"ALFKI\") == ([c].IsLondon AndAlso ([c].CustomerID != \"AROUT\")))'")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
-        public virtual Task Where_client_and_server_non_top_level(bool isAsync)
+        public virtual async Task Where_client_and_server_non_top_level(bool isAsync)
         {
-            return AssertQuery<Customer>(
-                isAsync,
-                cs => cs.Where(c => c.CustomerID != "ALFKI" == (c.IsLondon && c.CustomerID != "AROUT")),
-                entryCount: 6);
+            Assert.Equal(
+                CoreStrings.TranslationFailed("Where<Customer>(    source: DbSet<Customer>,     predicate: (c) => c.CustomerID != \"ALFKI\" == c.IsLondon && c.CustomerID != \"AROUT\")"),
+                RemoveNewLines(
+                    (await Assert.ThrowsAsync<InvalidOperationException>(
+                        () => AssertQuery<Customer>(
+                            isAsync,
+                            cs => cs.Where(c => c.CustomerID != "ALFKI" == (c.IsLondon && c.CustomerID != "AROUT")),
+                            entryCount: 6))).Message));
         }
 
-        [ConditionalTheory(Skip = "Issue #14935. Cannot eval 'where (([c].CustomerID == \"MAUMAR\") OrElse (([c].CustomerID != \"AROUT\") AndAlso [c].IsLondon))'")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
-        public virtual Task Where_client_deep_inside_predicate_and_server_top_level(bool isAsync)
+        public virtual async Task Where_client_deep_inside_predicate_and_server_top_level(bool isAsync)
         {
-            return AssertQuery<Customer>(
-                isAsync,
-                cs => cs.Where(c => c.CustomerID != "ALFKI" && (c.CustomerID == "MAUMAR" || (c.CustomerID != "AROUT" && c.IsLondon))),
-                entryCount: 5);
+            Assert.Equal(
+                CoreStrings.TranslationFailed("Where<Customer>(    source: DbSet<Customer>,     predicate: (c) => c.CustomerID != \"ALFKI\" && c.CustomerID == \"MAUMAR\" || c.CustomerID != \"AROUT\" && c.IsLondon)"),
+                RemoveNewLines(
+                    (await Assert.ThrowsAsync<InvalidOperationException>(
+                        () => AssertQuery<Customer>(
+                            isAsync,
+                            cs => cs.Where(
+                                c => c.CustomerID != "ALFKI" && (c.CustomerID == "MAUMAR" || (c.CustomerID != "AROUT" && c.IsLondon))),
+                            entryCount: 5))).Message));
         }
 
         [ConditionalTheory]
@@ -809,7 +789,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 5);
         }
 
-        [ConditionalTheory(Skip = "TaskList#8")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual async Task Where_equals_on_null_nullable_int_types(bool isAsync)
         {
@@ -856,7 +836,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 20);
         }
 
-        [ConditionalTheory(Skip = "TaskList#1")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_string_indexof(bool isAsync)
         {
@@ -1119,7 +1099,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 91);
         }
 
-        [ConditionalTheory(Skip = "TaskList#10")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_in_optimization_multiple(bool isAsync)
         {
@@ -1132,16 +1112,12 @@ namespace Microsoft.EntityFrameworkCore.Query
                           || c.City == "Berlin"
                           || c.CustomerID == "ALFKI"
                           || c.CustomerID == "ABCDE"
-                    select new
-                    {
-                        c,
-                        e
-                    },
+                    select new { c, e },
                 e => e.c.CustomerID + " " + e.e.EmployeeID,
                 entryCount: 16);
         }
 
-        [ConditionalTheory(Skip = "TaskList#10")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_not_in_optimization1(bool isAsync)
         {
@@ -1152,16 +1128,12 @@ namespace Microsoft.EntityFrameworkCore.Query
                     from e in es
                     where c.City != "London"
                           && e.City != "London"
-                    select new
-                    {
-                        c,
-                        e
-                    },
+                    select new { c, e },
                 e => e.c.CustomerID + " " + e.e.EmployeeID,
                 entryCount: 90);
         }
 
-        [ConditionalTheory(Skip = "TaskList#10")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_not_in_optimization2(bool isAsync)
         {
@@ -1172,16 +1144,12 @@ namespace Microsoft.EntityFrameworkCore.Query
                     from e in es
                     where c.City != "London"
                           && c.City != "Berlin"
-                    select new
-                    {
-                        c,
-                        e
-                    },
+                    select new { c, e },
                 e => e.c.CustomerID + " " + e.e.EmployeeID,
                 entryCount: 93);
         }
 
-        [ConditionalTheory(Skip = "TaskList#10")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_not_in_optimization3(bool isAsync)
         {
@@ -1193,16 +1161,12 @@ namespace Microsoft.EntityFrameworkCore.Query
                     where c.City != "London"
                           && c.City != "Berlin"
                           && c.City != "Seattle"
-                    select new
-                    {
-                        c,
-                        e
-                    },
+                    select new { c, e },
                 e => e.c.CustomerID + " " + e.e.EmployeeID,
                 entryCount: 92);
         }
 
-        [ConditionalTheory(Skip = "TaskList#10")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_not_in_optimization4(bool isAsync)
         {
@@ -1215,16 +1179,12 @@ namespace Microsoft.EntityFrameworkCore.Query
                           && c.City != "Berlin"
                           && c.City != "Seattle"
                           && c.City != "Lisboa"
-                    select new
-                    {
-                        c,
-                        e
-                    },
+                    select new { c, e },
                 e => e.c.CustomerID + " " + e.e.EmployeeID,
                 entryCount: 90);
         }
 
-        [ConditionalTheory(Skip = "TaskList#10")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_select_many_and(bool isAsync)
         {
@@ -1238,11 +1198,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                     where (c.City == "London" && c.Country == "UK")
                           && (e.City == "London" && e.Country == "UK")
 #pragma warning restore RCS1032 // Remove redundant parentheses.
-                    select new
-                    {
-                        c,
-                        e
-                    },
+                    select new { c, e },
                 e => e.c.CustomerID + " " + e.e.EmployeeID,
                 entryCount: 10);
         }
@@ -1273,10 +1229,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             return AssertQuery<Employee>(
                 isAsync,
                 es => es.Take(9).Select(
-                    e => new
-                    {
-                        e
-                    }).Where(e => e.e.EmployeeID == 5),
+                    e => new { e }).Where(e => e.e.EmployeeID == 5),
                 e => e.e.EmployeeID,
                 entryCount: 1);
         }
@@ -1299,13 +1252,17 @@ namespace Microsoft.EntityFrameworkCore.Query
                 ps => ps.Where(p => !p.Discontinued), entryCount: 69);
         }
 
-        [ConditionalTheory(Skip = "Issue #14935. Cannot eval 'where Not(ClientFunc([p].ProductID))'")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
-        public virtual Task Where_bool_client_side_negated(bool isAsync)
+        public virtual async Task Where_bool_client_side_negated(bool isAsync)
         {
-            return AssertQuery<Product>(
-                isAsync,
-                ps => ps.Where(p => !ClientFunc(p.ProductID) && p.Discontinued), entryCount: 8);
+            Assert.Equal(
+                CoreStrings.TranslationFailed("Where<Product>(    source: DbSet<Product>,     predicate: (p) => !(ClientFunc(p.ProductID)) && p.Discontinued)"),
+                RemoveNewLines(
+                    (await Assert.ThrowsAsync<InvalidOperationException>(
+                        () => AssertQuery<Product>(
+                            isAsync,
+                            ps => ps.Where(p => !ClientFunc(p.ProductID) && p.Discontinued), entryCount: 8))).Message));
         }
 
         private static bool ClientFunc(int id)
@@ -1437,7 +1394,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
         [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
-        public virtual Task Where_de_morgan_or_optimizated(bool isAsync)
+        public virtual Task Where_de_morgan_or_optimized(bool isAsync)
         {
             return AssertQuery<Product>(
                 isAsync,
@@ -1446,7 +1403,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
         [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
-        public virtual Task Where_de_morgan_and_optimizated(bool isAsync)
+        public virtual Task Where_de_morgan_and_optimized(bool isAsync)
         {
             return AssertQuery<Product>(
                 isAsync,
@@ -1517,23 +1474,17 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 1);
         }
 
-        [ConditionalTheory(Skip = "Issue#15588")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual async Task Where_poco_closure(bool isAsync)
         {
-            var customer = new Customer
-            {
-                CustomerID = "ALFKI"
-            };
+            var customer = new Customer { CustomerID = "ALFKI" };
 
             await AssertQuery<Customer>(
                 isAsync,
                 cs => cs.Where(c => c.Equals(customer)).Select(c => c.CustomerID));
 
-            customer = new Customer
-            {
-                CustomerID = "ANATR"
-            };
+            customer = new Customer { CustomerID = "ANATR" };
 
             await AssertQuery<Customer>(
                 isAsync,
@@ -1561,7 +1512,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 22);
         }
 
-        [ConditionalTheory(Skip = "TaskList#9")]
+        [ConditionalTheory(Skip = "Issue#14572")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_expression_invoke(bool isAsync)
         {
@@ -1709,47 +1660,6 @@ namespace Microsoft.EntityFrameworkCore.Query
                     .Where(p => flag ? p.UnitsInStock >= 20 : false));
         }
 
-        // TODO: Re-write entity ref equality to identity equality.
-        //
-        // [ConditionalFact]
-        // public virtual Task Where_compare_entity_equal()
-        // {
-        //     var alfki = NorthwindData.Customers.Single(c => c.CustomerID == "ALFKI");
-        //
-        //     Assert.Equal(1,
-        //         // ReSharper disable once PossibleUnintendedReferenceComparison
-        //         AssertQuery<Customer>(cs => cs.Where(c => c == alfki)));
-        // }
-        //
-        // [ConditionalFact]
-        // public virtual Task Where_compare_entity_not_equal()
-        // {
-        //     var alfki = new Customer { CustomerID = "ALFKI" };
-        //
-        //     Assert.Equal(90,
-        //         // ReSharper disable once PossibleUnintendedReferenceComparison
-        //         AssertQuery<Customer>(cs => cs.Where(c => c != alfki)));
-        //
-        // [ConditionalFact]
-        // public virtual Task Project_compare_entity_equal()
-        // {
-        //     var alfki = NorthwindData.Customers.Single(c => c.CustomerID == "ALFKI");
-        //
-        //     Assert.Equal(1,
-        //         // ReSharper disable once PossibleUnintendedReferenceComparison
-        //         AssertQuery<Customer>(cs => cs.Select(c => c == alfki)));
-        // }
-        //
-        // [ConditionalFact]
-        // public virtual Task Project_compare_entity_not_equal()
-        // {
-        //     var alfki = new Customer { CustomerID = "ALFKI" };
-        //
-        //     Assert.Equal(90,
-        //         // ReSharper disable once PossibleUnintendedReferenceComparison
-        //         AssertQuery<Customer>(cs => cs.Select(c => c != alfki)));
-        // }
-
         [ConditionalTheory(Skip = "Issue #14672. Cannot eval 'where (new <>f__AnonymousType409`1(x = [c].City) == { x = London })'")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_compare_constructed_equal(bool isAsync)
@@ -1757,49 +1667,31 @@ namespace Microsoft.EntityFrameworkCore.Query
             return AssertQuery<Customer>(
                 isAsync,
                 cs => cs.Where(
-                    c => new
-                    {
-                        x = c.City
-                    } == new
-                    {
-                        x = "London"
-                    }));
+                    c => new { x = c.City } == new { x = "London" }));
         }
 
-        [ConditionalTheory(Skip = "Issue #14672. Cannot eval 'where (new <>f__AnonymousType410`2(x = [c].City, y = [c].Country) == { x = London, y = UK })'")]
+        [ConditionalTheory(
+            Skip =
+                "Issue #14672. Cannot eval 'where (new <>f__AnonymousType410`2(x = [c].City, y = [c].Country) == { x = London, y = UK })'")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_compare_constructed_multi_value_equal(bool isAsync)
         {
             return AssertQuery<Customer>(
                 isAsync,
                 cs => cs.Where(
-                    c => new
-                    {
-                        x = c.City,
-                        y = c.Country
-                    } == new
-                    {
-                        x = "London",
-                        y = "UK"
-                    }));
+                    c => new { x = c.City, y = c.Country } == new { x = "London", y = "UK" }));
         }
 
-        [ConditionalTheory(Skip = "Issue #14672. Cannot eval 'where (new <>f__AnonymousType410`2(x = [c].City, y = [c].Country) != { x = London, y = UK })'")]
+        [ConditionalTheory(
+            Skip =
+                "Issue #14672. Cannot eval 'where (new <>f__AnonymousType410`2(x = [c].City, y = [c].Country) != { x = London, y = UK })'")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_compare_constructed_multi_value_not_equal(bool isAsync)
         {
             return AssertQuery<Customer>(
                 isAsync,
                 cs => cs.Where(
-                    c => new
-                    {
-                        x = c.City,
-                        y = c.Country
-                    } != new
-                    {
-                        x = "London",
-                        y = "UK"
-                    }),
+                    c => new { x = c.City, y = c.Country } != new { x = "London", y = "UK" }),
                 entryCount: 91);
         }
 
@@ -1877,7 +1769,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 cs => cs.Where(c => c.City == "London").Select(c => c.CompanyName));
         }
 
-        [ConditionalTheory(Skip = "TaskItem#5")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_Is_on_same_type(bool isAsync)
         {
@@ -1895,10 +1787,11 @@ namespace Microsoft.EntityFrameworkCore.Query
                 isAsync,
                 order => order
                     .Where(o => o.CustomerID == "QUICK")
-                    .Where(o => o.OrderDate > new DateTime(1998, 1, 1)), entryCount: 8);
+                    .Where(o => o.OrderDate > new DateTime(1998, 1, 1)),
+                entryCount: 8);
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'Contains(Property([od], \"OrderID\"))'")]
+        [ConditionalFact]
         public virtual void Where_navigation_contains()
         {
             using (var context = CreateContext())
@@ -1922,7 +1815,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 1);
         }
 
-        [ConditionalTheory(Skip = "TaskList#11")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_multiple_contains_in_subquery_with_or(bool isAsync)
         {
@@ -1936,7 +1829,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 41);
         }
 
-        [ConditionalTheory(Skip = "TaskList#11")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_multiple_contains_in_subquery_with_and(bool isAsync)
         {
@@ -1950,7 +1843,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 5);
         }
 
-        [ConditionalTheory(Skip = "TaskList#6")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_contains_on_navigation(bool isAsync)
         {
@@ -1960,7 +1853,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 830);
         }
 
-        [ConditionalTheory(Skip = "TaskList#6")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_subquery_FirstOrDefault_is_null(bool isAsync)
         {
@@ -1970,17 +1863,14 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 2);
         }
 
-        [ConditionalTheory(Skip = "TaskList#6")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_subquery_FirstOrDefault_compared_to_entity(bool isAsync)
         {
             return AssertQuery<Customer>(
                 isAsync,
                 cs => cs.Where(
-                    c => c.Orders.OrderBy(o => o.OrderID).FirstOrDefault() == new Order
-                    {
-                        OrderID = 10243
-                    }));
+                    c => c.Orders.OrderBy(o => o.OrderID).FirstOrDefault() == new Order { OrderID = 10243 }));
         }
 
         [ConditionalTheory]
@@ -2003,6 +1893,114 @@ namespace Microsoft.EntityFrameworkCore.Query
 #pragma warning disable CS0184 // 'is' expression's given expression is never of the provided type
                 os => os.Where(o => (customer is Order)));
 #pragma warning restore CS0184 // 'is' expression's given expression is never of the provided type
+        }
+
+        [ConditionalTheory]
+        [MemberData(nameof(IsAsyncData))]
+        public virtual Task Decimal_cast_to_double_works(bool isAsync)
+        {
+            var customer = new Customer();
+
+            return AssertQuery<Product>(
+                isAsync,
+                ps => ps.Where(p => (double?)p.UnitPrice > 100),
+                entryCount: 2);
+        }
+
+        [ConditionalTheory] // issue #16335
+        [MemberData(nameof(IsAsyncData))]
+        public virtual Task Where_is_conditional(bool isAsync)
+        {
+            var customer = new Customer();
+
+            return AssertQuery<Product>(
+                isAsync,
+                ps => ps.Where(p => p is Product ? false : true));
+        }
+
+        [ConditionalTheory] // issue #17172
+        [MemberData(nameof(IsAsyncData))]
+        public virtual async Task Enclosing_class_settable_member_generates_parameter(bool isAsync)
+        {
+            SettableProperty = 4;
+
+            await AssertQuery<Order>(
+                isAsync,
+                os => os.Where(o => o.OrderID == SettableProperty));
+
+            SettableProperty = 10;
+
+            await AssertQuery<Order>(
+                isAsync,
+                os => os.Where(o => o.OrderID == SettableProperty));
+        }
+
+        [ConditionalTheory] // issue #17172
+        [MemberData(nameof(IsAsyncData))]
+        public virtual Task Enclosing_class_readonly_member_generates_parameter(bool isAsync)
+        {
+            return AssertQuery<Order>(
+                isAsync,
+                os => os.Where(o => o.OrderID == ReadOnlyProperty));
+        }
+
+        [ConditionalTheory] // issue #17172
+        [MemberData(nameof(IsAsyncData))]
+        public virtual Task Enclosing_class_const_member_does_not_generate_parameter(bool isAsync)
+        {
+            return AssertQuery<Order>(
+                isAsync,
+                os => os.Where(o => o.OrderID == ConstantProperty));
+        }
+
+        [ConditionalTheory] // issue #17342
+        [MemberData(nameof(IsAsyncData))]
+        public virtual Task Generic_Ilist_contains_translates_to_server(bool isAsync)
+        {
+            var cities = new List<string>
+            {
+                "Seattle"
+            } as IList<string>;
+
+            return AssertQuery<Customer>(
+                isAsync,
+                cs => cs.Where(c => cities.Contains(c.City)),
+                entryCount: 1);
+        }
+
+        private int SettableProperty { get; set; }
+        private int ReadOnlyProperty => 5;
+        private const int ConstantProperty = 1;
+
+        [ConditionalTheory]
+        [MemberData(nameof(IsAsyncData))]
+        public virtual Task Filter_non_nullable_value_after_FirstOrDefault_on_empty_collection(bool isAsync)
+        {
+            return AssertQuery<Customer, Order>(
+                isAsync,
+                (cs, os) => cs.Where(c => os.Where(o => o.CustomerID == "John Doe").Select(o => o.CustomerID).FirstOrDefault().Length == 0),
+                (cs, os) => cs.Where(c => false));
+        }
+
+        [ConditionalTheory]
+        [MemberData(nameof(IsAsyncData))]
+        public virtual Task Like_with_non_string_column_using_ToString(bool isAsync)
+        {
+            return AssertQuery<Order>(
+                isAsync,
+                os => os.Where(o => EF.Functions.Like(o.OrderID.ToString(), "%20%")),
+                entryCount: 8);
+        }
+
+        [ConditionalTheory]
+        [MemberData(nameof(IsAsyncData))]
+        public virtual Task Like_with_non_string_column_using_double_cast(bool isAsync)
+        {
+            return AssertQuery<Order>(
+                isAsync,
+                os => os.Where(o => EF.Functions.Like((string)(object)o.OrderID, "%20%")),
+                os => os.Where(o => EF.Functions.Like(o.OrderID.ToString(), "%20%")),
+                entryCount: 8);
         }
     }
 }

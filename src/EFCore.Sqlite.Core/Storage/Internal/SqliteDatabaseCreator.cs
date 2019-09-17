@@ -17,8 +17,8 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Storage.Internal
     ///         doing so can result in application failures when updating to a new Entity Framework Core release.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Scoped"/>. This means that each
-    ///         <see cref="DbContext"/> instance will use its own instance of this service.
+    ///         The service lifetime is <see cref="ServiceLifetime.Scoped" />. This means that each
+    ///         <see cref="DbContext" /> instance will use its own instance of this service.
     ///         The implementation may depend on other services registered with any lifetime.
     ///         The implementation does not need to be thread-safe.
     ///     </para>
@@ -58,7 +58,12 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Storage.Internal
             Dependencies.Connection.Open();
 
             _rawSqlCommandBuilder.Build("PRAGMA journal_mode = 'wal';")
-                .ExecuteNonQuery(Dependencies.Connection, null, Dependencies.CommandLogger);
+                .ExecuteNonQuery(
+                    new RelationalCommandParameterObject(
+                        Dependencies.Connection,
+                        null,
+                        null,
+                        Dependencies.CommandLogger));
 
             Dependencies.Connection.Close();
         }
@@ -92,11 +97,16 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Storage.Internal
         ///     any release. You should only use it directly in your code with extreme caution and knowing that
         ///     doing so can result in application failures when updating to a new Entity Framework Core release.
         /// </summary>
-        protected override bool HasTables()
+        public override bool HasTables()
         {
             var count = (long)_rawSqlCommandBuilder
                 .Build("SELECT COUNT(*) FROM \"sqlite_master\" WHERE \"type\" = 'table' AND \"rootpage\" IS NOT NULL;")
-                .ExecuteScalar(Dependencies.Connection, null, Dependencies.CommandLogger);
+                .ExecuteScalar(
+                    new RelationalCommandParameterObject(
+                        Dependencies.Connection,
+                        null,
+                        null,
+                        Dependencies.CommandLogger));
 
             return count != 0;
         }

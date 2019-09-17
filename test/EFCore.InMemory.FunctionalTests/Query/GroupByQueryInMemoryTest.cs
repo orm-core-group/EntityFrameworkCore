@@ -3,7 +3,7 @@
 
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.TestUtilities;
-using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Microsoft.EntityFrameworkCore.Query
@@ -17,12 +17,6 @@ namespace Microsoft.EntityFrameworkCore.Query
             : base(fixture)
         {
             //TestLoggerFactory.TestOutputHelper = testOutputHelper;
-        }
-
-        [ConditionalTheory(Skip = "See issue #9591")]
-        public override Task Select_Distinct_GroupBy(bool isAsync)
-        {
-            return base.Select_Distinct_GroupBy(isAsync);
         }
     }
 }

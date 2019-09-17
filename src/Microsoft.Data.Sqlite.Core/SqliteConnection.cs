@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -10,7 +10,6 @@ using System.IO;
 using Microsoft.Data.Sqlite.Properties;
 using Microsoft.Data.Sqlite.Utilities;
 using SQLitePCL;
-
 using static SQLitePCL.raw;
 
 namespace Microsoft.Data.Sqlite
@@ -26,14 +25,16 @@ namespace Microsoft.Data.Sqlite
 
         private readonly List<WeakReference<SqliteCommand>> _commands = new List<WeakReference<SqliteCommand>>();
 
-        private readonly Dictionary<string, (object state, delegate_collation collation)> _collations
-            = new Dictionary<string, (object, delegate_collation)>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, (object state, strdelegate_collation collation)> _collations
+            = new Dictionary<string, (object, strdelegate_collation)>(StringComparer.OrdinalIgnoreCase);
 
         private readonly Dictionary<(string name, int arity), (int flags, object state, delegate_function_scalar func)> _functions
             = new Dictionary<(string, int), (int, object, delegate_function_scalar)>(FunctionsKeyComparer.Instance);
 
-        private readonly Dictionary<(string name, int arity), (int flags, object state, delegate_function_aggregate_step func_step, delegate_function_aggregate_final func_final)> _aggregates
-            = new Dictionary<(string, int), (int, object, delegate_function_aggregate_step, delegate_function_aggregate_final)>(FunctionsKeyComparer.Instance);
+        private readonly Dictionary<(string name, int arity), (int flags, object state, delegate_function_aggregate_step func_step,
+            delegate_function_aggregate_final func_final)> _aggregates
+            = new Dictionary<(string, int), (int, object, delegate_function_aggregate_step, delegate_function_aggregate_final)>(
+                FunctionsKeyComparer.Instance);
 
         private readonly HashSet<(string file, string proc)> _extensions = new HashSet<(string, string)>();
 
@@ -108,7 +109,7 @@ namespace Microsoft.Data.Sqlite
                 string dataSource = null;
                 if (State == ConnectionState.Open)
                 {
-                    dataSource = sqlite3_db_filename(_db, MainDatabaseName);
+                    dataSource = sqlite3_db_filename(_db, MainDatabaseName).utf8_to_string();
                 }
 
                 return dataSource ?? ConnectionOptions.DataSource;
@@ -128,7 +129,7 @@ namespace Microsoft.Data.Sqlite
         /// </summary>
         /// <value>The version of SQLite used by the connection.</value>
         public override string ServerVersion
-            => sqlite3_libversion();
+            => sqlite3_libversion().utf8_to_string();
 
         /// <summary>
         ///     Gets the current state of the connection.
@@ -284,7 +285,8 @@ namespace Microsoft.Data.Sqlite
 
                 foreach (var item in _aggregates)
                 {
-                    rc = sqlite3_create_function(_db, item.Key.name, item.Key.arity, item.Value.state, item.Value.func_step, item.Value.func_final);
+                    rc = sqlite3_create_function(
+                        _db, item.Key.name, item.Key.arity, item.Value.state, item.Value.func_step, item.Value.func_final);
                     SqliteException.ThrowExceptionForRC(rc, _db);
                 }
 
@@ -309,7 +311,7 @@ namespace Microsoft.Data.Sqlite
             }
             catch
             {
-                _db.Dispose2();
+                _db.Dispose();
                 _db = null;
 
                 _state = ConnectionState.Closed;
@@ -332,19 +334,23 @@ namespace Microsoft.Data.Sqlite
 
             Transaction?.Dispose();
 
-            // command.Dispose() removes itself from _commands
             for (var i = _commands.Count - 1; i >= 0; i--)
             {
                 var reference = _commands[i];
                 if (reference.TryGetTarget(out var command))
                 {
+                    // NB: Calls RemoveCommand()
                     command.Dispose();
+                }
+                else
+                {
+                    _commands.RemoveAt(i);
                 }
             }
 
             Debug.Assert(_commands.Count == 0);
 
-            _db.Dispose2();
+            _db.Dispose();
             _db = null;
 
             _state = ConnectionState.Closed;
@@ -376,12 +382,7 @@ namespace Microsoft.Data.Sqlite
         ///     transaction.
         /// </remarks>
         public new virtual SqliteCommand CreateCommand()
-            => new SqliteCommand
-            {
-                Connection = this,
-                CommandTimeout = DefaultTimeout,
-                Transaction = Transaction
-            };
+            => new SqliteCommand { Connection = this, CommandTimeout = DefaultTimeout, Transaction = Transaction };
 
         /// <summary>
         ///     Creates a new command associated with the connection.
@@ -397,8 +398,8 @@ namespace Microsoft.Data.Sqlite
         {
             for (var i = _commands.Count - 1; i >= 0; i--)
             {
-                if (!_commands[i].TryGetTarget(out var item)
-                    || item == command)
+                if (_commands[i].TryGetTarget(out var item)
+                    && item == command)
                 {
                     _commands.RemoveAt(i);
                 }
@@ -411,7 +412,8 @@ namespace Microsoft.Data.Sqlite
         /// <param name="name">Name of the collation.</param>
         /// <param name="comparison">Method that compares two strings.</param>
         public virtual void CreateCollation(string name, Comparison<string> comparison)
-            => CreateCollation(name, null, comparison != null ? (_, s1, s2) => comparison(s1, s2) : (Func<object, string, string, int>)null);
+            => CreateCollation(
+                name, null, comparison != null ? (_, s1, s2) => comparison(s1, s2) : (Func<object, string, string, int>)null);
 
         /// <summary>
         ///     Create custom collation.
@@ -427,7 +429,7 @@ namespace Microsoft.Data.Sqlite
                 throw new ArgumentNullException(nameof(name));
             }
 
-            var collation = comparison != null ? (v, s1, s2) => comparison((T)v, s1, s2) : (delegate_collation)null;
+            var collation = comparison != null ? (v, s1, s2) => comparison((T)v, s1, s2) : (strdelegate_collation)null;
 
             if (State == ConnectionState.Open)
             {
@@ -583,7 +585,7 @@ namespace Microsoft.Data.Sqlite
                 using (var backup = sqlite3_backup_init(destination._db, destinationName, _db, sourceName))
                 {
                     int rc;
-                    if (backup.ptr == IntPtr.Zero)
+                    if (backup.IsInvalid)
                     {
                         rc = sqlite3_errcode(destination._db);
                         SqliteException.ThrowExceptionForRC(rc, destination._db);
@@ -781,7 +783,7 @@ namespace Microsoft.Data.Sqlite
 
             public bool Equals((string name, int arity) x, (string name, int arity) y)
                 => StringComparer.OrdinalIgnoreCase.Equals(x.name, y.name)
-                    && x.arity == y.arity;
+                   && x.arity == y.arity;
 
             public int GetHashCode((string name, int arity) obj)
             {

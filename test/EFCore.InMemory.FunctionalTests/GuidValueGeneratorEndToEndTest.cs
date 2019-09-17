@@ -12,7 +12,7 @@ namespace Microsoft.EntityFrameworkCore
 {
     public class GuidValueGeneratorEndToEndTest
     {
-        [Fact]
+        [ConditionalFact]
         public async Task Can_use_GUIDs_end_to_end_async()
         {
             var serviceProvider = new ServiceCollection()
@@ -27,10 +27,7 @@ namespace Microsoft.EntityFrameworkCore
                 {
                     guids.Add(
                         context.Add(
-                            new Pegasus
-                            {
-                                Name = "Rainbow Dash " + i
-                            }).Entity.Id);
+                            new Pegasus { Name = "Rainbow Dash " + i }).Entity.Id);
                     guidsHash.Add(guids.Last());
                 }
 

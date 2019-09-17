@@ -15,18 +15,18 @@ namespace Microsoft.EntityFrameworkCore.Migrations
 {
     public class MigrationCommandExecutorTest
     {
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
-        public async Task Executes_migtration_commands_in_same_transaction(bool async)
+        public async Task Executes_migration_commands_in_same_transaction(bool async)
         {
             var fakeConnection = CreateConnection();
             var logger = new FakeDiagnosticsLogger<DbLoggerCategory.Database.Command>();
 
             var commandList = new List<MigrationCommand>
             {
-                new MigrationCommand(CreateRelationalCommand(), logger),
-                new MigrationCommand(CreateRelationalCommand(), logger)
+                new MigrationCommand(CreateRelationalCommand(), null, logger),
+                new MigrationCommand(CreateRelationalCommand(), null, logger)
             };
 
             var migrationCommandExecutor = new MigrationCommandExecutor();
@@ -57,7 +57,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                 fakeConnection.DbConnections[0].DbCommands[1].Transaction);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task Executes_migration_commands_with_transaction_suppressed_outside_of_transaction(bool async)
@@ -67,8 +67,8 @@ namespace Microsoft.EntityFrameworkCore.Migrations
 
             var commandList = new List<MigrationCommand>
             {
-                new MigrationCommand(CreateRelationalCommand(), logger, transactionSuppressed: true),
-                new MigrationCommand(CreateRelationalCommand(), logger, transactionSuppressed: true)
+                new MigrationCommand(CreateRelationalCommand(), null, logger, transactionSuppressed: true),
+                new MigrationCommand(CreateRelationalCommand(), null, logger, transactionSuppressed: true)
             };
 
             var migrationCommandExecutor = new MigrationCommandExecutor();
@@ -93,7 +93,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             Assert.Null(fakeConnection.DbConnections[0].DbCommands[1].Transaction);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task Ends_transaction_when_transaction_is_suppressed(bool async)
@@ -103,8 +103,8 @@ namespace Microsoft.EntityFrameworkCore.Migrations
 
             var commandList = new List<MigrationCommand>
             {
-                new MigrationCommand(CreateRelationalCommand(), logger),
-                new MigrationCommand(CreateRelationalCommand(), logger, transactionSuppressed: true)
+                new MigrationCommand(CreateRelationalCommand(), null, logger),
+                new MigrationCommand(CreateRelationalCommand(), null, logger, transactionSuppressed: true)
             };
 
             var migrationCommandExecutor = new MigrationCommandExecutor();
@@ -134,7 +134,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                 fakeConnection.DbConnections[0].DbCommands[1].Transaction);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task Begins_new_transaction_when_transaction_nolonger_suppressed(bool async)
@@ -144,8 +144,8 @@ namespace Microsoft.EntityFrameworkCore.Migrations
 
             var commandList = new List<MigrationCommand>
             {
-                new MigrationCommand(CreateRelationalCommand(), logger, transactionSuppressed: true),
-                new MigrationCommand(CreateRelationalCommand(), logger)
+                new MigrationCommand(CreateRelationalCommand(), null, logger, transactionSuppressed: true),
+                new MigrationCommand(CreateRelationalCommand(), null, logger)
             };
 
             var migrationCommandExecutor = new MigrationCommandExecutor();
@@ -175,7 +175,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                 fakeConnection.DbConnections[0].DbCommands[1].Transaction);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task Executes_commands_in_order_regardless_of_transaction_suppression(bool async)
@@ -185,9 +185,9 @@ namespace Microsoft.EntityFrameworkCore.Migrations
 
             var commandList = new List<MigrationCommand>
             {
-                new MigrationCommand(CreateRelationalCommand(commandText: "First"), logger),
-                new MigrationCommand(CreateRelationalCommand(commandText: "Second"), logger, transactionSuppressed: true),
-                new MigrationCommand(CreateRelationalCommand(commandText: "Third"), logger)
+                new MigrationCommand(CreateRelationalCommand(commandText: "First"), null, logger),
+                new MigrationCommand(CreateRelationalCommand(commandText: "Second"), null, logger, transactionSuppressed: true),
+                new MigrationCommand(CreateRelationalCommand(commandText: "Third"), null, logger)
             };
 
             var migrationCommandExecutor = new MigrationCommandExecutor();
@@ -239,7 +239,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                 command.CommandText);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task Disposes_transaction_on_exception(bool async)
@@ -258,10 +258,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
 
             var logger = new FakeDiagnosticsLogger<DbLoggerCategory.Database.Command>();
 
-            var commandList = new List<MigrationCommand>
-            {
-                new MigrationCommand(CreateRelationalCommand(), logger)
-            };
+            var commandList = new List<MigrationCommand> { new MigrationCommand(CreateRelationalCommand(), null, logger) };
 
             var migrationCommandExecutor = new MigrationCommandExecutor();
 

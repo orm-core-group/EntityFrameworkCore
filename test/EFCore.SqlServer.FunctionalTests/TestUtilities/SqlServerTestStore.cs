@@ -5,13 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
 
 #pragma warning disable IDE0022 // Use block body for methods
 // ReSharper disable SuggestBaseTypeForParameter
@@ -19,12 +19,12 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
 {
     public class SqlServerTestStore : RelationalTestStore
     {
-        public const int CommandTimeout = 600;
+        public const int CommandTimeout = 300;
         private static string CurrentDirectory => Environment.CurrentDirectory;
 
         public static SqlServerTestStore GetNorthwindStore()
             => (SqlServerTestStore)SqlServerNorthwindTestStoreFactory.Instance
-                .GetOrCreate(SqlServerNorthwindTestStoreFactory.Name).Initialize(null, (Func<DbContext>)null, null);
+                .GetOrCreate(SqlServerNorthwindTestStoreFactory.Name).Initialize(null, (Func<DbContext>)null);
 
         public static SqlServerTestStore GetOrCreate(string name)
             => new SqlServerTestStore(name);
@@ -75,9 +75,9 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
             IServiceProvider serviceProvider, Func<SqlServerTestStore, DbContext> createContext, Action<DbContext> seed)
             => InitializeSqlServer(serviceProvider, () => createContext(this), seed);
 
-        protected override void Initialize(Func<DbContext> createContext, Action<DbContext> seed)
+        protected override void Initialize(Func<DbContext> createContext, Action<DbContext> seed, Action<DbContext> clean)
         {
-            if (CreateDatabase())
+            if (CreateDatabase(clean))
             {
                 if (_scriptPath != null)
                 {
@@ -88,22 +88,24 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
                     using (var context = createContext())
                     {
                         context.Database.EnsureCreatedResiliently();
-                        seed(context);
+                        seed?.Invoke(context);
                     }
                 }
             }
         }
 
         public override DbContextOptionsBuilder AddProviderOptions(DbContextOptionsBuilder builder)
-            => builder.UseSqlServer(Connection, b => b.ApplyConfiguration().CommandTimeout(CommandTimeout));
+            => builder.UseSqlServer(Connection, b => b.ApplyConfiguration());
 
-        private bool CreateDatabase()
+        private bool CreateDatabase(Action<DbContext> clean)
         {
             using (var master = new SqlConnection(CreateConnectionString("master", fileName: null, multipleActiveResultSets: false)))
             {
                 if (ExecuteScalar<int>(master, $"SELECT COUNT(*) FROM sys.databases WHERE name = N'{Name}'") > 0)
                 {
-                    if (_scriptPath != null)
+                    // Only reseed scripted databases during CI runs
+                    if (_scriptPath != null
+                        && !TestEnvironment.IsCI)
                     {
                         return false;
                     }
@@ -116,6 +118,7 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
                                         .EnableServiceProviderCaching(false))
                                 .Options))
                         {
+                            clean?.Invoke(context);
                             Clean(context);
                             return true;
                         }
@@ -321,15 +324,15 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
             DbConnection connection, Func<DbCommand, T> execute, string sql,
             bool useTransaction = false, object[] parameters = null)
             => new TestSqlServerRetryingExecutionStrategy().Execute(
-                    new
-                    {
-                        connection,
-                        execute,
-                        sql,
-                        useTransaction,
-                        parameters
-                    },
-                    state => ExecuteCommand(state.connection, state.execute, state.sql, state.useTransaction, state.parameters));
+                new
+                {
+                    connection,
+                    execute,
+                    sql,
+                    useTransaction,
+                    parameters
+                },
+                state => ExecuteCommand(state.connection, state.execute, state.sql, state.useTransaction, state.parameters));
 
         private static T ExecuteCommand<T>(
             DbConnection connection, Func<DbCommand, T> execute, string sql, bool useTransaction, object[] parameters)
@@ -387,13 +390,13 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
         {
             if (connection.State != ConnectionState.Closed)
             {
-                connection.Close();
+                await connection.CloseAsync();
             }
 
             await connection.OpenAsync();
             try
             {
-                using (var transaction = useTransaction ? connection.BeginTransaction() : null)
+                using (var transaction = useTransaction ? await connection.BeginTransactionAsync() : null)
                 {
                     T result;
                     using (var command = CreateCommand(connection, sql, parameters))
@@ -401,7 +404,10 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
                         result = await executeAsync(command);
                     }
 
-                    transaction?.Commit();
+                    if (transaction != null)
+                    {
+                        await transaction.CommitAsync();
+                    }
 
                     return result;
                 }
@@ -410,7 +416,7 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
             {
                 if (connection.State != ConnectionState.Closed)
                 {
-                    connection.Close();
+                    await connection.CloseAsync();
                 }
             }
         }
@@ -449,8 +455,7 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
         {
             var builder = new SqlConnectionStringBuilder(TestEnvironment.DefaultConnection)
             {
-                MultipleActiveResultSets = multipleActiveResultSets ?? new Random().Next(0, 2) == 1,
-                InitialCatalog = name
+                MultipleActiveResultSets = multipleActiveResultSets ?? new Random().Next(0, 2) == 1, InitialCatalog = name
             };
             if (fileName != null)
             {

@@ -4,32 +4,52 @@
 using System.Collections;
 using System.Linq;
 using System.Text;
-using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Cosmos.Storage.Internal;
 using Microsoft.EntityFrameworkCore.ValueGeneration;
 
 namespace Microsoft.EntityFrameworkCore.Cosmos.ValueGeneration.Internal
 {
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
     public class IdValueGenerator : ValueGenerator
     {
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         public override bool GeneratesTemporaryValues => false;
 
-        protected override object NextValue([NotNull] EntityEntry entry)
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        protected override object NextValue(EntityEntry entry)
         {
             var builder = new StringBuilder();
+            var entityType = entry.Metadata;
 
-            var pk = entry.Metadata.FindPrimaryKey();
-            var discriminator = entry.Metadata.Cosmos().DiscriminatorValue;
+            var pk = entityType.FindPrimaryKey();
+            var discriminator = entityType.GetDiscriminatorValue();
             if (discriminator != null
-                && !pk.Properties.Contains(entry.Metadata.Cosmos().DiscriminatorProperty))
+                && !pk.Properties.Contains(entityType.GetDiscriminatorProperty()))
             {
-                AppendString(builder,discriminator);
+                AppendString(builder, discriminator);
                 builder.Append("|");
             }
 
+            var partitionKey = entityType.GetPartitionKeyPropertyName() ?? CosmosClientWrapper.DefaultPartitionKey;
             foreach (var property in pk.Properties)
             {
-                if (property.Name == "__partitionKey")
+                if (property.Name == partitionKey)
                 {
                     continue;
                 }
@@ -56,6 +76,7 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.ValueGeneration.Internal
                         builder.Append(item.ToString().Replace("|", "/|"));
                         builder.Append("|");
                     }
+
                     return;
                 default:
                     builder.Append(propertyValue.ToString().Replace("|", "/|"));

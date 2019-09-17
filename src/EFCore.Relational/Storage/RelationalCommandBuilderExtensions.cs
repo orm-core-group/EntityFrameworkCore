@@ -186,7 +186,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
                 new TypeMappedRelationalParameter(
                     invariantName,
                     name,
-                    property.FindRelationalMapping(),
+                    property.GetRelationalTypeMapping(),
                     property.IsNullable));
         }
 
@@ -277,10 +277,10 @@ namespace Microsoft.EntityFrameworkCore.Storage
                 new TypeMappedPropertyRelationalParameter(
                     invariantName,
                     name,
-                    property.FindRelationalMapping(),
+                    property.GetRelationalTypeMapping(),
                     property));
         }
-        
+
         private sealed class Indenter : IDisposable
         {
             private readonly IRelationalCommandBuilder _builder;

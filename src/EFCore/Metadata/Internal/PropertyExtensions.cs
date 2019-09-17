@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Infrastructure.Internal;
 using Microsoft.EntityFrameworkCore.ValueGeneration;
 
 namespace Microsoft.EntityFrameworkCore.Metadata.Internal
@@ -64,10 +65,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
         /// </summary>
         public static IProperty GetGenerationProperty([NotNull] this IProperty property)
         {
-            var traversalList = new List<IProperty>
-            {
-                property
-            };
+            var traversalList = new List<IProperty> { property };
 
             var index = 0;
             while (index < traversalList.Count)
@@ -163,10 +161,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
         /// </summary>
         public static IReadOnlyList<IProperty> FindPrincipals([NotNull] this IProperty property)
         {
-            var principals = new List<IProperty>
-            {
-                property
-            };
+            var principals = new List<IProperty> { property };
             AddPrincipals(property, principals);
             return principals;
         }
@@ -234,11 +229,6 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             if (property.IsShadowProperty())
             {
                 builder.Append(" Shadow");
-            }
-
-            if (property.IsIndexedProperty())
-            {
-                builder.Append(" Indexed");
             }
 
             if (!property.IsNullable)

@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata.Conventions.Internal;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
@@ -204,20 +204,12 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
 
         public ModelBuilder CreateConventionBuilder(bool skipValidation = false)
         {
-            var contextServices = CreateContextServices();
-            var loggers = new DiagnosticsLoggers(
-                contextServices.GetService<IDiagnosticsLogger<DbLoggerCategory.Model.Validation>>(),
-                contextServices.GetService<IDiagnosticsLogger<DbLoggerCategory.Model>>());
-
-            var conventionSet = contextServices.GetRequiredService<IConventionSetBuilder>()
+            var conventionSet = CreateContextServices().GetRequiredService<IConventionSetBuilder>()
                 .CreateConventionSet();
 
-            if (!skipValidation)
+            if (skipValidation)
             {
-                conventionSet.ModelBuiltConventions.Add(
-                    new ValidatingConvention(
-                        contextServices.GetService<IModelValidator>(),
-                        loggers));
+                ConventionSet.Remove(conventionSet.ModelFinalizedConventions, typeof(ValidatingConvention));
             }
 
             return new ModelBuilder(conventionSet);
@@ -232,20 +224,10 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
                     .AddScoped<IDiagnosticsLogger<DbLoggerCategory.Model>>(_ => modelLogger)
                     .AddScoped<IDiagnosticsLogger<DbLoggerCategory.Model.Validation>>(_ => validationLogger));
 
-            var loggers = new DiagnosticsLoggers(modelLogger, validationLogger);
-
             var conventionSet = contextServices.GetRequiredService<IConventionSetBuilder>().CreateConventionSet();
-
-            conventionSet.ModelBuiltConventions.Add(
-                new ValidatingConvention(
-                    CreateModelValidator(),
-                    loggers));
 
             return new ModelBuilder(conventionSet);
         }
-
-        public virtual IModelValidator CreateModelValidator()
-            => new ModelValidator(new ModelValidatorDependencies());
 
         public virtual LoggingDefinitions LoggingDefinitions { get; } = new TestLoggingDefinitions();
 
@@ -311,15 +293,15 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
                     if (elementAsserter != null)
                     {
                         throw new InvalidOperationException(
-                            "Elemenent asserter will not be used because results are not properly ordered - either remove asserter from the AssertQuery, add element sorter or set assertOrder to 'true'.");
+                            "Element asserter will not be used because results are not properly ordered - either remove asserter from the AssertQuery, add element sorter or set assertOrder to 'true'.");
                     }
 
                     return AssertResults(expected, actual, assertOrder: false);
                 }
             }
 
-            elementSorter = elementSorter ?? (e => e);
-            elementAsserter = elementAsserter ?? Assert.Equal;
+            elementSorter ??= (e => e);
+            elementAsserter ??= Assert.Equal;
             if (!verifyOrdered)
             {
                 expected = expected.OrderBy(elementSorter).ToList();
@@ -351,14 +333,14 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
                     if (elementAsserter != null)
                     {
                         throw new InvalidOperationException(
-                            "Elemenent asserter will not be used because results are not properly ordered - either remove asserter from the AssertQuery, add element sorter or set assertOrder to 'true'.");
+                            "Element asserter will not be used because results are not properly ordered - either remove asserter from the AssertQuery, add element sorter or set assertOrder to 'true'.");
                     }
 
                     return AssertResults(expected, actual, assertOrder: false);
                 }
             }
 
-            elementAsserter = elementAsserter ?? Assert.Equal;
+            elementAsserter ??= Assert.Equal;
             if (!verifyOrdered)
             {
                 expected = expected.OrderBy(elementSorter).ToList();
@@ -391,14 +373,14 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
                     if (elementAsserter != null)
                     {
                         throw new InvalidOperationException(
-                            "Elemenent asserter will not be used because results are not properly ordered - either remove asserter from the AssertQuery, add element sorter or set assertOrder to 'true'.");
+                            "Element asserter will not be used because results are not properly ordered - either remove asserter from the AssertQuery, add element sorter or set assertOrder to 'true'.");
                     }
 
                     return AssertResults(expected, actual, assertOrder: false);
                 }
             }
 
-            elementAsserter = elementAsserter ?? Assert.Equal;
+            elementAsserter ??= Assert.Equal;
             if (!verifyOrdered)
             {
                 expected = expected.OrderBy(elementSorter).ToList();

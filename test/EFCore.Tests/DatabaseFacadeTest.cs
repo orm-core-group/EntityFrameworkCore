@@ -17,7 +17,7 @@ namespace Microsoft.EntityFrameworkCore
 {
     public class DatabaseFacadeTest
     {
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public async Task Methods_delegate_to_configured_store_creator(bool async)
@@ -97,7 +97,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_IServiceProvider()
         {
             using (var context = InMemoryTestHelpers.Instance.CreateContext())
@@ -108,7 +108,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_DatabaseCreator()
         {
             using (var context = InMemoryTestHelpers.Instance.CreateContext())
@@ -119,7 +119,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_Model()
         {
             using (var context = InMemoryTestHelpers.Instance.CreateContext())
@@ -128,7 +128,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public async Task Can_begin_transaction(bool async)
@@ -171,17 +171,21 @@ namespace Microsoft.EntityFrameworkCore
             public void EnlistTransaction(Transaction transaction) => throw new NotImplementedException();
 
             public void ResetState() => throw new NotImplementedException();
+            public Task ResetStateAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
         }
 
         private class FakeDbContextTransaction : IDbContextTransaction
         {
             public void Dispose() => throw new NotImplementedException();
+            public ValueTask DisposeAsync() => throw new NotImplementedException();
             public Guid TransactionId { get; }
             public void Commit() => throw new NotImplementedException();
             public void Rollback() => throw new NotImplementedException();
+            public Task CommitAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+            public Task RollbackAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_commit_transaction()
         {
             var manager = new FakeDbContextTransactionManager(new FakeDbContextTransaction());
@@ -194,7 +198,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Equal(1, manager.CommitCalls);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_roll_back_transaction()
         {
             var manager = new FakeDbContextTransactionManager(new FakeDbContextTransaction());
@@ -207,7 +211,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Equal(1, manager.RollbackCalls);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_current_transaction()
         {
             var transaction = new FakeDbContextTransaction();
@@ -219,7 +223,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Same(transaction, context.Database.CurrentTransaction);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Cannot_use_DatabaseFacade_after_dispose()
         {
             var context = InMemoryTestHelpers.Instance.CreateContext();

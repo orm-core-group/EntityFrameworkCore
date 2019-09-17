@@ -21,8 +21,9 @@ namespace Microsoft.EntityFrameworkCore.Internal
     /// </summary>
     public class ServiceProviderCache
     {
-        private readonly ConcurrentDictionary<long, (IServiceProvider ServiceProvider, IDictionary<string, string> DebugInfo)> _configurations
-            = new ConcurrentDictionary<long, (IServiceProvider, IDictionary<string, string>)>();
+        private readonly ConcurrentDictionary<long, (IServiceProvider ServiceProvider, IDictionary<string, string> DebugInfo)>
+            _configurations
+                = new ConcurrentDictionary<long, (IServiceProvider, IDictionary<string, string>)>();
 
         /// <summary>
         ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -67,7 +68,7 @@ namespace Microsoft.EntityFrameworkCore.Internal
                 var debugInfo = new Dictionary<string, string>();
                 foreach (var optionsExtension in options.Extensions)
                 {
-                    optionsExtension.PopulateDebugInfo(debugInfo);
+                    optionsExtension.Info.PopulateDebugInfo(debugInfo);
                 }
 
                 debugInfo = debugInfo.OrderBy(v => debugInfo.Keys).ToDictionary(d => d.Key, v => v.Value);
@@ -87,7 +88,7 @@ namespace Microsoft.EntityFrameworkCore.Internal
                     {
                         if (replacedServices.TryGetValue(descriptor.ServiceType, out var replacementType))
                         {
-                            ((IList<ServiceDescriptor>) updatedServices).Add(
+                            ((IList<ServiceDescriptor>)updatedServices).Add(
                                 new ServiceDescriptor(descriptor.ServiceType, replacementType, descriptor.Lifetime));
                         }
                     }
@@ -149,7 +150,7 @@ namespace Microsoft.EntityFrameworkCore.Internal
 
             var key = options.Extensions
                 .OrderBy(e => e.GetType().Name)
-                .Aggregate(0L, (t, e) => (t * 397) ^ ((long)e.GetType().GetHashCode() * 397) ^ e.GetServiceProviderHashCode());
+                .Aggregate(0L, (t, e) => (t * 397) ^ ((long)e.GetType().GetHashCode() * 397) ^ e.Info.GetServiceProviderHashCode());
 
             return _configurations.GetOrAdd(key, k => BuildServiceProvider()).ServiceProvider;
         }
@@ -168,7 +169,9 @@ namespace Microsoft.EntityFrameworkCore.Internal
 
             foreach (var extension in options.Extensions)
             {
-                if (extension.ApplyServices(services))
+                extension.ApplyServices(services);
+
+                if (extension.Info.IsDatabaseProvider)
                 {
                     coreServicesAdded = true;
                 }

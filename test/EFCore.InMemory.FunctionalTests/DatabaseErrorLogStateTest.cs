@@ -18,13 +18,13 @@ using Xunit;
 // ReSharper disable StringStartsWithIsCultureSpecific
 namespace Microsoft.EntityFrameworkCore
 {
-    internal class DatabaseErrorLogStateTest
+    public class DatabaseErrorLogStateTest
     {
-        [Fact]
+        [ConditionalFact]
         public Task SaveChanges_logs_DatabaseErrorLogState_nonasync()
             => SaveChanges_logs_DatabaseErrorLogState_test(async: false);
 
-        [Fact]
+        [ConditionalFact]
         public Task SaveChanges_logs_DatabaseErrorLogState_async()
             => SaveChanges_logs_DatabaseErrorLogState_test(async: true);
 
@@ -39,10 +39,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = new BloggingContext(serviceProvider))
             {
                 context.Blogs.Add(
-                    new BloggingContext.Blog(jimSaysThrow: false)
-                    {
-                        Url = "http://sample.com"
-                    });
+                    new BloggingContext.Blog(jimSaysThrow: false) { Url = "http://sample.com" });
                 context.SaveChanges();
                 context.ChangeTracker.Entries().Single().State = EntityState.Added;
 
@@ -63,15 +60,15 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Query_logs_DatabaseErrorLogState_during_DbSet_enumeration()
             => Query_logs_DatabaseErrorLogState_test(c => c.Blogs.ToList());
 
-        [Fact]
+        [ConditionalFact]
         public Task Query_logs_DatabaseErrorLogState_during_DbSet_enumeration_async()
             => Query_logs_DatabaseErrorLogState_test(c => c.Blogs.ToListAsync());
 
-        [Fact]
+        [ConditionalFact]
         public Task Query_logs_DatabaseErrorLogState_during_LINQ_enumeration()
             => Query_logs_DatabaseErrorLogState_test(
                 c => c.Blogs
@@ -79,7 +76,7 @@ namespace Microsoft.EntityFrameworkCore
                     .Where(b => b.Url.StartsWith("http://"))
                     .ToList());
 
-        [Fact]
+        [ConditionalFact]
         public Task Query_logs_DatabaseErrorLogState_during_LINQ_enumeration_async()
             => Query_logs_DatabaseErrorLogState_test(
                 c => c.Blogs
@@ -87,11 +84,11 @@ namespace Microsoft.EntityFrameworkCore
                     .Where(b => b.Url.StartsWith("http://"))
                     .ToListAsync());
 
-        [Fact]
+        [ConditionalFact]
         public Task Query_logs_DatabaseErrorLogState_during_single()
             => Query_logs_DatabaseErrorLogState_test(c => c.Blogs.FirstOrDefault());
 
-        [Fact]
+        [ConditionalFact]
         public Task Query_logs_DatabaseErrorLogState_during_single_async()
             => Query_logs_DatabaseErrorLogState_test(c => c.Blogs.FirstOrDefaultAsync());
 
@@ -114,10 +111,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = new BloggingContext(serviceProvider))
             {
                 context.Blogs.Add(
-                    new BloggingContext.Blog(false)
-                    {
-                        Url = "http://sample.com"
-                    });
+                    new BloggingContext.Blog(false) { Url = "http://sample.com" });
                 context.SaveChanges();
                 var entry = context.ChangeTracker.Entries().Single().GetInfrastructure();
                 context.GetService<IStateManager>().StopTracking(entry, entry.EntityState);

@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -13,10 +13,10 @@ using JetBrains.Annotations;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Scaffolding;
 using Microsoft.EntityFrameworkCore.Scaffolding.Metadata;
+using Microsoft.EntityFrameworkCore.Sqlite.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.Utilities;
 
@@ -153,9 +153,9 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Scaffolding.Internal
             using (var command = connection.CreateCommand())
             {
                 command.CommandText = new StringBuilder()
-                    .AppendLine("SELECT \"name\"")
+                    .AppendLine("SELECT \"name\", \"type\"")
                     .AppendLine("FROM \"sqlite_master\"")
-                    .Append("WHERE \"type\" = 'table' AND instr(\"name\", 'sqlite_') <> 1 AND \"name\" NOT IN ('")
+                    .Append("WHERE \"type\" IN ('table', 'view') AND instr(\"name\", 'sqlite_') <> 1 AND \"name\" NOT IN ('")
                     .Append(HistoryRepository.DefaultTableName)
                     .Append("', 'ElementaryGeometries', 'geometry_columns', 'geometry_columns_auth', ")
                     .Append("'geometry_columns_field_infos', 'geometry_columns_statistics', 'geometry_columns_time', ")
@@ -163,6 +163,7 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Scaffolding.Internal
                     .Append("'sql_statements_log', 'views_geometry_columns', 'views_geometry_columns_auth', ")
                     .Append("'views_geometry_columns_field_infos', 'views_geometry_columns_statistics', ")
                     .Append("'virts_geometry_columns', 'virts_geometry_columns_auth', ")
+                    .Append("'geom_cols_ref_sys', 'spatial_ref_sys_all', ")
                     .AppendLine("'virts_geometry_columns_field_infos', 'virts_geometry_columns_statistics');")
                     .ToString();
 
@@ -178,10 +179,12 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Scaffolding.Internal
 
                         _logger.TableFound(name);
 
-                        var table = new DatabaseTable
-                        {
-                            Name = name
-                        };
+                        var type = reader.GetString(1);
+                        var table = type == "table"
+                            ? new DatabaseTable()
+                            : new DatabaseView();
+
+                        table.Name = name;
 
                         foreach (var column in GetColumns(connection, name))
                         {
@@ -265,10 +268,7 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Scaffolding.Internal
 
                         yield return new DatabaseColumn
                         {
-                            Name = columnName,
-                            StoreType = dataType,
-                            IsNullable = !notNull,
-                            DefaultValueSql = defaultValue
+                            Name = columnName, StoreType = dataType, IsNullable = !notNull, DefaultValueSql = defaultValue
                         };
                     }
                 }
@@ -384,13 +384,7 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Scaffolding.Internal
 
                     Debug.Assert(!reader.Read(), "Unexpected composite primary key.");
 
-                    return new DatabasePrimaryKey
-                    {
-                        Columns =
-                        {
-                            column
-                        }
-                    };
+                    return new DatabasePrimaryKey { Columns = { column } };
                 }
             }
         }
@@ -446,7 +440,8 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Scaffolding.Internal
                                 {
                                     var columnName = reader2.GetString(0);
                                     var column = columns.FirstOrDefault(c => c.Name == columnName)
-                                                 ?? columns.FirstOrDefault(c => c.Name.Equals(columnName, StringComparison.OrdinalIgnoreCase));
+                                                 ?? columns.FirstOrDefault(
+                                                     c => c.Name.Equals(columnName, StringComparison.OrdinalIgnoreCase));
                                     Debug.Assert(column != null, "column is null.");
 
                                     uniqueConstraint.Columns.Add(column);
@@ -483,11 +478,7 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Scaffolding.Internal
                 {
                     while (reader1.Read())
                     {
-                        var index = new DatabaseIndex
-                        {
-                            Name = reader1.GetString(0),
-                            IsUnique = reader1.GetBoolean(1)
-                        };
+                        var index = new DatabaseIndex { Name = reader1.GetString(0), IsUnique = reader1.GetBoolean(1) };
 
                         _logger.IndexFound(index.Name, table, index.IsUnique);
 
@@ -549,7 +540,8 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Scaffolding.Internal
                         var foreignKey = new DatabaseForeignKey
                         {
                             PrincipalTable = tables.FirstOrDefault(t => t.Name == principalTableName)
-                                             ?? tables.FirstOrDefault(t => t.Name.Equals(principalTableName, StringComparison.OrdinalIgnoreCase)),
+                                             ?? tables.FirstOrDefault(
+                                                 t => t.Name.Equals(principalTableName, StringComparison.OrdinalIgnoreCase)),
                             OnDelete = ConvertToReferentialAction(onDelete)
                         };
 
@@ -588,12 +580,15 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Scaffolding.Internal
                                 {
                                     var columnName = reader2.GetString(0);
                                     var column = table.Columns.FirstOrDefault(c => c.Name == columnName)
-                                                 ?? table.Columns.FirstOrDefault(c => c.Name.Equals(columnName, StringComparison.OrdinalIgnoreCase));
+                                                 ?? table.Columns.FirstOrDefault(
+                                                     c => c.Name.Equals(columnName, StringComparison.OrdinalIgnoreCase));
                                     Debug.Assert(column != null, "column is null.");
 
                                     var principalColumnName = reader2.GetString(1);
-                                    var principalColumn = foreignKey.PrincipalTable.Columns.FirstOrDefault(c => c.Name == principalColumnName)
-                                                          ?? foreignKey.PrincipalTable.Columns.FirstOrDefault(c => c.Name.Equals(principalColumnName, StringComparison.OrdinalIgnoreCase));
+                                    var principalColumn =
+                                        foreignKey.PrincipalTable.Columns.FirstOrDefault(c => c.Name == principalColumnName)
+                                        ?? foreignKey.PrincipalTable.Columns.FirstOrDefault(
+                                            c => c.Name.Equals(principalColumnName, StringComparison.OrdinalIgnoreCase));
                                     if (principalColumn == null)
                                     {
                                         invalid = true;

@@ -7,7 +7,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.TestModels.Northwind;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 using Xunit;
@@ -24,7 +23,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
         protected TFixture Fixture { get; }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Executes_stored_procedure()
         {
             using (var context = CreateContext())
@@ -33,7 +32,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Executes_stored_procedure_with_parameter()
         {
             using (var context = CreateContext())
@@ -44,7 +43,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Executes_stored_procedure_with_generated_parameter()
         {
             using (var context = CreateContext())
@@ -53,7 +52,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact(Skip = "Issue#17019")]
         public virtual void Throws_on_concurrent_command()
         {
             using (var context = CreateContext())
@@ -89,7 +88,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_parameters()
         {
             var city = "London";
@@ -105,7 +104,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_dbParameter_with_name()
         {
             var city = CreateDbParameter("@city", "London");
@@ -120,7 +119,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_positional_dbParameter_with_name()
         {
             var city = CreateDbParameter("@city", "London");
@@ -135,7 +134,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_positional_dbParameter_without_name()
         {
             var city = CreateDbParameter(name: null, value: "London");
@@ -150,7 +149,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_dbParameters_mixed()
         {
             var city = "London";
@@ -177,7 +176,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_parameters_interpolated()
         {
             var city = "London";
@@ -193,7 +192,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Executes_stored_procedure_async()
         {
             using (var context = CreateContext())
@@ -202,7 +201,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Executes_stored_procedure_with_parameter_async()
         {
             using (var context = CreateContext())
@@ -213,7 +212,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Executes_stored_procedure_with_generated_parameter_async()
         {
             using (var context = CreateContext())
@@ -222,7 +221,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact(Skip = "#12138")]
+        [ConditionalFact(Skip = "Issue#17019")]
         public virtual async Task Throws_on_concurrent_command_async()
         {
             using (var context = CreateContext())
@@ -266,7 +265,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             return c;
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Query_with_parameters_async()
         {
             var city = "London";
@@ -282,7 +281,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Query_with_parameters_interpolated_async()
         {
             var city = "London";

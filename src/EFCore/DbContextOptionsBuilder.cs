@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using JetBrains.Annotations;
@@ -68,11 +69,16 @@ namespace Microsoft.EntityFrameworkCore
         ///         <see cref="DbContext.OnConfiguring(DbContextOptionsBuilder)" />.
         ///     </para>
         /// </summary>
-        public virtual bool IsConfigured => _options.Extensions.Any(e => e.ApplyServices(new ServiceCollection()));
+        public virtual bool IsConfigured => _options.Extensions.Any(e => e.Info.IsDatabaseProvider);
 
         /// <summary>
-        ///     Sets the model to be used for the context. If the model is set, then <see cref="DbContext.OnModelCreating(ModelBuilder)" />
-        ///     will not be run.
+        ///     <para>
+        ///         Sets the model to be used for the context. If the model is set, then <see cref="DbContext.OnModelCreating(ModelBuilder)" />
+        ///         will not be run.
+        ///     </para>
+        ///     <para>
+        ///         If setting an externally created model <see cref="ModelBuilder.FinalizeModel()" /> should be called first.
+        ///     </para>
         /// </summary>
         /// <param name="model"> The model to be used. </param>
         /// <returns> The same builder instance so that multiple calls can be chained. </returns>
@@ -206,7 +212,7 @@ namespace Microsoft.EntityFrameworkCore
         /// <param name="cacheServiceProvider"> If <c>true</c>, then the internal service provider is cached. </param>
         /// <returns> The same builder instance so that multiple calls can be chained. </returns>
         public virtual DbContextOptionsBuilder EnableServiceProviderCaching(bool cacheServiceProvider = true)
-            => WithOption(e => e.WithCacheServiceProvider(cacheServiceProvider));
+            => WithOption(e => e.WithServiceProviderCachingEnabled(cacheServiceProvider));
 
         /// <summary>
         ///     <para>
@@ -252,7 +258,7 @@ namespace Microsoft.EntityFrameworkCore
         ///         optionsBuilder.ConfigureWarnings(warnings =>
         ///             warnings.Default(WarningBehavior.Ignore)
         ///                     .Log(CoreEventId.IncludeIgnoredWarning, CoreEventId.ModelValidationWarning)
-        ///                     .Throw(RelationalEventId.QueryClientEvaluationWarning))
+        ///                     .Throw(RelationalEventId.BoolWithDefaultWarning))
         ///     </code>
         /// </example>
         /// <param name="warningsConfigurationBuilderAction">
@@ -290,6 +296,58 @@ namespace Microsoft.EntityFrameworkCore
         public virtual DbContextOptionsBuilder ReplaceService<TService, TImplementation>()
             where TImplementation : TService
             => WithOption(e => e.WithReplacedService(typeof(TService), typeof(TImplementation)));
+
+        /// <summary>
+        ///     <para>
+        ///         Adds <see cref="IInterceptor" /> instances to those registered on the context.
+        ///     </para>
+        ///     <para>
+        ///         Interceptors can be used to view, change, or suppress operations taken by Entity Framework.
+        ///         See the specific implementations of <see cref="IInterceptor" /> for details. For example, 'IDbCommandInterceptor'.
+        ///     </para>
+        ///     <para>
+        ///         A single interceptor instance can implement multiple different interceptor interfaces. I will be registered as
+        ///         an interceptor for all interfaces that it implements.
+        ///     </para>
+        ///     <para>
+        ///         Extensions can also register multiple <see cref="IInterceptor" />s in the internal service provider.
+        ///         If both injected and application interceptors are found, then the injected interceptors are run in the
+        ///         order that they are resolved from the service provider, and then the application interceptors are run
+        ///         in the order that they were added to the context.
+        ///     </para>
+        ///     <para>
+        ///         Calling this method multiple times will result in all interceptors in every call being added to the context.
+        ///         Interceptors added in a previous call are not overridden by interceptors added in a later call.
+        ///     </para>
+        /// </summary>
+        /// <param name="interceptors"> The interceptors to add. </param>
+        /// <returns> The same builder instance so that multiple calls can be chained. </returns>
+        public virtual DbContextOptionsBuilder AddInterceptors([NotNull] IEnumerable<IInterceptor> interceptors)
+            => WithOption(e => e.WithInterceptors(Check.NotNull(interceptors, nameof(interceptors))));
+
+        /// <summary>
+        ///     <para>
+        ///         Adds <see cref="IInterceptor" /> instances to those registered on the context.
+        ///     </para>
+        ///     <para>
+        ///         Interceptors can be used to view, change, or suppress operations taken by Entity Framework.
+        ///         See the specific implementations of <see cref="IInterceptor" /> for details. For example, 'IDbCommandInterceptor'.
+        ///     </para>
+        ///     <para>
+        ///         Extensions can also register multiple <see cref="IInterceptor" />s in the internal service provider.
+        ///         If both injected and application interceptors are found, then the injected interceptors are run in the
+        ///         order that they are resolved from the service provider, and then the application interceptors are run
+        ///         in the order that they were added to the context.
+        ///     </para>
+        ///     <para>
+        ///         Calling this method multiple times will result in all interceptors in every call being added to the context.
+        ///         Interceptors added in a previous call are not overridden by interceptors added in a later call.
+        ///     </para>
+        /// </summary>
+        /// <param name="interceptors"> The interceptors to add. </param>
+        /// <returns> The same builder instance so that multiple calls can be chained. </returns>
+        public virtual DbContextOptionsBuilder AddInterceptors([NotNull] params IInterceptor[] interceptors)
+            => AddInterceptors((IEnumerable<IInterceptor>)interceptors);
 
         /// <summary>
         ///     <para>

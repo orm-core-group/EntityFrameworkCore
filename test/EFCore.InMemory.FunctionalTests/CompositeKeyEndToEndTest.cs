@@ -13,7 +13,7 @@ namespace Microsoft.EntityFrameworkCore
 {
     public class CompositeKeyEndToEndTest
     {
-        [Fact]
+        [ConditionalFact]
         public async Task Can_use_two_non_generated_integers_as_composite_key_end_to_end()
         {
             var serviceProvider = new ServiceCollection()
@@ -25,12 +25,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = new BronieContext(serviceProvider))
             {
                 context.Add(
-                    new Pegasus
-                    {
-                        Id1 = ticks,
-                        Id2 = ticks + 1,
-                        Name = "Rainbow Dash"
-                    });
+                    new Pegasus { Id1 = ticks, Id2 = ticks + 1, Name = "Rainbow Dash" });
                 await context.SaveChangesAsync();
             }
 
@@ -60,7 +55,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Can_use_generated_values_in_composite_key_end_to_end()
         {
             var serviceProvider = new ServiceCollection()
@@ -74,11 +69,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = new BronieContext(serviceProvider))
             {
                 var added = context.Add(
-                    new Unicorn
-                    {
-                        Id2 = id2,
-                        Name = "Rarity"
-                    }).Entity;
+                    new Unicorn { Id2 = id2, Name = "Rarity" }).Entity;
 
                 Assert.True(added.Id1 > 0);
                 Assert.NotEqual(Guid.Empty, added.Id3);
@@ -120,8 +111,8 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
-        public async Task Only_one_part_of_a_composite_key_needs_to_vary_for_uniquness()
+        [ConditionalFact]
+        public async Task Only_one_part_of_a_composite_key_needs_to_vary_for_uniqueness()
         {
             var serviceProvider = new ServiceCollection()
                 .AddEntityFrameworkInMemoryDatabase()
@@ -132,23 +123,11 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = new BronieContext(serviceProvider))
             {
                 var pony1 = context.Add(
-                    new EarthPony
-                    {
-                        Id2 = 7,
-                        Name = "Apple Jack 1"
-                    }).Entity;
+                    new EarthPony { Id2 = 7, Name = "Apple Jack 1" }).Entity;
                 var pony2 = context.Add(
-                    new EarthPony
-                    {
-                        Id2 = 7,
-                        Name = "Apple Jack 2"
-                    }).Entity;
+                    new EarthPony { Id2 = 7, Name = "Apple Jack 2" }).Entity;
                 var pony3 = context.Add(
-                    new EarthPony
-                    {
-                        Id2 = 7,
-                        Name = "Apple Jack 3"
-                    }).Entity;
+                    new EarthPony { Id2 = 7, Name = "Apple Jack 3" }).Entity;
 
                 await context.SaveChangesAsync();
 
@@ -210,61 +189,35 @@ namespace Microsoft.EntityFrameworkCore
             protected override void OnModelCreating(ModelBuilder modelBuilder)
             {
                 modelBuilder.Entity<Pegasus>().HasKey(
-                    e => new
-                    {
-                        e.Id1,
-                        e.Id2
-                    });
+                    e => new { e.Id1, e.Id2 });
                 modelBuilder
                     .Entity<Pegasus>(
                         b =>
                         {
                             b.HasKey(
-                                e => new
-                                {
-                                    e.Id1,
-                                    e.Id2
-                                });
+                                e => new { e.Id1, e.Id2 });
                             b.Property(e => e.Id1).ValueGeneratedOnAdd();
                             b.Property(e => e.Id2).ValueGeneratedOnAdd();
                         });
 
                 modelBuilder.Entity<Unicorn>().HasKey(
-                    e => new
-                    {
-                        e.Id1,
-                        e.Id2,
-                        e.Id3
-                    });
+                    e => new { e.Id1, e.Id2, e.Id3 });
                 modelBuilder.Entity<Unicorn>(
                     b =>
                     {
                         b.HasKey(
-                            e => new
-                            {
-                                e.Id1,
-                                e.Id2,
-                                e.Id3
-                            });
+                            e => new { e.Id1, e.Id2, e.Id3 });
                         b.Property(e => e.Id1).ValueGeneratedOnAdd();
                         b.Property(e => e.Id3).ValueGeneratedOnAdd();
                     });
 
                 modelBuilder.Entity<EarthPony>().HasKey(
-                    e => new
-                    {
-                        e.Id1,
-                        e.Id2
-                    });
+                    e => new { e.Id1, e.Id2 });
                 modelBuilder.Entity<EarthPony>(
                     b =>
                     {
                         b.HasKey(
-                            e => new
-                            {
-                                e.Id1,
-                                e.Id2
-                            });
+                            e => new { e.Id1, e.Id2 });
                         b.Property(e => e.Id1).ValueGeneratedOnAdd();
                         b.Property(e => e.Id2).ValueGeneratedOnAdd();
                     });

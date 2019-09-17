@@ -7,7 +7,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -36,7 +35,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
                 => new NonGenericTestModelBuilder(testHelpers);
         }
 
-        public class NonGenericQueryTypes : QueryTypesTestBase
+        public class NonGenericKeylessEntities : KeylessEntitiesTestBase
         {
             protected override TestModelBuilder CreateTestModelBuilder(TestHelpers testHelpers)
                 => new NonGenericTestModelBuilder(testHelpers);

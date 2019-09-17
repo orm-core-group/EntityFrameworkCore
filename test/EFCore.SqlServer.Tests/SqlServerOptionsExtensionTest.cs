@@ -5,7 +5,6 @@ using System;
 using System.Linq;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.SqlServer.Infrastructure.Internal;
 using Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,17 +14,17 @@ namespace Microsoft.EntityFrameworkCore
 {
     public class SqlServerOptionsExtensionTest
     {
-        [Fact]
+        [ConditionalFact]
         public void ApplyServices_adds_SQL_server_services()
         {
             var services = new ServiceCollection();
 
             new SqlServerOptionsExtension().ApplyServices(services);
 
-            Assert.True(services.Any(sd => sd.ServiceType == typeof(ISqlServerConnection)));
+            Assert.Contains(services, sd => sd.ServiceType == typeof(ISqlServerConnection));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Changing_RowNumberPagingEnabled_causes_new_service_provider_to_be_built()
         {
             ISqlServerOptions singletonOptions;
@@ -46,7 +45,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Changing_RowNumberPagingEnabled_when_UseInternalServiceProvider_throws()
         {
             using (var context = new ChangedRowNumberContext(rowNumberPagingEnabled: false, setInternalServiceProvider: true))

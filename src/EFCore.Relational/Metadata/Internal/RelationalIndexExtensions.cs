@@ -1,11 +1,11 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
 using System.Linq;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Internal;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 {
@@ -25,8 +25,8 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
         /// </summary>
         public static bool AreCompatible([NotNull] this IIndex index, [NotNull] IIndex duplicateIndex, bool shouldThrow)
         {
-            if (!index.Properties.Select(p => p.Relational().ColumnName)
-                .SequenceEqual(duplicateIndex.Properties.Select(p => p.Relational().ColumnName)))
+            if (!index.Properties.Select(p => p.GetColumnName())
+                .SequenceEqual(duplicateIndex.Properties.Select(p => p.GetColumnName())))
             {
                 if (shouldThrow)
                 {
@@ -36,8 +36,8 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                             index.DeclaringEntityType.DisplayName(),
                             duplicateIndex.Properties.Format(),
                             duplicateIndex.DeclaringEntityType.DisplayName(),
-                            Format(index.DeclaringEntityType.Relational()),
-                            index.Relational().Name,
+                            Format(index.DeclaringEntityType),
+                            index.GetName(),
                             index.Properties.FormatColumns(),
                             duplicateIndex.Properties.FormatColumns()));
                 }
@@ -55,8 +55,8 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                             index.DeclaringEntityType.DisplayName(),
                             duplicateIndex.Properties.Format(),
                             duplicateIndex.DeclaringEntityType.DisplayName(),
-                            Format(index.DeclaringEntityType.Relational()),
-                            index.Relational().Name));
+                            Format(index.DeclaringEntityType),
+                            index.GetName()));
                 }
 
                 return false;
@@ -65,7 +65,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             return true;
         }
 
-        private static string Format(IRelationalEntityTypeAnnotations annotations)
-            => (string.IsNullOrEmpty(annotations.Schema) ? "" : annotations.Schema + ".") + annotations.TableName;
+        private static string Format(IEntityType entityType)
+            => (string.IsNullOrEmpty(entityType.GetSchema()) ? "" : entityType.GetSchema() + ".") + entityType.GetTableName();
     }
 }

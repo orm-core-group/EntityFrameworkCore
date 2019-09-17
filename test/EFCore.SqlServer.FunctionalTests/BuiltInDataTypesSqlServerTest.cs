@@ -6,13 +6,12 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.TestUtilities;
-using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,7 +34,7 @@ namespace Microsoft.EntityFrameworkCore
             //Fixture.TestSqlLoggerFactory.SetTestOutputHelper(testOutputHelper);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Sql_translation_uses_type_mapper_when_constant()
         {
             using (var context = CreateContext())
@@ -46,17 +45,16 @@ namespace Microsoft.EntityFrameworkCore
                         .Select(e => e.Int)
                         .ToList();
 
-                Assert.Equal(0, results.Count);
-                Assert.Equal(
+                Assert.Empty(results);
+
+                AssertSql(
                     @"SELECT [m].[Int]
 FROM [MappedNullableDataTypes] AS [m]
-WHERE [m].[TimeSpanAsTime] = '00:01:02'",
-                    Sql,
-                    ignoreLineEndingDifferences: true);
+WHERE ([m].[TimeSpanAsTime] = '00:01:02') AND [m].[TimeSpanAsTime] IS NOT NULL");
             }
         }
 
-        [Fact(Skip = "Issue#13487")]
+        [ConditionalFact(Skip = "Issue#13487")]
         public void Translate_array_length()
         {
             using (var db = CreateContext())
@@ -66,16 +64,14 @@ WHERE [m].[TimeSpanAsTime] = '00:01:02'",
                     .Select(p => p.BytesAsImage.Length)
                     .FirstOrDefault();
 
-                Assert.Equal(
+                AssertSql(
                     @"SELECT TOP(1) CAST(DATALENGTH([p].[BytesAsImage]) AS int)
 FROM [MappedDataTypesWithIdentity] AS [p]
-WHERE CAST(DATALENGTH([p].[BytesAsImage]) AS int) = 0",
-                    Sql,
-                    ignoreLineEndingDifferences: true);
+WHERE CAST(DATALENGTH([p].[BytesAsImage]) AS int) = 0");
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Sql_translation_uses_type_mapper_when_parameter()
         {
             using (var context = CreateContext())
@@ -88,19 +84,155 @@ WHERE CAST(DATALENGTH([p].[BytesAsImage]) AS int) = 0",
                         .Select(e => e.Int)
                         .ToList();
 
-                Assert.Equal(0, results.Count);
-                Assert.Equal(
+                Assert.Empty(results);
+                AssertSql(
                     @"@__timeSpan_0='02:01:00' (Nullable = true)
 
 SELECT [m].[Int]
 FROM [MappedNullableDataTypes] AS [m]
-WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
-                    Sql,
-                    ignoreLineEndingDifferences: true);
+WHERE (([m].[TimeSpanAsTime] = @__timeSpan_0) AND ([m].[TimeSpanAsTime] IS NOT NULL AND @__timeSpan_0 IS NOT NULL)) OR ([m].[TimeSpanAsTime] IS NULL AND @__timeSpan_0 IS NULL)");
             }
         }
 
-        [Fact]
+        [ConditionalFact]
+        public virtual void Can_query_using_DateDiffHour_using_TimeSpan()
+        {
+            using (var context = CreateContext())
+            {
+                var timeSpan = new TimeSpan(2, 1, 0);
+
+                var results
+                    = context.Set<MappedNullableDataTypes>()
+                        .Where(e => EF.Functions.DateDiffHour(e.TimeSpanAsTime, timeSpan) == 0)
+                        .Select(e => e.Int)
+                        .ToList();
+
+                Assert.Empty(results);
+                AssertSql(
+                    @"@__timeSpan_1='02:01:00' (Nullable = true)
+
+SELECT [m].[Int]
+FROM [MappedNullableDataTypes] AS [m]
+WHERE (DATEDIFF(HOUR, [m].[TimeSpanAsTime], @__timeSpan_1) = 0) AND DATEDIFF(HOUR, [m].[TimeSpanAsTime], @__timeSpan_1) IS NOT NULL");
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Can_query_using_DateDiffMinute_using_TimeSpan()
+        {
+            using (var context = CreateContext())
+            {
+                var timeSpan = new TimeSpan(2, 1, 0);
+
+                var results
+                    = context.Set<MappedNullableDataTypes>()
+                        .Where(e => EF.Functions.DateDiffMinute(e.TimeSpanAsTime, timeSpan) == 0)
+                        .Select(e => e.Int)
+                        .ToList();
+
+                Assert.Empty(results);
+                AssertSql(
+                    @"@__timeSpan_1='02:01:00' (Nullable = true)
+
+SELECT [m].[Int]
+FROM [MappedNullableDataTypes] AS [m]
+WHERE (DATEDIFF(MINUTE, [m].[TimeSpanAsTime], @__timeSpan_1) = 0) AND DATEDIFF(MINUTE, [m].[TimeSpanAsTime], @__timeSpan_1) IS NOT NULL");
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Can_query_using_DateDiffSecond_using_TimeSpan()
+        {
+            using (var context = CreateContext())
+            {
+                var timeSpan = new TimeSpan(2, 1, 0);
+
+                var results
+                    = context.Set<MappedNullableDataTypes>()
+                        .Where(e => EF.Functions.DateDiffSecond(e.TimeSpanAsTime, timeSpan) == 0)
+                        .Select(e => e.Int)
+                        .ToList();
+
+                Assert.Empty(results);
+                AssertSql(
+                    @"@__timeSpan_1='02:01:00' (Nullable = true)
+
+SELECT [m].[Int]
+FROM [MappedNullableDataTypes] AS [m]
+WHERE (DATEDIFF(SECOND, [m].[TimeSpanAsTime], @__timeSpan_1) = 0) AND DATEDIFF(SECOND, [m].[TimeSpanAsTime], @__timeSpan_1) IS NOT NULL");
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Can_query_using_DateDiffMillisecond_using_TimeSpan()
+        {
+            using (var context = CreateContext())
+            {
+                var timeSpan = new TimeSpan(2, 1, 0);
+
+                var results
+                    = context.Set<MappedNullableDataTypes>()
+                        .Where(e => EF.Functions.DateDiffMillisecond(e.TimeSpanAsTime, timeSpan) == 0)
+                        .Select(e => e.Int)
+                        .ToList();
+
+                Assert.Empty(results);
+                AssertSql(
+                    @"@__timeSpan_1='02:01:00' (Nullable = true)
+
+SELECT [m].[Int]
+FROM [MappedNullableDataTypes] AS [m]
+WHERE (DATEDIFF(MILLISECOND, [m].[TimeSpanAsTime], @__timeSpan_1) = 0) AND DATEDIFF(MILLISECOND, [m].[TimeSpanAsTime], @__timeSpan_1) IS NOT NULL");
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Can_query_using_DateDiffMicrosecond_using_TimeSpan()
+        {
+            using (var context = CreateContext())
+            {
+                var timeSpan = new TimeSpan(2, 1, 0);
+
+                var results
+                    = context.Set<MappedNullableDataTypes>()
+                        .Where(e => EF.Functions.DateDiffMicrosecond(e.TimeSpanAsTime, timeSpan) == 0)
+                        .Select(e => e.Int)
+                        .ToList();
+
+                Assert.Empty(results);
+                AssertSql(
+                    @"@__timeSpan_1='02:01:00' (Nullable = true)
+
+SELECT [m].[Int]
+FROM [MappedNullableDataTypes] AS [m]
+WHERE (DATEDIFF(MICROSECOND, [m].[TimeSpanAsTime], @__timeSpan_1) = 0) AND DATEDIFF(MICROSECOND, [m].[TimeSpanAsTime], @__timeSpan_1) IS NOT NULL");
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Can_query_using_DateDiffNanosecond_using_TimeSpan()
+        {
+            using (var context = CreateContext())
+            {
+                var timeSpan = new TimeSpan(2, 1, 0);
+
+                var results
+                    = context.Set<MappedNullableDataTypes>()
+                        .Where(e => EF.Functions.DateDiffNanosecond(e.TimeSpanAsTime, timeSpan) == 0)
+                        .Select(e => e.Int)
+                        .ToList();
+
+                Assert.Empty(results);
+                AssertSql(
+                    @"@__timeSpan_1='02:01:00' (Nullable = true)
+
+SELECT [m].[Int]
+FROM [MappedNullableDataTypes] AS [m]
+WHERE (DATEDIFF(NANOSECOND, [m].[TimeSpanAsTime], @__timeSpan_1) = 0) AND DATEDIFF(NANOSECOND, [m].[TimeSpanAsTime], @__timeSpan_1) IS NOT NULL");
+            }
+        }
+
+        [ConditionalFact]
         public virtual void Can_query_using_any_mapped_data_type()
         {
             using (var context = CreateContext())
@@ -263,12 +395,11 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
                 ulong? param42 = ulong.MaxValue;
                 Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.UlongAsBigint == param42));
 
-                // TODO: Issue#15330
-                //ushort? param43 = ushort.MaxValue;
-                //Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.UShortAsSmallint == param43));
+                ushort? param43 = ushort.MaxValue;
+                Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.UShortAsSmallint == param43));
 
-                //sbyte? param44 = sbyte.MinValue;
-                //Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.SbyteAsTinyint == param44));
+                sbyte? param44 = sbyte.MinValue;
+                Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.SbyteAsTinyint == param44));
 
                 uint? param45 = uint.MaxValue;
                 Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.UintAsBigint == param45));
@@ -286,60 +417,53 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
                 Assert.Same(
                     entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.GuidAsUniqueidentifier == param49));
 
-                //char? param50 = 'A';
-                //Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.CharAsVarcharMax == param50));
+                char? param50 = 'A';
+                Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.CharAsVarcharMax == param50));
 
-                //char? param51 = 'B';
-                //Assert.Same(
-                //    entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.CharAsAsCharVaryingMax == param51));
+                char? param51 = 'B';
+                Assert.Same(
+                    entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.CharAsAsCharVaryingMax == param51));
 
-                //char? param52 = 'C';
-                //Assert.Same(
-                //    entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.CharAsCharacterVaryingMax == param52));
+                char? param52 = 'C';
+                Assert.Same(
+                    entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.CharAsCharacterVaryingMax == param52));
 
-                //char? param53 = 'D';
-                //Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.CharAsNvarcharMax == param53));
+                char? param53 = 'D';
+                Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.CharAsNvarcharMax == param53));
 
-                //char? param54 = 'E';
-                //Assert.Same(
-                //    entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.CharAsNationalCharVaryingMax == param54));
+                char? param54 = 'E';
+                Assert.Same(
+                    entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.CharAsNationalCharVaryingMax == param54));
 
-                //char? param55 = 'F';
-                //Assert.Same(
-                //    entity,
-                //    context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.CharAsNationalCharacterVaryingMax == param55));
+                char? param55 = 'F';
+                Assert.Same(
+                    entity,
+                    context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.CharAsNationalCharacterVaryingMax == param55));
 
-                //char? param58 = 'I';
-                //Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.CharAsInt == param58));
+                char? param58 = 'I';
+                Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.CharAsInt == param58));
 
-                //StringEnumU16? param59 = StringEnumU16.Value4;
-                //Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.EnumAsNvarchar20 == param59));
+                StringEnumU16? param59 = StringEnumU16.Value4;
+                Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.EnumAsNvarchar20 == param59));
 
-                //StringEnum16? param60 = StringEnum16.Value2;
-                //Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.EnumAsVarcharMax == param60));
+                StringEnum16? param60 = StringEnum16.Value2;
+                Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.EnumAsVarcharMax == param60));
 
-                // Issue #14935. Cannot eval 'where [e].SqlVariantString.Equals(__param61_0)'
-                // Added AsEnumerable()
                 object param61 = "Bang!";
-                Assert.Same(entity, context.Set<MappedNullableDataTypes>().AsEnumerable().Single(e => e.Int == 999 && e.SqlVariantString.Equals(param61)));
+                Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.SqlVariantString.Equals(param61)));
 
-                // Issue #14935. Cannot eval 'where [e].SqlVariantInt.Equals(__param62_0)'
-                // Added AsEnumerable()
                 object param62 = 887876;
-                Assert.Same(entity, context.Set<MappedNullableDataTypes>().AsEnumerable().Single(e => e.Int == 999 && e.SqlVariantInt.Equals(param62)));
+                Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 999 && e.SqlVariantInt.Equals(param62)));
             }
         }
 
-        [Fact(Skip = "TaskList#8")]
+        [ConditionalFact]
         public virtual void Can_query_using_any_mapped_data_types_with_nulls()
         {
             using (var context = CreateContext())
             {
                 context.Set<MappedNullableDataTypes>().Add(
-                    new MappedNullableDataTypes
-                    {
-                        Int = 911
-                    });
+                    new MappedNullableDataTypes { Int = 911 });
 
                 Assert.Equal(1, context.SaveChanges());
             }
@@ -423,10 +547,22 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
                     context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.StringAsNationalCharacterVaryingMax == param29));
 
                 string param30 = null;
-                Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.StringAsText == param30));
+                var message30 = Assert.Throws<SqlException>(
+                    () => context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.StringAsText == param30)).Message;
+
+                // Expect: "The data types text and text are incompatible in the equal to operator."
+                Assert.NotEqual(
+                    message30.IndexOf("text", StringComparison.Ordinal),
+                    message30.LastIndexOf("text", StringComparison.Ordinal));
 
                 string param31 = null;
-                Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.StringAsNtext == param31));
+                var message31 = Assert.Throws<SqlException>(
+                    () => context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.StringAsNtext == param31)).Message;
+
+                // Expect: "The data types ntext and ntext are incompatible in the equal to operator."
+                Assert.NotEqual(
+                    message31.IndexOf("ntext", StringComparison.Ordinal),
+                    message31.LastIndexOf("ntext", StringComparison.Ordinal));
 
                 byte[] param35 = null;
                 Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.BytesAsVarbinaryMax == param35));
@@ -436,7 +572,13 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
                     entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.BytesAsBinaryVaryingMax == param36));
 
                 byte[] param37 = null;
-                Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.BytesAsImage == param37));
+                var message37 = Assert.Throws<SqlException>(
+                    () => context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.BytesAsImage == param37)).Message;
+
+                // Expect: "The data types image and image are incompatible in the equal to operator."
+                Assert.NotEqual(
+                    message37.IndexOf("image", StringComparison.Ordinal),
+                    message37.LastIndexOf("image", StringComparison.Ordinal));
 
                 decimal? param38 = null;
                 Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.Decimal == param38));
@@ -498,11 +640,11 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
                     entity,
                     context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.CharAsNationalCharacterVaryingMax == param55));
 
-                char? param56 = null;
-                Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.CharAsText == param56));
+                //char? param56 = null;
+                //Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.CharAsText == param56));
 
-                char? param57 = null;
-                Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.CharAsNtext == param57));
+                //char? param57 = null;
+                //Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.CharAsNtext == param57));
 
                 char? param58 = null;
                 Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.CharAsInt == param58));
@@ -513,19 +655,14 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
                 StringEnum16? param60 = null;
                 Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.EnumAsVarcharMax == param60));
 
-                // Issue #14935. Cannot eval 'where ([e].SqlVariantString == __param61_0)'
-                // Added AsEnumerable()
                 object param61 = null;
-                Assert.Same(entity, context.Set<MappedNullableDataTypes>().AsEnumerable().Single(e => e.Int == 911 && e.SqlVariantString == param61));
-
-                // Issue #14935. Cannot eval 'where ([e].SqlVariantInt == __param62_0)'
-                // Added AsEnumerable()
+                Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.SqlVariantString == param61));
                 object param62 = null;
-                Assert.Same(entity, context.Set<MappedNullableDataTypes>().AsEnumerable().Single(e => e.Int == 911 && e.SqlVariantInt == param62));
+                Assert.Same(entity, context.Set<MappedNullableDataTypes>().Single(e => e.Int == 911 && e.SqlVariantInt == param62));
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_data_types()
         {
             var entity = CreateMappedDataTypes(77);
@@ -716,7 +853,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
                 SqlVariantInt = 887876
             };
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_nullable_data_types()
         {
             using (var context = CreateContext())
@@ -902,7 +1039,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
                 SqlVariantInt = 887876
             };
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_data_types_set_to_null()
         {
             using (var context = CreateContext())
@@ -1031,7 +1168,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             Assert.Null(entity.SqlVariantInt);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_sized_data_types()
         {
             using (var context = CreateContext())
@@ -1121,7 +1258,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
                 CharAsNationalCharacterVarying3 = 'F'
             };
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_nulls_for_all_mapped_sized_data_types()
         {
             using (var context = CreateContext())
@@ -1186,7 +1323,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             Assert.Null(entity.CharAsNationalCharacterVarying3);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_data_types_with_scale()
         {
             using (var context = CreateContext())
@@ -1198,29 +1335,16 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
 
             var parameters = DumpParameters();
             Assert.Equal(
-#if NETCOREAPP3_0
                 @"@p0='77'
 @p1='2017-01-02T12:11:12' (Size = 3)
 @p2='2016-01-02T11:11:12.0000000+00:00' (Size = 3)
 @p3='102.2' (Size = 3)
-@p4='101.1'
+@p4='101.1' (Size = 3)
 @p5='103.3' (Size = 3)
 @p6='85.55000305175781' (Size = 25)
 @p7='85.5' (Size = 3)
 @p8='83.33000183105469' (Size = 25)
 @p9='83.3' (Size = 3)",
-#else
-                @"@p0='77'
-@p1='2017-01-02T12:11:12' (Size = 3)
-@p2='2016-01-02T11:11:12.0000000+00:00' (Size = 3)
-@p3='102.2' (Size = 3)
-@p4='101.1'
-@p5='103.3' (Size = 3)
-@p6='85.5500030517578' (Size = 25)
-@p7='85.5' (Size = 3)
-@p8='83.3300018310547' (Size = 25)
-@p9='83.3' (Size = 3)",
-#endif
                 parameters,
                 ignoreLineEndingDifferences: true);
 
@@ -1259,7 +1383,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
                 DecimalAsNumeric3 = 103.3m
             };
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_data_types_with_precision_and_scale()
         {
             using (var context = CreateContext())
@@ -1295,13 +1419,10 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
         private static MappedPrecisionAndScaledDataTypes CreateMappedPrecisionAndScaledDataTypes(int id)
             => new MappedPrecisionAndScaledDataTypes
             {
-                Id = id,
-                DecimalAsDecimal52 = 101.1m,
-                DecimalAsDec52 = 102.2m,
-                DecimalAsNumeric52 = 103.3m
+                Id = id, DecimalAsDecimal52 = 101.1m, DecimalAsDec52 = 102.2m, DecimalAsNumeric52 = 103.3m
             };
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_data_types_with_identity()
         {
             using (var context = CreateContext())
@@ -1487,7 +1608,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
                 SqlVariantInt = 887876
             };
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_nullable_data_types_with_identity()
         {
             using (var context = CreateContext())
@@ -1575,7 +1696,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             Assert.Equal(82.2m, entity.DecimalAsSmallmoney);
             Assert.Equal(83.3, entity.DoubleAsFloat);
             Assert.Equal(84.4f, entity.FloatAsReal);
-            Assert.Equal(85.5, entity.DoubkleAsDoublePrecision);
+            Assert.Equal(85.5, entity.DoubleAsDoublePrecision);
             Assert.Equal(new DateTime(2015, 1, 2), entity.DateTimeAsDate);
             Assert.Equal(new DateTimeOffset(new DateTime(2016, 1, 2, 11, 11, 12), TimeSpan.Zero), entity.DateTimeOffsetAsDatetimeoffset);
             Assert.Equal(new DateTime(2017, 1, 2, 12, 11, 12), entity.DateTimeAsDatetime2);
@@ -1632,7 +1753,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
                 DecimalAsSmallmoney = 82.2m,
                 DoubleAsFloat = 83.3,
                 FloatAsReal = 84.4f,
-                DoubkleAsDoublePrecision = 85.5,
+                DoubleAsDoublePrecision = 85.5,
                 DateTimeAsDate = new DateTime(2015, 1, 2, 10, 11, 12),
                 DateTimeOffsetAsDatetimeoffset = new DateTimeOffset(new DateTime(2016, 1, 2, 11, 11, 12), TimeSpan.Zero),
                 DateTimeAsDatetime2 = new DateTime(2017, 1, 2, 12, 11, 12),
@@ -1673,7 +1794,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
                 SqlVariantInt = 887876
             };
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_data_types_set_to_null_with_identity()
         {
             using (var context = CreateContext())
@@ -1763,7 +1884,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             Assert.Null(entity.DecimalAsSmallmoney);
             Assert.Null(entity.DoubleAsFloat);
             Assert.Null(entity.FloatAsReal);
-            Assert.Null(entity.DoubkleAsDoublePrecision);
+            Assert.Null(entity.DoubleAsDoublePrecision);
             Assert.Null(entity.DateTimeAsDate);
             Assert.Null(entity.DateTimeOffsetAsDatetimeoffset);
             Assert.Null(entity.DateTimeAsDatetime2);
@@ -1804,7 +1925,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             Assert.Null(entity.SqlVariantInt);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_sized_data_types_with_identity()
         {
             using (var context = CreateContext())
@@ -1894,7 +2015,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
                 CharAsNationalCharacterVarying3 = 'F'
             };
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_nulls_for_all_mapped_sized_data_types_with_identity()
         {
             using (var context = CreateContext())
@@ -1959,7 +2080,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             Assert.Null(entity.CharAsNationalCharacterVarying3);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_data_types_with_scale_with_identity()
         {
             using (var context = CreateContext())
@@ -1971,29 +2092,16 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
 
             var parameters = DumpParameters();
             Assert.Equal(
-#if NETCOREAPP3_0
                 @"@p0='2017-01-02T12:11:12' (Size = 3)
 @p1='2016-01-02T11:11:12.0000000+00:00' (Size = 3)
 @p2='102.2' (Size = 3)
-@p3='101.1'
+@p3='101.1' (Size = 3)
 @p4='103.3' (Size = 3)
 @p5='85.55000305175781' (Size = 25)
 @p6='85.5' (Size = 3)
 @p7='83.33000183105469' (Size = 25)
 @p8='83.3' (Size = 3)
 @p9='77'",
-#else
-                @"@p0='2017-01-02T12:11:12' (Size = 3)
-@p1='2016-01-02T11:11:12.0000000+00:00' (Size = 3)
-@p2='102.2' (Size = 3)
-@p3='101.1'
-@p4='103.3' (Size = 3)
-@p5='85.5500030517578' (Size = 25)
-@p6='85.5' (Size = 3)
-@p7='83.3300018310547' (Size = 25)
-@p8='83.3' (Size = 3)
-@p9='77'",
-#endif
                 parameters,
                 ignoreLineEndingDifferences: true);
 
@@ -2032,7 +2140,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
                 DecimalAsNumeric3 = 103.3m
             };
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_data_types_with_precision_and_scale_with_identity()
         {
             using (var context = CreateContext())
@@ -2071,13 +2179,10 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
         private static MappedPrecisionAndScaledDataTypesWithIdentity CreateMappedPrecisionAndScaledDataTypesWithIdentity(int id)
             => new MappedPrecisionAndScaledDataTypesWithIdentity
             {
-                Int = id,
-                DecimalAsDecimal52 = 101.1m,
-                DecimalAsDec52 = 102.2m,
-                DecimalAsNumeric52 = 103.3m
+                Int = id, DecimalAsDecimal52 = 101.1m, DecimalAsDec52 = 102.2m, DecimalAsNumeric52 = 103.3m
             };
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_data_types_in_batch()
         {
             using (var context = CreateContext())
@@ -2097,7 +2202,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_nullable_data_types_in_batch()
         {
             using (var context = CreateContext())
@@ -2117,7 +2222,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_data_types_set_to_null_in_batch()
         {
             using (var context = CreateContext())
@@ -2137,7 +2242,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_sized_data_types_in_batch()
         {
             using (var context = CreateContext())
@@ -2157,7 +2262,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_nulls_for_all_mapped_sized_data_types_in_batch()
         {
             using (var context = CreateContext())
@@ -2177,7 +2282,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_data_types_with_scale_in_batch()
         {
             using (var context = CreateContext())
@@ -2197,7 +2302,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_data_types_with_precision_and_scale_in_batch()
         {
             using (var context = CreateContext())
@@ -2217,7 +2322,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_data_types_with_identity_in_batch()
         {
             using (var context = CreateContext())
@@ -2237,7 +2342,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_nullable_data_types_with_identity_in_batch()
         {
             using (var context = CreateContext())
@@ -2260,7 +2365,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_data_types_set_to_null_with_identity_in_batch()
         {
             using (var context = CreateContext())
@@ -2283,7 +2388,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_sized_data_types_with_identity_in_batch()
         {
             using (var context = CreateContext())
@@ -2303,7 +2408,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_nulls_for_all_mapped_sized_data_types_with_identity_in_batch()
         {
             using (var context = CreateContext())
@@ -2323,7 +2428,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_data_types_with_scale_with_identity_in_batch()
         {
             using (var context = CreateContext())
@@ -2343,7 +2448,7 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_and_read_back_all_mapped_data_types_with_precision_and_scale_with_identity_in_batch()
         {
             using (var context = CreateContext())
@@ -2369,10 +2474,13 @@ WHERE [m].[TimeSpanAsTime] = @__timeSpan_0",
         [ConditionalFact]
         public virtual void Columns_have_expected_data_types()
         {
-            var actual = QueryForColumnTypes(CreateContext());
+            var actual = QueryForColumnTypes(
+                CreateContext(),
+                nameof(ObjectBackedDataTypes), nameof(NullableBackedDataTypes), nameof(NonNullableBackedDataTypes));
 
             const string expected = @"BinaryForeignKeyDataType.BinaryKeyDataTypeId ---> [nullable varbinary] [MaxLength = 900]
 BinaryForeignKeyDataType.Id ---> [int] [Precision = 10 Scale = 0]
+BinaryKeyDataType.Ex ---> [nullable nvarchar] [MaxLength = -1]
 BinaryKeyDataType.Id ---> [varbinary] [MaxLength = 900]
 BuiltInDataTypes.Enum16 ---> [smallint] [Precision = 5 Scale = 0]
 BuiltInDataTypes.Enum32 ---> [int] [Precision = 10 Scale = 0]
@@ -2665,7 +2773,7 @@ MappedNullableDataTypesWithIdentity.DecimalAsDec ---> [nullable decimal] [Precis
 MappedNullableDataTypesWithIdentity.DecimalAsMoney ---> [nullable money] [Precision = 19 Scale = 4]
 MappedNullableDataTypesWithIdentity.DecimalAsNumeric ---> [nullable numeric] [Precision = 18 Scale = 0]
 MappedNullableDataTypesWithIdentity.DecimalAsSmallmoney ---> [nullable smallmoney] [Precision = 10 Scale = 4]
-MappedNullableDataTypesWithIdentity.DoubkleAsDoublePrecision ---> [nullable float] [Precision = 53]
+MappedNullableDataTypesWithIdentity.DoubleAsDoublePrecision ---> [nullable float] [Precision = 53]
 MappedNullableDataTypesWithIdentity.DoubleAsFloat ---> [nullable float] [Precision = 53]
 MappedNullableDataTypesWithIdentity.EnumAsNvarchar20 ---> [nullable nvarchar] [MaxLength = 20]
 MappedNullableDataTypesWithIdentity.EnumAsVarcharMax ---> [nullable varchar] [MaxLength = -1]
@@ -2784,7 +2892,7 @@ UnicodeDataTypes.StringUnicode ---> [nullable nvarchar] [MaxLength = -1]
             Assert.Equal(expected, actual, ignoreLineEndingDifferences: true);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_column_types_from_built_model()
         {
             using (var context = CreateContext())
@@ -2793,7 +2901,7 @@ UnicodeDataTypes.StringUnicode ---> [nullable nvarchar] [MaxLength = -1]
 
                 foreach (var property in context.Model.GetEntityTypes().SelectMany(e => e.GetDeclaredProperties()))
                 {
-                    var columnType = property.Relational().ColumnType;
+                    var columnType = property.GetColumnType();
                     Assert.NotNull(columnType);
 
                     if (property[RelationalAnnotationNames.ColumnType] == null)
@@ -2806,7 +2914,7 @@ UnicodeDataTypes.StringUnicode ---> [nullable nvarchar] [MaxLength = -1]
             }
         }
 
-        public static string QueryForColumnTypes(DbContext context)
+        public static string QueryForColumnTypes(DbContext context, params string[] tablesToIgnore)
         {
             const string query
                 = @"SELECT
@@ -2845,7 +2953,10 @@ UnicodeDataTypes.StringUnicode ---> [nullable nvarchar] [MaxLength = -1]
                             DateTimePrecision = reader.IsDBNull(7) ? null : (int?)reader.GetInt16(7)
                         };
 
-                        columns.Add(columnInfo);
+                        if (!tablesToIgnore.Contains(columnInfo.TableName))
+                        {
+                            columns.Add(columnInfo);
+                        }
                     }
                 }
             }
@@ -2906,7 +3017,8 @@ UnicodeDataTypes.StringUnicode ---> [nullable nvarchar] [MaxLength = -1]
             return actual;
         }
 
-        private string Sql => Fixture.TestSqlLoggerFactory.Sql;
+        private void AssertSql(params string[] expected)
+            => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);
 
         public class BuiltInDataTypesSqlServerFixture : BuiltInDataTypesFixtureBase
         {
@@ -2917,6 +3029,8 @@ UnicodeDataTypes.StringUnicode ---> [nullable nvarchar] [MaxLength = -1]
             public override bool SupportsUnicodeToAnsiConversion => true;
 
             public override bool SupportsLargeStringComparisons => true;
+
+            public override bool SupportsDecimalComparisons => true;
 
             protected override ITestStoreFactory TestStoreFactory
                 => SqlServerTestStoreFactory.Instance;
@@ -3747,7 +3861,7 @@ UnicodeDataTypes.StringUnicode ---> [nullable nvarchar] [MaxLength = -1]
             public float? FloatAsReal { get; set; }
 
             [Column(TypeName = "double precision")]
-            public double? DoubkleAsDoublePrecision { get; set; }
+            public double? DoubleAsDoublePrecision { get; set; }
 
             [Column(TypeName = "date")]
             public DateTime? DateTimeAsDate { get; set; }

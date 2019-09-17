@@ -1,9 +1,11 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.TestUtilities;
+using Xunit;
 
 namespace Microsoft.EntityFrameworkCore
 {
@@ -19,12 +21,35 @@ namespace Microsoft.EntityFrameworkCore
             // Computed columns not supported
         }
 
+        [ConditionalFact]
+        public void Identity_key_works_when_not_aliasing_rowid()
+        {
+            ExecuteWithStrategyInTransaction(
+                context =>
+                {
+                    var entry = context.Add(new Zach());
+
+                    context.SaveChanges();
+                    var id = entry.Entity.Id;
+
+                    Assert.Equal(16, id?.Length ?? 0);
+                });
+        }
+
         protected override void UseTransaction(DatabaseFacade facade, IDbContextTransaction transaction)
             => facade.UseTransaction(transaction.GetDbTransaction());
 
         public class StoreGeneratedSqliteFixture : StoreGeneratedFixtureBase
         {
             protected override ITestStoreFactory TestStoreFactory => SqliteTestStoreFactory.Instance;
+
+            public override DbContextOptionsBuilder AddOptions(DbContextOptionsBuilder builder)
+                => builder
+                    .EnableSensitiveDataLogging()
+                    .ConfigureWarnings(
+                        b => b.Default(WarningBehavior.Throw)
+                            .Ignore(CoreEventId.SensitiveDataLoggingEnabledWarning)
+                            .Ignore(RelationalEventId.BoolWithDefaultWarning));
 
             protected override void OnModelCreating(ModelBuilder modelBuilder, DbContext context)
             {
@@ -82,8 +107,24 @@ namespace Microsoft.EntityFrameworkCore
                         b.Property(e => e.OnUpdateThrowBeforeThrowAfter).HasDefaultValue("Rabbit");
                     });
 
+                modelBuilder.Entity<WithNullableBackingFields>(
+                    b =>
+                    {
+                        b.Property(e => e.NullableBackedBool).HasDefaultValue(true);
+                        b.Property(e => e.NullableBackedInt).HasDefaultValue(-1);
+                    });
+
+                modelBuilder.Entity<Zach>().Property(e => e.Id)
+                    .ValueGeneratedOnAdd()
+                    .HasDefaultValueSql("randomblob(16)");
+
                 base.OnModelCreating(modelBuilder, context);
             }
+        }
+
+        private class Zach
+        {
+            public byte[] Id { get; set; }
         }
     }
 }

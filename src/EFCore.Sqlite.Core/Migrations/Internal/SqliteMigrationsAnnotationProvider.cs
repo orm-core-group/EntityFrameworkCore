@@ -7,7 +7,6 @@ using System.Linq;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Sqlite.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Sqlite.Storage.Internal;
@@ -23,9 +22,9 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Migrations.Internal
     ///         doing so can result in application failures when updating to a new Entity Framework Core release.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Singleton"/>. This means a single instance
-    ///         is used by many <see cref="DbContext"/> instances. The implementation must be thread-safe.
-    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped"/>.
+    ///         The service lifetime is <see cref="ServiceLifetime.Singleton" />. This means a single instance
+    ///         is used by many <see cref="DbContext" /> instances. The implementation must be thread-safe.
+    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped" />.
     ///     </para>
     /// </summary>
     public class SqliteMigrationsAnnotationProvider : MigrationsAnnotationProvider
@@ -50,7 +49,7 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Migrations.Internal
         public override IEnumerable<IAnnotation> For(IModel model)
         {
             if (model.GetEntityTypes().SelectMany(t => t.GetProperties()).Any(
-                p => SqliteTypeMappingSource.IsSpatialiteType(p.Relational().ColumnType)))
+                p => SqliteTypeMappingSource.IsSpatialiteType(p.GetColumnType())))
             {
                 yield return new Annotation(SqliteAnnotationNames.InitSpatialMetaData, true);
             }
@@ -71,13 +70,13 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Migrations.Internal
                 yield return new Annotation(SqliteAnnotationNames.Autoincrement, true);
             }
 
-            var srid = property.Sqlite().Srid;
+            var srid = property.GetSrid();
             if (srid != null)
             {
                 yield return new Annotation(SqliteAnnotationNames.Srid, srid);
             }
 
-            var dimension = property.Sqlite().Dimension;
+            var dimension = property.GetGeometricDimension();
             if (dimension != null)
             {
                 yield return new Annotation(SqliteAnnotationNames.Dimension, dimension);
@@ -85,7 +84,6 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Migrations.Internal
         }
 
         private static bool HasConverter(IProperty property)
-            => (property.FindMapping()?.Converter
-                ?? property.GetValueConverter()) != null;
+            => property.FindTypeMapping()?.Converter != null;
     }
 }

@@ -9,7 +9,6 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions;
-using Microsoft.EntityFrameworkCore.Metadata.Conventions.Internal;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.EntityFrameworkCore.TestUtilities;
@@ -21,7 +20,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
 {
     public class ModelBuilderGenericTest : ModelBuilderTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Can_create_a_model_builder_with_given_conventions_only()
         {
             var convention = new TestConvention();
@@ -40,15 +39,14 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
         {
             public bool Applied { get; private set; }
 
-            public InternalEntityTypeBuilder Apply(InternalEntityTypeBuilder entityTypeBuilder)
+            public void ProcessEntityTypeAdded(
+                IConventionEntityTypeBuilder entityTypeBuilder, IConventionContext<IConventionEntityTypeBuilder> context)
             {
                 Applied = true;
-
-                return entityTypeBuilder;
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_discover_large_models_through_navigations()
         {
             var modelBuilder = InMemoryTestHelpers.Instance.CreateConventionBuilder();
@@ -63,7 +61,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             protected override TestModelBuilder CreateTestModelBuilder(TestHelpers testHelpers)
                 => new GenericTestModelBuilder(testHelpers);
 
-            [Fact]
+            [ConditionalFact]
             public virtual void Changing_propertyInfo_updates_Property()
             {
                 var modelBuilder = CreateModelBuilder();
@@ -73,12 +71,10 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
                 modelBuilder.FinalizeModel();
 
                 var property = modelBuilder.Model.FindEntityType(typeof(DoubleProperty)).GetProperty("Property");
-                Assert.True(
-                    property.GetIdentifyingMemberInfo().Name
-                        .EndsWith(typeof(IReplacable).Name + "." + nameof(IReplacable.Property)));
+                Assert.EndsWith(typeof(IReplacable).Name + "." + nameof(IReplacable.Property), property.GetIdentifyingMemberInfo().Name);
             }
 
-            [Fact]
+            [ConditionalFact]
             public virtual void Can_add_ignore_explicit_interface_implementation_property()
             {
                 var modelBuilder = CreateModelBuilder();
@@ -88,7 +84,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
 
                 modelBuilder.Entity<EntityBase>().Property(e => ((IEntityBase)e).Target);
 
-                Assert.Equal(1, modelBuilder.Model.FindEntityType(typeof(EntityBase)).GetProperties().Count());
+                Assert.Single(modelBuilder.Model.FindEntityType(typeof(EntityBase)).GetProperties());
             }
         }
 
@@ -104,7 +100,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
                 => new GenericTestModelBuilder(testHelpers);
         }
 
-        public class GenericQueryTypes : QueryTypesTestBase
+        public class GenericKeylessEntities : KeylessEntitiesTestBase
         {
             protected override TestModelBuilder CreateTestModelBuilder(TestHelpers testHelpers)
                 => new GenericTestModelBuilder(testHelpers);

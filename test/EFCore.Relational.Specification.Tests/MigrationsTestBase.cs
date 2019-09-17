@@ -7,10 +7,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -333,7 +331,7 @@ namespace Microsoft.EntityFrameworkCore
                 }
                 finally
                 {
-                    db.Database.CloseConnection();
+                    await db.Database.CloseConnectionAsync();
                 }
             }
         }
@@ -352,6 +350,41 @@ namespace Microsoft.EntityFrameworkCore
             var commandList = generator.Generate(operations);
 
             return executor.ExecuteNonQueryAsync(commandList, connection);
+        }
+
+        [ConditionalFact]
+        public abstract void Can_diff_against_2_2_model();
+
+        [ConditionalFact]
+        public abstract void Can_diff_against_3_0_ASP_NET_Identity_model();
+
+        [ConditionalFact]
+        public abstract void Can_diff_against_2_2_ASP_NET_Identity_model();
+
+        [ConditionalFact]
+        public abstract void Can_diff_against_2_1_ASP_NET_Identity_model();
+
+        protected virtual void DiffSnapshot(ModelSnapshot snapshot, DbContext context)
+        {
+            var sourceModel = snapshot.Model;
+            var targetModel = context.Model;
+
+            var typeMapper = context.GetService<IRelationalTypeMappingSource>();
+
+            foreach (var property in sourceModel.GetEntityTypes().SelectMany(e => e.GetDeclaredProperties()))
+            {
+                Assert.NotNull(typeMapper.FindMapping(property));
+            }
+
+            foreach (var property in targetModel.GetEntityTypes().SelectMany(e => e.GetDeclaredProperties()))
+            {
+                Assert.NotNull(typeMapper.FindMapping(property));
+            }
+
+            var modelDiffer = context.GetService<IMigrationsModelDiffer>();
+            var operations = modelDiffer.GetDifferences(sourceModel, targetModel);
+
+            Assert.Equal(0, operations.Count);
         }
 
         protected virtual void BuildFirstMigration(MigrationBuilder migrationBuilder)

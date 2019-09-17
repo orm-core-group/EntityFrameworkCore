@@ -3,7 +3,6 @@
 
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Utilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,8 +26,8 @@ namespace Microsoft.EntityFrameworkCore.Query
     ///         services using the 'With...' methods. Do not call the constructor at any point in this process.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Scoped"/>. This means that each
-    ///         <see cref="DbContext"/> instance will use its own instance of this service.
+    ///         The service lifetime is <see cref="ServiceLifetime.Scoped" />. This means that each
+    ///         <see cref="DbContext" /> instance will use its own instance of this service.
     ///         The implementation may depend on other services registered with any lifetime.
     ///         The implementation does not need to be thread-safe.
     ///     </para>
@@ -51,16 +50,21 @@ namespace Microsoft.EntityFrameworkCore.Query
         ///         injection container, then replace selected services using the 'With...' methods. Do not call
         ///         the constructor at any point in this process.
         ///     </para>
+        ///     <para>
+        ///         This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///         the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///         any release. You should only use it directly in your code with extreme caution and knowing that
+        ///         doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     </para>
         /// </summary>
-        /// <param name="model"> The model that queries will be written against. </param>
-        /// <param name="currentContext"> The context that queries will be executed for. </param>
+        [EntityFrameworkInternal]
         public CompiledQueryCacheKeyGeneratorDependencies([NotNull] IModel model, [NotNull] ICurrentDbContext currentContext)
         {
             Check.NotNull(model, nameof(model));
             Check.NotNull(currentContext, nameof(currentContext));
 
             Model = model;
-            Context = currentContext;
+            CurrentContext = currentContext;
         }
 
         /// <summary>
@@ -71,7 +75,7 @@ namespace Microsoft.EntityFrameworkCore.Query
         /// <summary>
         ///     The context that queries will be executed for.
         /// </summary>
-        public ICurrentDbContext Context { get; }
+        public ICurrentDbContext CurrentContext { get; }
 
         /// <summary>
         ///     Clones this dependency parameter object with one service replaced.
@@ -79,7 +83,7 @@ namespace Microsoft.EntityFrameworkCore.Query
         /// <param name="model"> A replacement for the current dependency of this type. </param>
         /// <returns> A new parameter object with the given service replaced. </returns>
         public CompiledQueryCacheKeyGeneratorDependencies With([NotNull] IModel model)
-            => new CompiledQueryCacheKeyGeneratorDependencies(model, Context);
+            => new CompiledQueryCacheKeyGeneratorDependencies(model, CurrentContext);
 
         /// <summary>
         ///     Clones this dependency parameter object with one service replaced.

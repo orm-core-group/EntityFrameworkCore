@@ -3,7 +3,6 @@
 
 using System;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 using Xunit;
@@ -28,9 +27,9 @@ namespace Microsoft.EntityFrameworkCore
         {
             var modelBuilder = base.Non_public_annotations_are_enabled();
 
-            var relational = GetProperty<PrivateMemberAnnotationClass>(modelBuilder, "PersonFirstName").Relational();
-            Assert.Equal("dsdsd", relational.ColumnName);
-            Assert.Equal("nvarchar(128)", relational.ColumnType);
+            var relational = GetProperty<PrivateMemberAnnotationClass>(modelBuilder, "PersonFirstName");
+            Assert.Equal("dsdsd", relational.GetColumnName());
+            Assert.Equal("nvarchar(128)", relational.GetColumnType());
 
             return modelBuilder;
         }
@@ -39,9 +38,9 @@ namespace Microsoft.EntityFrameworkCore
         {
             var modelBuilder = base.Field_annotations_are_enabled();
 
-            var relational = GetProperty<FieldAnnotationClass>(modelBuilder, "_personFirstName").Relational();
-            Assert.Equal("dsdsd", relational.ColumnName);
-            Assert.Equal("nvarchar(128)", relational.ColumnType);
+            var relational = GetProperty<FieldAnnotationClass>(modelBuilder, "_personFirstName");
+            Assert.Equal("dsdsd", relational.GetColumnName());
+            Assert.Equal("nvarchar(128)", relational.GetColumnType());
 
             return modelBuilder;
         }
@@ -50,9 +49,9 @@ namespace Microsoft.EntityFrameworkCore
         {
             var modelBuilder = base.Key_and_column_work_together();
 
-            var relational = GetProperty<ColumnKeyAnnotationClass1>(modelBuilder, "PersonFirstName").Relational();
-            Assert.Equal("dsdsd", relational.ColumnName);
-            Assert.Equal("nvarchar(128)", relational.ColumnType);
+            var relational = GetProperty<ColumnKeyAnnotationClass1>(modelBuilder, "PersonFirstName");
+            Assert.Equal("dsdsd", relational.GetColumnName());
+            Assert.Equal("nvarchar(128)", relational.GetColumnType());
 
             return modelBuilder;
         }
@@ -63,7 +62,7 @@ namespace Microsoft.EntityFrameworkCore
 
             var property = GetProperty<ColumnKeyAnnotationClass2>(modelBuilder, "PersonFirstName");
 
-            var storeType = property.FindRelationalMapping().StoreType;
+            var storeType = property.GetRelationalTypeMapping().StoreType;
 
             Assert.Equal("TEXT", storeType);
 
@@ -76,7 +75,7 @@ namespace Microsoft.EntityFrameworkCore
 
             var property = GetProperty<TimestampAndMaxlen>(modelBuilder, "MaxTimestamp");
 
-            var storeType = property.FindRelationalMapping().StoreType;
+            var storeType = property.GetRelationalTypeMapping().StoreType;
 
             Assert.Equal("BLOB", storeType);
 
@@ -87,8 +86,8 @@ namespace Microsoft.EntityFrameworkCore
         {
             var modelBuilder = base.TableNameAttribute_affects_table_name_in_TPH();
 
-            var relational = modelBuilder.Model.FindEntityType(typeof(TNAttrBase)).Relational();
-            Assert.Equal("A", relational.TableName);
+            var relational = modelBuilder.Model.FindEntityType(typeof(TNAttrBase));
+            Assert.Equal("A", relational.GetTableName());
 
             return modelBuilder;
         }
@@ -97,74 +96,76 @@ namespace Microsoft.EntityFrameworkCore
         {
             base.ConcurrencyCheckAttribute_throws_if_value_in_database_changed();
 
-            Assert.Equal(@"SELECT ""r"".""UniqueNo"", ""r"".""MaxLengthProperty"", ""r"".""Name"", ""r"".""RowVersion"", ""t"".""UniqueNo"", ""t"".""Details_Name"", ""t0"".""UniqueNo"", ""t0"".""AdditionalDetails_Name""
-FROM ""Sample"" AS ""r""
+            AssertSql(
+                @"SELECT ""s"".""UniqueNo"", ""s"".""MaxLengthProperty"", ""s"".""Name"", ""s"".""RowVersion"", ""t"".""UniqueNo"", ""t"".""AdditionalDetails_Name"", ""t0"".""UniqueNo"", ""t0"".""Details_Name""
+FROM ""Sample"" AS ""s""
 LEFT JOIN (
-    SELECT ""r.Details"".*
-    FROM ""Sample"" AS ""r.Details""
-    WHERE ""r.Details"".""Details_Name"" IS NOT NULL
-) AS ""t"" ON ""r"".""UniqueNo"" = ""t"".""UniqueNo""
+    SELECT ""s0"".""UniqueNo"", ""s0"".""AdditionalDetails_Name"", ""s1"".""UniqueNo"" AS ""UniqueNo0""
+    FROM ""Sample"" AS ""s0""
+    INNER JOIN ""Sample"" AS ""s1"" ON ""s0"".""UniqueNo"" = ""s1"".""UniqueNo""
+    WHERE ""s0"".""AdditionalDetails_Name"" IS NOT NULL
+) AS ""t"" ON ""s"".""UniqueNo"" = ""t"".""UniqueNo""
 LEFT JOIN (
-    SELECT ""r.AdditionalDetails"".*
-    FROM ""Sample"" AS ""r.AdditionalDetails""
-    WHERE ""r.AdditionalDetails"".""AdditionalDetails_Name"" IS NOT NULL
-) AS ""t0"" ON ""r"".""UniqueNo"" = ""t0"".""UniqueNo""
-WHERE ""r"".""UniqueNo"" = 1
-LIMIT 1
-
-SELECT ""r"".""UniqueNo"", ""r"".""MaxLengthProperty"", ""r"".""Name"", ""r"".""RowVersion"", ""t"".""UniqueNo"", ""t"".""Details_Name"", ""t0"".""UniqueNo"", ""t0"".""AdditionalDetails_Name""
-FROM ""Sample"" AS ""r""
+    SELECT ""s2"".""UniqueNo"", ""s2"".""Details_Name"", ""s3"".""UniqueNo"" AS ""UniqueNo0""
+    FROM ""Sample"" AS ""s2""
+    INNER JOIN ""Sample"" AS ""s3"" ON ""s2"".""UniqueNo"" = ""s3"".""UniqueNo""
+    WHERE ""s2"".""Details_Name"" IS NOT NULL
+) AS ""t0"" ON ""s"".""UniqueNo"" = ""t0"".""UniqueNo""
+WHERE ""s"".""UniqueNo"" = 1
+LIMIT 1",
+                //
+                @"SELECT ""s"".""UniqueNo"", ""s"".""MaxLengthProperty"", ""s"".""Name"", ""s"".""RowVersion"", ""t"".""UniqueNo"", ""t"".""AdditionalDetails_Name"", ""t0"".""UniqueNo"", ""t0"".""Details_Name""
+FROM ""Sample"" AS ""s""
 LEFT JOIN (
-    SELECT ""r.Details"".*
-    FROM ""Sample"" AS ""r.Details""
-    WHERE ""r.Details"".""Details_Name"" IS NOT NULL
-) AS ""t"" ON ""r"".""UniqueNo"" = ""t"".""UniqueNo""
+    SELECT ""s0"".""UniqueNo"", ""s0"".""AdditionalDetails_Name"", ""s1"".""UniqueNo"" AS ""UniqueNo0""
+    FROM ""Sample"" AS ""s0""
+    INNER JOIN ""Sample"" AS ""s1"" ON ""s0"".""UniqueNo"" = ""s1"".""UniqueNo""
+    WHERE ""s0"".""AdditionalDetails_Name"" IS NOT NULL
+) AS ""t"" ON ""s"".""UniqueNo"" = ""t"".""UniqueNo""
 LEFT JOIN (
-    SELECT ""r.AdditionalDetails"".*
-    FROM ""Sample"" AS ""r.AdditionalDetails""
-    WHERE ""r.AdditionalDetails"".""AdditionalDetails_Name"" IS NOT NULL
-) AS ""t0"" ON ""r"".""UniqueNo"" = ""t0"".""UniqueNo""
-WHERE ""r"".""UniqueNo"" = 1
-LIMIT 1
-
-@p2='1' (DbType = String)
+    SELECT ""s2"".""UniqueNo"", ""s2"".""Details_Name"", ""s3"".""UniqueNo"" AS ""UniqueNo0""
+    FROM ""Sample"" AS ""s2""
+    INNER JOIN ""Sample"" AS ""s3"" ON ""s2"".""UniqueNo"" = ""s3"".""UniqueNo""
+    WHERE ""s2"".""Details_Name"" IS NOT NULL
+) AS ""t0"" ON ""s"".""UniqueNo"" = ""t0"".""UniqueNo""
+WHERE ""s"".""UniqueNo"" = 1
+LIMIT 1",
+                //
+                @"@p2='1' (DbType = String)
 @p0='ModifiedData' (Nullable = false) (Size = 12)
 @p1='00000000-0000-0000-0003-000000000001' (DbType = String)
 @p3='00000001-0000-0000-0000-000000000001' (DbType = String)
 
 UPDATE ""Sample"" SET ""Name"" = @p0, ""RowVersion"" = @p1
 WHERE ""UniqueNo"" = @p2 AND ""RowVersion"" = @p3;
-SELECT changes();
-
-@p2='1' (DbType = String)
+SELECT changes();",
+                //
+                @"@p2='1' (DbType = String)
 @p0='ChangedData' (Nullable = false) (Size = 11)
 @p1='00000000-0000-0000-0002-000000000001' (DbType = String)
 @p3='00000001-0000-0000-0000-000000000001' (DbType = String)
 
 UPDATE ""Sample"" SET ""Name"" = @p0, ""RowVersion"" = @p1
 WHERE ""UniqueNo"" = @p2 AND ""RowVersion"" = @p3;
-SELECT changes();",
-                Sql);
+SELECT changes();");
         }
 
         public override void DatabaseGeneratedAttribute_autogenerates_values_when_set_to_identity()
         {
             base.DatabaseGeneratedAttribute_autogenerates_values_when_set_to_identity();
 
-            Assert.Contains(
-                "@p0=''" + _eol +
-                "@p1='Third' (Nullable = false) (Size = 5)" + _eol +
-                "@p2='00000000-0000-0000-0000-000000000003' (DbType = String)" + _eol +
-                "@p3='Third Additional Name' (Size = 21)" + _eol +
-                "@p4='Third Name' (Size = 10)" + _eol +
-                _eol +
-                @"INSERT INTO ""Sample"" (""MaxLengthProperty"", ""Name"", ""RowVersion"", ""AdditionalDetails_Name"", ""Details_Name"")"
-                + _eol +
-                "VALUES (@p0, @p1, @p2, @p3, @p4);" + _eol +
-                @"SELECT ""UniqueNo""" + _eol +
-                @"FROM ""Sample""" + _eol +
-                @"WHERE changes() = 1 AND ""UniqueNo"" = last_insert_rowid();",
-                Sql);
+            AssertSql(
+                @"@p0=''
+@p1='Third' (Nullable = false) (Size = 5)
+@p2='00000000-0000-0000-0000-000000000003' (DbType = String)
+@p3='Third Additional Name' (Size = 21)
+@p4='Third Name' (Size = 10)
+
+INSERT INTO ""Sample"" (""MaxLengthProperty"", ""Name"", ""RowVersion"", ""AdditionalDetails_Name"", ""Details_Name"")
+VALUES (@p0, @p1, @p2, @p3, @p4);
+SELECT ""UniqueNo""
+FROM ""Sample""
+WHERE changes() = 1 AND ""rowid"" = last_insert_rowid();");
         }
 
         // Sqlite does not support length
@@ -180,48 +181,54 @@ SELECT changes();",
         {
             base.RequiredAttribute_for_navigation_throws_while_inserting_null_value();
 
-            Assert.Contains(
-                "@p1='1' (DbType = String)" + _eol,
-                Sql);
+            AssertSql(
+                @"@p0=''
+@p1='1' (DbType = String)
 
-            Assert.Contains(
-                "@p1='' (Nullable = false)" + _eol,
-                Sql);
+INSERT INTO ""BookDetails"" (""AdditionalBookDetailsId"", ""AnotherBookId"")
+VALUES (@p0, @p1);
+SELECT ""Id""
+FROM ""BookDetails""
+WHERE changes() = 1 AND ""rowid"" = last_insert_rowid();",
+                //
+                @"@p0=''
+@p1='' (Nullable = false)
+
+INSERT INTO ""BookDetails"" (""AdditionalBookDetailsId"", ""AnotherBookId"")
+VALUES (@p0, @p1);
+SELECT ""Id""
+FROM ""BookDetails""
+WHERE changes() = 1 AND ""rowid"" = last_insert_rowid();");
         }
 
         public override void RequiredAttribute_for_property_throws_while_inserting_null_value()
         {
             base.RequiredAttribute_for_property_throws_while_inserting_null_value();
 
-            Assert.Contains(
-                "@p0=''" + _eol +
-                "@p1='ValidString' (Nullable = false) (Size = 11)" + _eol +
-                "@p2='00000000-0000-0000-0000-000000000001' (DbType = String)" + _eol +
-                "@p3='Two' (Size = 3)" + _eol +
-                "@p4='One' (Size = 3)" + _eol +
-                _eol +
-                @"INSERT INTO ""Sample"" (""MaxLengthProperty"", ""Name"", ""RowVersion"", ""AdditionalDetails_Name"", ""Details_Name"")"
-                + _eol +
-                "VALUES (@p0, @p1, @p2, @p3, @p4);" + _eol +
-                @"SELECT ""UniqueNo""" + _eol +
-                @"FROM ""Sample""" + _eol +
-                @"WHERE changes() = 1 AND ""UniqueNo"" = last_insert_rowid();",
-                Sql);
+            AssertSql(
+                @"@p0=''
+@p1='ValidString' (Nullable = false) (Size = 11)
+@p2='00000000-0000-0000-0000-000000000001' (DbType = String)
+@p3='Two' (Size = 3)
+@p4='One' (Size = 3)
 
-            Assert.Contains(
-                "@p0=''" + _eol +
-                "@p1='' (Nullable = false)" + _eol +
-                "@p2='00000000-0000-0000-0000-000000000002' (DbType = String)" + _eol +
-                "@p3='Two' (Size = 3)" + _eol +
-                "@p4='One' (Size = 3)" + _eol +
-                _eol +
-                @"INSERT INTO ""Sample"" (""MaxLengthProperty"", ""Name"", ""RowVersion"", ""AdditionalDetails_Name"", ""Details_Name"")"
-                + _eol +
-                "VALUES (@p0, @p1, @p2, @p3, @p4);" + _eol +
-                @"SELECT ""UniqueNo""" + _eol +
-                @"FROM ""Sample""" + _eol +
-                @"WHERE changes() = 1 AND ""UniqueNo"" = last_insert_rowid();",
-                Sql);
+INSERT INTO ""Sample"" (""MaxLengthProperty"", ""Name"", ""RowVersion"", ""AdditionalDetails_Name"", ""Details_Name"")
+VALUES (@p0, @p1, @p2, @p3, @p4);
+SELECT ""UniqueNo""
+FROM ""Sample""
+WHERE changes() = 1 AND ""rowid"" = last_insert_rowid();",
+                //
+                @"@p0=''
+@p1='' (Nullable = false)
+@p2='00000000-0000-0000-0000-000000000002' (DbType = String)
+@p3='Two' (Size = 3)
+@p4='One' (Size = 3)
+
+INSERT INTO ""Sample"" (""MaxLengthProperty"", ""Name"", ""RowVersion"", ""AdditionalDetails_Name"", ""Details_Name"")
+VALUES (@p0, @p1, @p2, @p3, @p4);
+SELECT ""UniqueNo""
+FROM ""Sample""
+WHERE changes() = 1 AND ""rowid"" = last_insert_rowid();");
         }
 
         // Sqlite does not support length
@@ -244,7 +251,8 @@ SELECT changes();",
 
         private static readonly string _eol = Environment.NewLine;
 
-        private string Sql => Fixture.TestSqlLoggerFactory.Sql;
+        private void AssertSql(params string[] expected)
+            => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);
 
         public class DataAnnotationSqliteFixture : DataAnnotationFixtureBase
         {

@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.TestUtilities;
@@ -22,7 +23,7 @@ namespace Microsoft.EntityFrameworkCore
         protected override void UseTransaction(DatabaseFacade facade, IDbContextTransaction transaction)
             => facade.UseTransaction(transaction.GetDbTransaction());
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Exception_in_SaveChanges_causes_store_values_to_be_reverted()
         {
             var entities = new List<Darwin>();
@@ -32,10 +33,7 @@ namespace Microsoft.EntityFrameworkCore
             }
 
             entities.Add(
-                new Darwin
-                {
-                    Id = 1777
-                });
+                new Darwin { Id = 1777 });
 
             for (var i = 0; i < 2; i++)
             {
@@ -99,12 +97,20 @@ namespace Microsoft.EntityFrameworkCore
         {
             protected override ITestStoreFactory TestStoreFactory => SqlServerTestStoreFactory.Instance;
 
+            public override DbContextOptionsBuilder AddOptions(DbContextOptionsBuilder builder)
+                => builder
+                    .EnableSensitiveDataLogging()
+                    .ConfigureWarnings(
+                        b => b.Default(WarningBehavior.Throw)
+                            .Ignore(CoreEventId.SensitiveDataLoggingEnabledWarning)
+                            .Ignore(RelationalEventId.BoolWithDefaultWarning));
+
             protected override void OnModelCreating(ModelBuilder modelBuilder, DbContext context)
             {
                 modelBuilder.Entity<Gumball>(
                     b =>
                     {
-                        b.Property(e => e.Id).UseSqlServerIdentityColumn();
+                        b.Property(e => e.Id).UseIdentityColumn();
                         b.Property(e => e.Identity).HasDefaultValue("Banana Joe");
                         b.Property(e => e.IdentityReadOnlyBeforeSave).HasDefaultValue("Doughnut Sheriff");
                         b.Property(e => e.IdentityReadOnlyAfterSave).HasDefaultValue("Anton");
@@ -161,6 +167,13 @@ namespace Microsoft.EntityFrameworkCore
                     {
                         b.Property(e => e.NullableAsNonNullable).HasComputedColumnSql("1");
                         b.Property(e => e.NonNullableAsNullable).HasComputedColumnSql("1");
+                    });
+
+                modelBuilder.Entity<WithNullableBackingFields>(
+                    b =>
+                    {
+                        b.Property(e => e.NullableBackedBool).HasDefaultValue(true);
+                        b.Property(e => e.NullableBackedInt).HasDefaultValue(-1);
                     });
 
                 base.OnModelCreating(modelBuilder, context);

@@ -26,6 +26,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
         // Warning: Never access these fields directly as access needs to be thread-safe
         private IClrPropertyGetter _getter;
         private IClrPropertySetter _setter;
+        private IClrPropertySetter _materializationSetter;
         private PropertyAccessors _accessors;
         private PropertyIndexes _indexes;
 
@@ -162,9 +163,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             var oldFieldInfo = FieldInfo;
             _fieldInfo = fieldInfo;
 
-            PropertyMetadataChanged();
-
-            OnFieldInfoSet(oldFieldInfo);
+            OnFieldInfoSet(fieldInfo, oldFieldInfo);
         }
 
         /// <summary>
@@ -185,7 +184,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
         public static bool IsCompatible(
             [NotNull] FieldInfo fieldInfo,
             [NotNull] Type propertyType,
-            [NotNull] Type entityClrType,
+            [CanBeNull] Type entityClrType,
             [CanBeNull] string propertyName,
             bool shouldThrow)
         {
@@ -197,7 +196,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 if (shouldThrow)
                 {
                     throw new InvalidOperationException(
-                        CoreStrings.MissingBackingField(fieldInfo.Name, propertyName, entityClrType.ShortDisplayName()));
+                        CoreStrings.MissingBackingField(fieldInfo.Name, propertyName, entityClrType?.ShortDisplayName()));
                 }
 
                 return false;
@@ -261,15 +260,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
         ///     any release. You should only use it directly in your code with extreme caution and knowing that
         ///     doing so can result in application failures when updating to a new Entity Framework Core release.
         /// </summary>
-        protected abstract void PropertyMetadataChanged();
-
-        /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
-        /// </summary>
-        protected virtual void OnFieldInfoSet([CanBeNull] FieldInfo oldFieldInfo)
+        protected virtual void OnFieldInfoSet([CanBeNull] FieldInfo newFieldInfo, [CanBeNull] FieldInfo oldFieldInfo)
         {
         }
 
@@ -300,8 +291,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
         /// </summary>
         public virtual IClrPropertyGetter Getter =>
             NonCapturingLazyInitializer.EnsureInitialized(
-                ref _getter, this,
-                p => p.IsIndexedProperty() ? new IndexedPropertyGetterFactory().Create(p) : new ClrPropertyGetterFactory().Create(p));
+                ref _getter, this, p => new ClrPropertyGetterFactory().Create(p));
 
         /// <summary>
         ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -311,8 +301,17 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
         /// </summary>
         public virtual IClrPropertySetter Setter =>
             NonCapturingLazyInitializer.EnsureInitialized(
-                ref _setter, this,
-                p => p.IsIndexedProperty() ? new IndexedPropertySetterFactory().Create(p) : new ClrPropertySetterFactory().Create(p));
+                ref _setter, this, p => new ClrPropertySetterFactory().Create(p));
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        public virtual IClrPropertySetter MaterializationSetter =>
+            NonCapturingLazyInitializer.EnsureInitialized(
+                ref _materializationSetter, this, p => new ClrPropertyMaterializationSetterFactory().Create(p));
 
         /// <summary>
         ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -323,10 +322,36 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
         public virtual PropertyAccessors Accessors
             => NonCapturingLazyInitializer.EnsureInitialized(ref _accessors, this, p => new PropertyAccessorsFactory().Create(p));
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         ITypeBase IPropertyBase.DeclaringType => DeclaringType;
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         IMutableTypeBase IMutablePropertyBase.DeclaringType => DeclaringType;
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         IConventionTypeBase IConventionPropertyBase.DeclaringType => DeclaringType;
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         void IConventionPropertyBase.SetField(FieldInfo fieldInfo, bool fromDataAnnotation)
             => SetField(fieldInfo, fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention);
     }

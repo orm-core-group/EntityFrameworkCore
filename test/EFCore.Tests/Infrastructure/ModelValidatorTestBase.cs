@@ -9,12 +9,13 @@ using System.Linq;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions;
-using Microsoft.EntityFrameworkCore.Metadata.Conventions.Internal;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.EntityFrameworkCore.Metadata.Conventions.Infrastructure;
 using Microsoft.EntityFrameworkCore.TestUtilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
+// ReSharper disable MemberHidesStaticFromOuterClass
 namespace Microsoft.EntityFrameworkCore.Infrastructure
 {
     public abstract class ModelValidatorTestBase
@@ -26,7 +27,7 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         {
             if (startingPropertyIndex == -1)
             {
-                startingPropertyIndex = entityType.PropertyCount() - 1;
+                startingPropertyIndex = entityType.GetProperties().Count() - 1;
             }
 
             var keyProperties = new IMutableProperty[propertyCount];
@@ -41,11 +42,16 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
             return entityType.AddKey(keyProperties);
         }
 
-        public void SetPrimaryKey(IMutableEntityType entityType)
+        public void AddProperties(IMutableEntityType entityTypeA)
         {
-            var property = entityType.AddProperty("Id", typeof(int));
-            entityType.SetPrimaryKey(property);
+            entityTypeA.AddProperty(nameof(A.P0), typeof(int?));
+            entityTypeA.AddProperty(nameof(A.P1), typeof(int?));
+            entityTypeA.AddProperty(nameof(A.P2), typeof(int?));
+            entityTypeA.AddProperty(nameof(A.P3), typeof(int?));
         }
+
+        public void SetPrimaryKey(IMutableEntityType entityType)
+            => entityType.SetPrimaryKey(entityType.AddProperty("Id", typeof(int)));
 
         protected IMutableForeignKey CreateForeignKey(IMutableKey dependentKey, IMutableKey principalKey)
             => CreateForeignKey(dependentKey.DeclaringEntityType, dependentKey.Properties, principalKey);
@@ -129,6 +135,22 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
             public int SampleEntityId { get; set; }
         }
 
+        public class SampleEntityMinimal
+        {
+            public int Id { get; set; }
+            public ReferencedEntityMinimal ReferencedEntity { get; set; }
+        }
+
+        public class ReferencedEntityMinimal
+        {
+        }
+
+        public class AnotherSampleEntityMinimal
+        {
+            public int Id { get; set; }
+            public ReferencedEntityMinimal ReferencedEntity { get; set; }
+        }
+
         protected class E
         {
             public int Id { get; set; }
@@ -174,7 +196,7 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
 
         protected ListLoggerFactory LoggerFactory { get; }
 
-        protected virtual void VerifyWarning(string expectedMessage, IModel model, LogLevel level = LogLevel.Warning)
+        protected virtual void VerifyWarning(string expectedMessage, IMutableModel model, LogLevel level = LogLevel.Warning)
         {
             Validate(model);
 
@@ -182,12 +204,13 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
             Assert.Equal(expectedMessage, logEntry.Message);
         }
 
-        protected virtual void VerifyError(string expectedMessage, IModel model)
+        protected virtual void VerifyError(string expectedMessage, IMutableModel model)
         {
-            Assert.Equal(expectedMessage, Assert.Throws<InvalidOperationException>(() => Validate(model)).Message);
+            var message = Assert.Throws<InvalidOperationException>(() => Validate(model)).Message;
+            Assert.Equal(expectedMessage, message);
         }
 
-        protected virtual void Validate(IModel model) => ((Model)model).FinalizeModel();
+        protected virtual void Validate(IMutableModel model) => model.FinalizeModel();
 
         protected DiagnosticsLogger<DbLoggerCategory.Model.Validation> CreateValidationLogger(bool sensitiveDataLoggingEnabled = false)
         {
@@ -219,15 +242,16 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         {
             var conventionSet = new ConventionSet();
 
-            conventionSet.ModelBuiltConventions.Add(
-                new ValidatingConvention(
-                    TestHelpers.CreateModelValidator(),
-                    new Diagnostics.DiagnosticsLoggers(
-                        CreateModelLogger(sensitiveDataLoggingEnabled),
-                        CreateValidationLogger(sensitiveDataLoggingEnabled))));
+            var dependencies = CreateDependencies(sensitiveDataLoggingEnabled);
+            conventionSet.ModelFinalizedConventions.Add(new TypeMappingConvention(dependencies));
+            conventionSet.ModelFinalizedConventions.Add(new ValidatingConvention(dependencies));
 
             return new ModelBuilder(conventionSet);
         }
+
+        protected ProviderConventionSetBuilderDependencies CreateDependencies(bool sensitiveDataLoggingEnabled = false)
+            => TestHelpers.CreateContextServices().GetRequiredService<ProviderConventionSetBuilderDependencies>()
+                .With(CreateValidationLogger(sensitiveDataLoggingEnabled));
 
         protected virtual TestHelpers TestHelpers => InMemoryTestHelpers.Instance;
     }

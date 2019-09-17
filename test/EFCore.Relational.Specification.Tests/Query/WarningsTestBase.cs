@@ -1,11 +1,8 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
 using Microsoft.EntityFrameworkCore.TestModels.Northwind;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 using Xunit;
@@ -28,22 +25,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
         protected NorthwindContext CreateContext() => Fixture.CreateContext();
 
-        [Fact]
-        public virtual void Throws_when_warning_as_error()
-        {
-            using (var context = CreateContext())
-            {
-                Assert.Equal(
-                    CoreStrings.WarningAsErrorTemplate(
-                        RelationalEventId.QueryClientEvaluationWarning,
-                        RelationalResources.LogClientEvalWarning(new TestLogger<TestRelationalLoggingDefinitions>()).GenerateMessage("where [c].IsLondon"),
-                        "RelationalEventId.QueryClientEvaluationWarning"),
-                    Assert.Throws<InvalidOperationException>(
-                        () => context.Customers.Where(c => c.IsLondon).ToList()).Message);
-            }
-        }
-
-        [Fact]
+        [ConditionalFact]
         public virtual void Does_not_throw_for_top_level_single()
         {
             using (var context = CreateContext())
@@ -54,7 +36,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Paging_operation_without_orderby_issues_warning()
         {
             using (var context = CreateContext())
@@ -64,7 +46,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Paging_operation_without_orderby_issues_warning_async()
         {
             using (var context = CreateContext())
@@ -74,17 +56,17 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact(Skip = "issue #15312")]
+        [ConditionalFact]
         public virtual void FirstOrDefault_without_orderby_and_filter_issues_warning_subquery()
         {
             using (var context = CreateContext())
             {
                 var query = context.Customers.Where(c => c.CustomerID == "ALFKI" && c.Orders.FirstOrDefault().OrderID > 1000).ToList();
-                Assert.Equal(1, query.Count);
+                Assert.Single(query);
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void FirstOrDefault_without_orderby_but_with_filter_doesnt_issue_warning()
         {
             using (var context = CreateContext())
@@ -94,7 +76,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Single_SingleOrDefault_without_orderby_doesnt_issue_warning()
         {
             using (var context = CreateContext())
@@ -107,7 +89,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void LastOrDefault_with_order_by_does_not_issue_client_eval_warning()
         {
             using (var context = CreateContext())
@@ -121,7 +103,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Last_with_order_by_does_not_issue_client_eval_warning_if_at_top_level()
         {
             using (var context = CreateContext())
@@ -131,66 +113,16 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Max_does_not_issue_client_eval_warning_when_at_top_level()
         {
             using (var context = CreateContext())
             {
                 var query = context.Orders.Select(o => o.OrderID).Max();
-
-                Assert.NotNull(query);
             }
         }
 
-        [Fact]
-        public virtual void Last_without_order_by_issues_client_eval_warning()
-        {
-            using (var context = CreateContext())
-            {
-                Assert.Equal(
-                    CoreStrings.WarningAsErrorTemplate(
-                        RelationalEventId.QueryClientEvaluationWarning,
-                        RelationalResources.LogClientEvalWarning(new TestLogger<TestRelationalLoggingDefinitions>()).GenerateMessage("Last()"),
-                        "RelationalEventId.QueryClientEvaluationWarning"),
-                    Assert.Throws<InvalidOperationException>(
-                        () => context.Customers.Last()).Message);
-            }
-        }
-
-        [Fact]
-        public virtual void Last_with_order_by_issues_client_eval_warning_in_subquery()
-        {
-            using (var context = CreateContext())
-            {
-                Assert.Equal(
-                    CoreStrings.WarningAsErrorTemplate(
-                        RelationalEventId.QueryClientEvaluationWarning,
-                        RelationalResources.LogClientEvalWarning(new TestLogger<TestRelationalLoggingDefinitions>()).GenerateMessage("Last()"),
-                        "RelationalEventId.QueryClientEvaluationWarning"),
-                    Assert.Throws<InvalidOperationException>(
-                        () => context.Customers
-                            .Where(
-                                c => c.CustomerID == "ALFKI"
-                                     && c.Orders.OrderBy(o => o.OrderID).Last().OrderID > 1000).ToList()).Message);
-            }
-        }
-
-        [Fact]
-        public virtual void LastOrDefault_without_order_by_issues_client_eval_warning()
-        {
-            using (var context = CreateContext())
-            {
-                Assert.Equal(
-                    CoreStrings.WarningAsErrorTemplate(
-                        RelationalEventId.QueryClientEvaluationWarning,
-                        RelationalResources.LogClientEvalWarning(new TestLogger<TestRelationalLoggingDefinitions>()).GenerateMessage("LastOrDefault()"),
-                        "RelationalEventId.QueryClientEvaluationWarning"),
-                    Assert.Throws<InvalidOperationException>(
-                        () => context.Customers.LastOrDefault()).Message);
-            }
-        }
-
-        [Fact(Skip = "issue #15312")]
+        [ConditionalFact]
         public virtual void Comparing_collection_navigation_to_null_issues_possible_unintended_consequences_warning()
         {
             using (var context = CreateContext())
@@ -200,7 +132,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact(Skip = "issue #15312")]
+        [ConditionalFact]
         public virtual void Comparing_two_collections_together_issues_possible_unintended_reference_comparison_warning()
         {
             using (var context = CreateContext())

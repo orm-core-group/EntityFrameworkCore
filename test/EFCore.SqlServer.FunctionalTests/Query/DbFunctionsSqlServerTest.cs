@@ -2,12 +2,11 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore.SqlServer.Internal;
 using Microsoft.EntityFrameworkCore.TestUtilities;
-using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -64,7 +63,7 @@ WHERE [c].[ContactName] LIKE N'!%' ESCAPE N'!'");
                     .Where(c => EF.Functions.FreeText(c.Title, "Representative"))
                     .ToListAsync();
 
-                Assert.Equal(result.First().EmployeeID, 1u);
+                Assert.Equal(1u, result.First().EmployeeID);
 
                 AssertSql(
                     @"SELECT [c].[EmployeeID], [c].[City], [c].[Country], [c].[FirstName], [c].[ReportsTo], [c].[Title]
@@ -90,7 +89,7 @@ WHERE FREETEXT([c].[Title], N'Representative')");
                     .Where(c => EF.Functions.FreeText(c.Title, "Representative Sales"))
                     .Count();
 
-                Assert.Equal(result, 9);
+                Assert.Equal(9, result);
 
                 AssertSql(
                     @"SELECT COUNT(*)
@@ -107,7 +106,7 @@ WHERE FREETEXT([c].[Title], N'Representative Sales')");
             {
                 var result = context.Employees.SingleOrDefault(c => EF.Functions.FreeText(c.Title, "President", 1033));
 
-                Assert.Equal(result.EmployeeID, 2u);
+                Assert.Equal(2u, result.EmployeeID);
 
                 AssertSql(
                     @"SELECT TOP(2) [c].[EmployeeID], [c].[City], [c].[Country], [c].[FirstName], [c].[ReportsTo], [c].[Title]
@@ -126,7 +125,7 @@ WHERE FREETEXT([c].[Title], N'President', LANGUAGE 1033)");
                     .Where(c => EF.Functions.FreeText(c.Title, "Representative President", 1033))
                     .ToList();
 
-                Assert.Equal(result.First().EmployeeID, 1u);
+                Assert.Equal(1u, result.First().EmployeeID);
 
                 AssertSql(
                     @"SELECT [c].[EmployeeID], [c].[City], [c].[Country], [c].[FirstName], [c].[ReportsTo], [c].[Title]
@@ -147,7 +146,7 @@ WHERE FREETEXT([c].[Title], N'Representative President', LANGUAGE 1033)");
                              && EF.Functions.FreeText(c.Title, "Manager", 1033))
                     .FirstOrDefault();
 
-                Assert.Equal(result.EmployeeID, 5u);
+                Assert.Equal(5u, result.EmployeeID);
 
                 AssertSql(
                     @"SELECT TOP(1) [c].[EmployeeID], [c].[City], [c].[Country], [c].[FirstName], [c].[ReportsTo], [c].[Title]
@@ -167,7 +166,7 @@ WHERE (FREETEXT([c].[City], N'London')) AND (FREETEXT([c].[Title], N'Manager', L
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'LastOrDefault()'")]
+        [ConditionalFact]
         [SqlServerCondition(SqlServerCondition.SupportsFullTextSearch)]
         public void FreeText_through_navigation()
         {
@@ -180,7 +179,7 @@ WHERE (FREETEXT([c].[City], N'London')) AND (FREETEXT([c].[Title], N'Manager', L
                              && c.FirstName.Contains("Lau"))
                     .LastOrDefault();
 
-                Assert.Equal(result.EmployeeID, 8u);
+                Assert.Equal(8u, result.EmployeeID);
 
                 AssertSql(
                     @"SELECT [c].[EmployeeID], [c].[City], [c].[Country], [c].[FirstName], [c].[ReportsTo], [c].[Title]
@@ -190,7 +189,7 @@ WHERE ((FREETEXT([c.Manager].[Title], N'President')) AND (FREETEXT([c].[Title], 
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'LastOrDefault()'")]
+        [ConditionalFact]
         [SqlServerCondition(SqlServerCondition.SupportsFullTextSearch)]
         public void FreeText_through_navigation_with_language_terms()
         {
@@ -203,7 +202,7 @@ WHERE ((FREETEXT([c.Manager].[Title], N'President')) AND (FREETEXT([c].[Title], 
                              && c.FirstName.Contains("Lau"))
                     .LastOrDefault();
 
-                Assert.Equal(result.EmployeeID, 8u);
+                Assert.Equal(8u, result.EmployeeID);
 
                 AssertSql(
                     @"SELECT [c].[EmployeeID], [c].[City], [c].[Country], [c].[FirstName], [c].[ReportsTo], [c].[Title]
@@ -235,7 +234,7 @@ WHERE ((FREETEXT([c.Manager].[Title], N'President', LANGUAGE 1033)) AND (FREETEX
 
         [ConditionalFact]
         [SqlServerCondition(SqlServerCondition.SupportsFullTextSearch)]
-        public async Task FreeText_throws_when_using_non_column_for_proeprty_reference()
+        public async Task FreeText_throws_when_using_non_column_for_property_reference()
         {
             using (var context = CreateContext())
             {
@@ -260,9 +259,14 @@ WHERE ((FREETEXT([c.Manager].[Title], N'President', LANGUAGE 1033)) AND (FREETEX
         public void Contains_should_throw_on_client_eval()
         {
             var exNoLang = Assert.Throws<InvalidOperationException>(() => EF.Functions.Contains("teststring", "teststring"));
-            Assert.Equal(SqlServerStrings.ContainsFunctionOnClient, exNoLang.Message);
+            Assert.Equal(
+                SqlServerStrings.FunctionOnClient(nameof(SqlServerDbFunctionsExtensions.Contains)),
+                exNoLang.Message);
+
             var exLang = Assert.Throws<InvalidOperationException>(() => EF.Functions.Contains("teststring", "teststring", 1033));
-            Assert.Equal(SqlServerStrings.ContainsFunctionOnClient, exLang.Message);
+            Assert.Equal(
+                SqlServerStrings.FunctionOnClient(nameof(SqlServerDbFunctionsExtensions.Contains)),
+                exLang.Message);
         }
 
         [ConditionalFact]
@@ -306,7 +310,7 @@ WHERE ((FREETEXT([c.Manager].[Title], N'President', LANGUAGE 1033)) AND (FREETEX
                     .Where(c => EF.Functions.Contains(c.Title, "Representative"))
                     .ToListAsync();
 
-                Assert.Equal(result.First().EmployeeID, 1u);
+                Assert.Equal(1u, result.First().EmployeeID);
 
                 AssertSql(
                     @"SELECT [c].[EmployeeID], [c].[City], [c].[Country], [c].[FirstName], [c].[ReportsTo], [c].[Title]
@@ -323,7 +327,7 @@ WHERE CONTAINS([c].[Title], N'Representative')");
             {
                 var result = context.Employees.SingleOrDefault(c => EF.Functions.Contains(c.Title, "President", 1033));
 
-                Assert.Equal(result.EmployeeID, 2u);
+                Assert.Equal(2u, result.EmployeeID);
 
                 AssertSql(
                     @"SELECT TOP(2) [c].[EmployeeID], [c].[City], [c].[Country], [c].[FirstName], [c].[ReportsTo], [c].[Title]
@@ -388,7 +392,7 @@ WHERE CONTAINS([c].[Title], N'NEAR((Sales, President), 1)', LANGUAGE 1033)");
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'LastOrDefault()'")]
+        [ConditionalFact]
         [SqlServerCondition(SqlServerCondition.SupportsFullTextSearch)]
         public void Contains_through_navigation()
         {
@@ -401,7 +405,7 @@ WHERE CONTAINS([c].[Title], N'NEAR((Sales, President), 1)', LANGUAGE 1033)");
                     .LastOrDefault();
 
                 Assert.NotNull(result);
-                Assert.Equal(result.EmployeeID, 8u);
+                Assert.Equal(8u, result.EmployeeID);
 
                 AssertSql(
                     @"SELECT [c].[EmployeeID], [c].[City], [c].[Country], [c].[FirstName], [c].[ReportsTo], [c].[Title]
@@ -423,8 +427,8 @@ WHERE (CONTAINS([c.Manager].[Title], N'President')) AND (CONTAINS([c].[Title], N
 
                 AssertSql(
                     @"SELECT COUNT(*)
-FROM [Orders] AS [c]
-WHERE DATEDIFF(YEAR, [c].[OrderDate], GETDATE()) = 0");
+FROM [Orders] AS [o]
+WHERE (DATEDIFF(YEAR, [o].[OrderDate], GETDATE()) = 0) AND DATEDIFF(YEAR, [o].[OrderDate], GETDATE()) IS NOT NULL");
             }
         }
 
@@ -439,8 +443,8 @@ WHERE DATEDIFF(YEAR, [c].[OrderDate], GETDATE()) = 0");
                 Assert.Equal(0, count);
                 AssertSql(
                     @"SELECT COUNT(*)
-FROM [Orders] AS [c]
-WHERE DATEDIFF(MONTH, [c].[OrderDate], GETDATE()) = 0");
+FROM [Orders] AS [o]
+WHERE (DATEDIFF(MONTH, [o].[OrderDate], GETDATE()) = 0) AND DATEDIFF(MONTH, [o].[OrderDate], GETDATE()) IS NOT NULL");
             }
         }
 
@@ -455,8 +459,8 @@ WHERE DATEDIFF(MONTH, [c].[OrderDate], GETDATE()) = 0");
                 Assert.Equal(0, count);
                 AssertSql(
                     @"SELECT COUNT(*)
-FROM [Orders] AS [c]
-WHERE DATEDIFF(DAY, [c].[OrderDate], GETDATE()) = 0");
+FROM [Orders] AS [o]
+WHERE (DATEDIFF(DAY, [o].[OrderDate], GETDATE()) = 0) AND DATEDIFF(DAY, [o].[OrderDate], GETDATE()) IS NOT NULL");
             }
         }
 
@@ -471,8 +475,8 @@ WHERE DATEDIFF(DAY, [c].[OrderDate], GETDATE()) = 0");
                 Assert.Equal(0, count);
                 AssertSql(
                     @"SELECT COUNT(*)
-FROM [Orders] AS [c]
-WHERE DATEDIFF(HOUR, [c].[OrderDate], GETDATE()) = 0");
+FROM [Orders] AS [o]
+WHERE (DATEDIFF(HOUR, [o].[OrderDate], GETDATE()) = 0) AND DATEDIFF(HOUR, [o].[OrderDate], GETDATE()) IS NOT NULL");
             }
         }
 
@@ -487,8 +491,8 @@ WHERE DATEDIFF(HOUR, [c].[OrderDate], GETDATE()) = 0");
                 Assert.Equal(0, count);
                 AssertSql(
                     @"SELECT COUNT(*)
-FROM [Orders] AS [c]
-WHERE DATEDIFF(MINUTE, [c].[OrderDate], GETDATE()) = 0");
+FROM [Orders] AS [o]
+WHERE (DATEDIFF(MINUTE, [o].[OrderDate], GETDATE()) = 0) AND DATEDIFF(MINUTE, [o].[OrderDate], GETDATE()) IS NOT NULL");
             }
         }
 
@@ -503,8 +507,8 @@ WHERE DATEDIFF(MINUTE, [c].[OrderDate], GETDATE()) = 0");
                 Assert.Equal(0, count);
                 AssertSql(
                     @"SELECT COUNT(*)
-FROM [Orders] AS [c]
-WHERE DATEDIFF(SECOND, [c].[OrderDate], GETDATE()) = 0");
+FROM [Orders] AS [o]
+WHERE (DATEDIFF(SECOND, [o].[OrderDate], GETDATE()) = 0) AND DATEDIFF(SECOND, [o].[OrderDate], GETDATE()) IS NOT NULL");
             }
         }
 
@@ -519,8 +523,8 @@ WHERE DATEDIFF(SECOND, [c].[OrderDate], GETDATE()) = 0");
                 Assert.Equal(0, count);
                 AssertSql(
                     @"SELECT COUNT(*)
-FROM [Orders] AS [c]
-WHERE DATEDIFF(MILLISECOND, GETDATE(), DATEADD(day, 1.0E0, GETDATE())) = 0");
+FROM [Orders] AS [o]
+WHERE DATEDIFF(MILLISECOND, GETDATE(), DATEADD(day, CAST(1.0E0 AS int), GETDATE())) = 0");
             }
         }
 
@@ -535,8 +539,8 @@ WHERE DATEDIFF(MILLISECOND, GETDATE(), DATEADD(day, 1.0E0, GETDATE())) = 0");
                 Assert.Equal(0, count);
                 AssertSql(
                     @"SELECT COUNT(*)
-FROM [Orders] AS [c]
-WHERE DATEDIFF(MICROSECOND, GETDATE(), DATEADD(second, 1.0E0, GETDATE())) = 0");
+FROM [Orders] AS [o]
+WHERE DATEDIFF(MICROSECOND, GETDATE(), DATEADD(second, CAST(1.0E0 AS int), GETDATE())) = 0");
             }
         }
 
@@ -551,9 +555,199 @@ WHERE DATEDIFF(MICROSECOND, GETDATE(), DATEADD(second, 1.0E0, GETDATE())) = 0");
                 Assert.Equal(0, count);
                 AssertSql(
                     @"SELECT COUNT(*)
-FROM [Orders] AS [c]
-WHERE DATEDIFF(NANOSECOND, GETDATE(), DATEADD(second, 1.0E0, GETDATE())) = 0");
+FROM [Orders] AS [o]
+WHERE DATEDIFF(NANOSECOND, GETDATE(), DATEADD(second, CAST(1.0E0 AS int), GETDATE())) = 0");
             }
+        }
+
+        [ConditionalFact]
+        public virtual void DateDiff_Week_datetime()
+        {
+            using (var context = CreateContext())
+            {
+                var count = context.Orders
+                    .Count(c => EF.Functions.DateDiffWeek(
+                        c.OrderDate,
+                        new DateTime(1998, 5, 6, 0, 0, 0)) == 5);
+
+                Assert.Equal(16, count);
+
+                AssertSql(
+                    @"SELECT COUNT(*)
+FROM [Orders] AS [o]
+WHERE (DATEDIFF(WEEK, [o].[OrderDate], '1998-05-06T00:00:00.000') = 5) AND DATEDIFF(WEEK, [o].[OrderDate], '1998-05-06T00:00:00.000') IS NOT NULL");
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void DateDiff_Week_datetimeoffset()
+        {
+            using (var context = CreateContext())
+            {
+                var count = context.Orders
+                    .Count(c => EF.Functions.DateDiffWeek(
+                        c.OrderDate,
+                        new DateTimeOffset(1998, 5, 6, 0, 0, 0, TimeSpan.Zero)) == 5);
+
+                Assert.Equal(16, count);
+
+                AssertSql(
+                    @"SELECT COUNT(*)
+FROM [Orders] AS [o]
+WHERE (DATEDIFF(WEEK, CAST([o].[OrderDate] AS datetimeoffset), '1998-05-06T00:00:00.0000000+00:00') = 5) AND DATEDIFF(WEEK, CAST([o].[OrderDate] AS datetimeoffset), '1998-05-06T00:00:00.0000000+00:00') IS NOT NULL");
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void DateDiff_Week_parameters_null()
+        {
+            using (var context = CreateContext())
+            {
+                var count = context.Orders
+                    .Count(c => EF.Functions.DateDiffWeek(
+                        null,
+                        new DateTimeOffset(1998, 5, 6, 0, 0, 0, TimeSpan.Zero)) == 5);
+
+                Assert.Equal(0, count);
+
+                AssertSql(
+                    @"@__p_0='False'
+
+SELECT COUNT(*)
+FROM [Orders] AS [o]
+WHERE @__p_0 = CAST(1 AS bit)");
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void DateDiff_Week_server_vs_client_eval_datetime()
+        {
+            using (var context = CreateContext())
+            {
+                var endDate = new DateTime(1998, 5, 6, 0, 0, 0);
+
+                var orders = context.Orders
+                    .OrderBy(p => p.OrderID)
+                    .Take(200)
+                    .Select(c => new
+                    {
+                        Weeks = EF.Functions.DateDiffWeek(c.OrderDate, endDate),
+                        c.OrderDate
+                    });
+
+                foreach (var order in orders)
+                {
+                    var weeks = EF.Functions.DateDiffWeek(order.OrderDate, endDate);
+
+                    Assert.Equal(weeks, order.Weeks);
+                }
+
+                AssertSql(
+                    @"@__p_0='200'
+@__endDate_2='1998-05-06T00:00:00' (Nullable = true) (DbType = DateTime)
+
+SELECT TOP(@__p_0) DATEDIFF(WEEK, [o].[OrderDate], @__endDate_2) AS [Weeks], [o].[OrderDate]
+FROM [Orders] AS [o]
+ORDER BY [o].[OrderID]");
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void DateDiff_Week_server_vs_client_eval_datetimeoffset()
+        {
+            using (var context = CreateContext())
+            {
+                var endDate = new DateTimeOffset(1998, 5, 6, 0, 0, 0, TimeSpan.Zero);
+
+                var orders = context.Orders
+                    .OrderBy(p => p.OrderID)
+                    .Take(200)
+                    .Select(c => new
+                    {
+                        Weeks = EF.Functions.DateDiffWeek(c.OrderDate, endDate),
+                        c.OrderDate
+                    });
+
+                foreach (var order in orders)
+                {
+                    var weeks = EF.Functions.DateDiffWeek(order.OrderDate, endDate);
+
+                    Assert.Equal(weeks, order.Weeks);
+                }
+
+                AssertSql(
+                    @"@__p_0='200'
+@__endDate_2='1998-05-06T00:00:00.0000000+00:00' (Nullable = true)
+
+SELECT TOP(@__p_0) DATEDIFF(WEEK, CAST([o].[OrderDate] AS datetimeoffset), @__endDate_2) AS [Weeks], [o].[OrderDate]
+FROM [Orders] AS [o]
+ORDER BY [o].[OrderID]");
+            }
+        }
+        [ConditionalFact]
+        public virtual void IsDate_not_valid()
+        {
+            using (var context = CreateContext())
+            {
+                var actual = context
+                    .Orders
+                    .Where(c => !EF.Functions.IsDate(c.CustomerID))
+                    .Select(c => EF.Functions.IsDate(c.CustomerID))
+                    .FirstOrDefault();
+
+                Assert.False(actual);
+
+                AssertSql(
+                    @"SELECT TOP(1) CAST(ISDATE([o].[CustomerID]) AS bit)
+FROM [Orders] AS [o]
+WHERE CAST(ISDATE([o].[CustomerID]) AS bit) <> CAST(1 AS bit)");
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void IsDate_valid()
+        {
+            using (var context = CreateContext())
+            {
+                var actual = context
+                    .Orders
+                    .Where(c => EF.Functions.IsDate(c.OrderDate.Value.ToString()))
+                    .Select(c => EF.Functions.IsDate(c.OrderDate.Value.ToString()))
+                    .FirstOrDefault();
+
+                Assert.True(actual);
+
+                AssertSql(
+                    @"SELECT TOP(1) CAST(ISDATE(CONVERT(VARCHAR(100), [o].[OrderDate])) AS bit)
+FROM [Orders] AS [o]
+WHERE CAST(ISDATE(CONVERT(VARCHAR(100), [o].[OrderDate])) AS bit) = CAST(1 AS bit)");
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void IsDate_join_fields()
+        {
+            using (var context = CreateContext())
+            {
+                var count = context.Orders.Count(c => EF.Functions.IsDate(c.CustomerID + c.OrderID));
+
+                Assert.Equal(0, count);
+
+                AssertSql(
+                    @"SELECT COUNT(*)
+FROM [Orders] AS [o]
+WHERE CAST(ISDATE([o].[CustomerID] + CAST([o].[OrderID] AS nchar(5))) AS bit) = CAST(1 AS bit)");
+            }
+        }
+
+        [ConditionalFact]
+        public void IsDate_should_throw_on_client_eval()
+        {
+            var exIsDate = Assert.Throws<InvalidOperationException>(() => EF.Functions.IsDate("#ISDATE#"));
+
+            Assert.Equal(
+                SqlServerStrings.FunctionOnClient(nameof(SqlServerDbFunctionsExtensions.IsDate)),
+                exIsDate.Message);
         }
 
         private void AssertSql(params string[] expected)

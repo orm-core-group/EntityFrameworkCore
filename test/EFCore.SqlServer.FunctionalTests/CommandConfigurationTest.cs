@@ -6,7 +6,6 @@ using System.Linq;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.TestUtilities;
-using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
 using Xunit;
 
 // ReSharper disable UnusedAutoPropertyAccessor.Local
@@ -23,7 +22,7 @@ namespace Microsoft.EntityFrameworkCore
 
         protected CommandConfigurationFixture Fixture { get; set; }
 
-        [Fact]
+        [ConditionalFact]
         public void Constructed_select_query_CommandBuilder_throws_when_negative_CommandTimeout_is_used()
         {
             using (var context = CreateContext())
@@ -87,7 +86,7 @@ namespace Microsoft.EntityFrameworkCore
             {
                 if (TestEnvironment.GetFlag(nameof(SqlServerCondition.SupportsSequences)) ?? true)
                 {
-                    modelBuilder.ForSqlServerUseSequenceHiLo();
+                    modelBuilder.UseHiLo();
                 }
             }
         }

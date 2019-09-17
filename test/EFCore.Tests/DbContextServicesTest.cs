@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -15,8 +14,8 @@ using Microsoft.EntityFrameworkCore.InMemory.ValueGeneration.Internal;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata.Conventions.Internal;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 using Microsoft.EntityFrameworkCore.ValueGeneration;
 using Microsoft.Extensions.Caching.Memory;
@@ -32,19 +31,19 @@ namespace Microsoft.EntityFrameworkCore
 {
     public partial class DbContextTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Can_log_debug_events_with_OnConfiguring()
         {
             DebugLogTest(useLoggerFactory: false, configureForDebug: false, shouldLog: true);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Cannot_log_debug_events_with_default_UseLoggerFactory()
         {
             DebugLogTest(useLoggerFactory: true, configureForDebug: false, shouldLog: false);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_log_debug_events_with_UseLoggerFactory_when_configured()
         {
             DebugLogTest(useLoggerFactory: true, configureForDebug: true, shouldLog: true);
@@ -176,7 +175,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(ServiceLifetime.Scoped, false)]
         [InlineData(ServiceLifetime.Singleton, false)]
         [InlineData(ServiceLifetime.Singleton, true)]
@@ -256,7 +255,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_GetInfrastructure_with_inferred_generic_to_get_service_provider()
         {
             using (var context = new EarlyLearningCenter())
@@ -267,7 +266,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Logger_factory_registered_on_internal_service_provider_is_not_disposed()
         {
             var serviceProvider
@@ -289,7 +288,7 @@ namespace Microsoft.EntityFrameworkCore
             _ = context.Model;
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Each_context_gets_new_scoped_services()
         {
             var serviceProvider = InMemoryTestHelpers.Instance.CreateServiceProvider();
@@ -307,7 +306,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Each_context_gets_new_scoped_services_with_explicit_config()
         {
             var serviceProvider = InMemoryTestHelpers.Instance.CreateServiceProvider();
@@ -328,7 +327,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Each_context_gets_new_scoped_services_with_implicit_services_and_explicit_config()
         {
             var options = new DbContextOptionsBuilder()
@@ -348,7 +347,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Default_services_are_registered_when_parameterless_constructor_used()
         {
             using (var context = new EarlyLearningCenter())
@@ -357,7 +356,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Default_context_scoped_services_are_registered_when_parameterless_constructor_used()
         {
             using (var context = new EarlyLearningCenter())
@@ -366,7 +365,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_singleton_service_from_scoped_configuration()
         {
             using (var context = new EarlyLearningCenter())
@@ -375,7 +374,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_start_with_custom_services_by_passing_in_base_service_provider()
         {
             var service = new FakeNavigationFixer();
@@ -409,11 +408,11 @@ namespace Microsoft.EntityFrameworkCore
                 InternalEntityEntry entry, IProperty property, IReadOnlyList<IKey> containingPrincipalKeys,
                 IReadOnlyList<IForeignKey> containingForeignKeys, object oldValue, object newValue) => throw new NotImplementedException();
 
-            public void TrackedFromQuery(InternalEntityEntry entry, ISet<IForeignKey> handledForeignKeys) =>
+            public void TrackedFromQuery(InternalEntityEntry entry) =>
                 throw new NotImplementedException();
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Required_low_level_services_are_added_if_needed()
         {
             var serviceCollection = new ServiceCollection();
@@ -423,7 +422,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.IsType<ScopedLoggerFactory>(provider.GetRequiredService<ILoggerFactory>());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Required_low_level_services_are_not_added_if_already_present()
         {
             var serviceCollection = new ServiceCollection();
@@ -438,7 +437,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Same(loggerFactory, provider.GetRequiredService<ILoggerFactory>());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Low_level_services_can_be_replaced_after_being_added()
         {
             var serviceCollection = new ServiceCollection();
@@ -453,7 +452,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Same(loggerFactory, provider.GetRequiredService<ILoggerFactory>());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_replace_already_registered_service_with_new_service()
         {
             var service = new FakeNavigationFixer();
@@ -468,7 +467,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_set_known_singleton_services_using_instance_sugar()
         {
             var modelSource = (IModelSource)new FakeModelSource();
@@ -484,7 +483,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_set_known_singleton_services_using_type_activation()
         {
             var services = new ServiceCollection()
@@ -498,7 +497,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_set_known_context_scoped_services_using_type_activation()
         {
             var services = new ServiceCollection()
@@ -512,7 +511,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Replaced_services_are_scoped_appropriately()
         {
             var provider = new ServiceCollection()
@@ -546,7 +545,7 @@ namespace Microsoft.EntityFrameworkCore
             context.Dispose();
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_replaced_singleton_service_from_scoped_configuration()
         {
             var provider = new ServiceCollection()
@@ -622,19 +621,21 @@ namespace Microsoft.EntityFrameworkCore
 
         private class FakeEntityMaterializerSource : EntityMaterializerSource
         {
+            public FakeEntityMaterializerSource(EntityMaterializerSourceDependencies dependencies)
+                : base(dependencies)
+            {
+            }
         }
 
         private class FakeModelSource : IModelSource
         {
             public IModel GetModel(
                 DbContext context,
-                IConventionSetBuilder conventionSetBuilder,
-                IModelValidator validator,
-                DiagnosticsLoggers loggers)
+                IConventionSetBuilder conventionSetBuilder)
                 => new Model();
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_derived_context()
         {
             var singleton = new object[3];
@@ -657,7 +658,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_derived_context_with_external_services()
         {
             var appServiceProvider = new ServiceCollection()
@@ -689,7 +690,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_derived_context_with_options()
         {
             var options = new DbContextOptionsBuilder<ConstructorTestContextWithOC3A>()
@@ -718,7 +719,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_derived_context_with_options_and_external_services()
         {
             var appServiceProvider = new ServiceCollection()
@@ -757,7 +758,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_derived_context_controlling_internal_services()
         {
             var internalServiceProvider = new ServiceCollection()
@@ -784,7 +785,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_derived_context_controlling_internal_services_with_options()
         {
             var internalServiceProvider = new ServiceCollection()
@@ -819,7 +820,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_derived_context_with_options_no_OnConfiguring()
         {
             var options = new DbContextOptionsBuilder<ConstructorTestContext1A>()
@@ -848,7 +849,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_derived_context_with_options_and_external_services_no_OnConfiguring()
         {
             var appServiceProvider = new ServiceCollection()
@@ -888,7 +889,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_derived_context_controlling_internal_services_with_options_no_OnConfiguring()
         {
             var internalServiceProvider = new ServiceCollection()
@@ -922,7 +923,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_non_derived_context_with_options()
         {
             var options = new DbContextOptionsBuilder()
@@ -949,7 +950,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_non_derived_context_with_options_and_external_services()
         {
             var appServiceProvider = new ServiceCollection()
@@ -965,7 +966,7 @@ namespace Microsoft.EntityFrameworkCore
                     InMemoryFixture.BuildServiceProvider(
                         new ServiceCollection()
                             .AddSingleton<ILoggerFactory>(loggerFactory)
-                            .AddSingleton<IMemoryCache>(memoryCache)))
+                            .AddSingleton(memoryCache)))
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options;
 
@@ -991,7 +992,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_non_derived_context_controlling_internal_services_with_options()
         {
             var internalServiceProvider = new ServiceCollection()
@@ -1025,7 +1026,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public void Can_add_derived_context(bool useInterface)
@@ -1082,7 +1083,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Throws<ObjectDisposedException>(() => context2.Model);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_derived_context_with_external_services()
         {
             var appServiceProvider = new ServiceCollection()
@@ -1127,7 +1128,7 @@ namespace Microsoft.EntityFrameworkCore
         {
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_derived_context_with_options()
         {
             var appServiceProvider = new ServiceCollection()
@@ -1181,7 +1182,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_derived_context_with_options_and_external_services()
         {
             var appServiceProvider = new ServiceCollection()
@@ -1222,7 +1223,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_derived_context_controlling_internal_services()
         {
             var appServiceProvider = new ServiceCollection()
@@ -1255,7 +1256,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_derived_context_controlling_internal_services_with_options()
         {
             var internalServiceProvider = new ServiceCollection()
@@ -1295,7 +1296,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public void Can_add_derived_context_one_service_provider_with_options(bool useInterface)
@@ -1346,7 +1347,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public void Can_add_derived_context_one_service_provider_with_options_and_external_services(bool singletonOptions)
@@ -1396,13 +1397,14 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_derived_context_with_options_no_OnConfiguring()
         {
             var appServiceProvider = new ServiceCollection()
-                .AddDbContext<ConstructorTestContext1A>(b =>
-                    b.EnableServiceProviderCaching(false)
-                       .UseInMemoryDatabase(Guid.NewGuid().ToString()))
+                .AddDbContext<ConstructorTestContext1A>(
+                    b =>
+                        b.EnableServiceProviderCaching(false)
+                            .UseInMemoryDatabase(Guid.NewGuid().ToString()))
                 .BuildServiceProvider();
 
             var singleton = new object[3];
@@ -1432,13 +1434,14 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_derived_context_with_options_and_external_services_no_OnConfiguring()
         {
             var appServiceProvider = new ServiceCollection()
-                .AddDbContext<ConstructorTestContext1A>(b =>
-                    b.EnableServiceProviderCaching(false)
-                        .UseInMemoryDatabase(Guid.NewGuid().ToString()))
+                .AddDbContext<ConstructorTestContext1A>(
+                    b =>
+                        b.EnableServiceProviderCaching(false)
+                            .UseInMemoryDatabase(Guid.NewGuid().ToString()))
                 .BuildServiceProvider();
 
             ILoggerFactory loggerFactory;
@@ -1473,7 +1476,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_derived_context_controlling_internal_services_with_options_no_OnConfiguring()
         {
             var internalServiceProvider = new ServiceCollection()
@@ -1513,7 +1516,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_derived_context_one_provider_with_options_no_OnConfiguring()
         {
             var appServiceProvider = new ServiceCollection()
@@ -1549,7 +1552,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_derived_context_one_provider_with_options_and_external_services_no_OnConfiguring()
         {
             var appServiceProvider = new ServiceCollection()
@@ -1588,13 +1591,14 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_non_derived_context_with_options()
         {
             var appServiceProvider = new ServiceCollection()
-                .AddDbContext<DbContext>(b =>
-                    b.EnableServiceProviderCaching(false)
-                        .UseInMemoryDatabase(Guid.NewGuid().ToString()))
+                .AddDbContext<DbContext>(
+                    b =>
+                        b.EnableServiceProviderCaching(false)
+                            .UseInMemoryDatabase(Guid.NewGuid().ToString()))
                 .BuildServiceProvider();
 
             var singleton = new object[4];
@@ -1624,7 +1628,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_non_derived_context_with_options_and_external_services()
         {
             var appServiceProvider = new ServiceCollection()
@@ -1667,7 +1671,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_non_derived_context_controlling_internal_services_with_options()
         {
             var appServiceProvider = new ServiceCollection()
@@ -1702,7 +1706,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true, false)]
         [InlineData(false, false)]
         [InlineData(true, true)]
@@ -1756,7 +1760,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Same(context1.Model, context2.Model);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_when_used_with_parameterless_constructor_context()
         {
             var serviceCollection = new ServiceCollection();
@@ -1774,7 +1778,7 @@ namespace Microsoft.EntityFrameworkCore
                         (_, __) => { })).Message);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true, false)]
         [InlineData(false, false)]
         [InlineData(true, true)]
@@ -1835,7 +1839,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Same(context1.Model, context2.Model);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true, false, ServiceLifetime.Scoped)]
         [InlineData(false, false, ServiceLifetime.Scoped)]
         [InlineData(true, true, ServiceLifetime.Transient)]
@@ -1925,7 +1929,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true, false)]
         [InlineData(false, false)]
         [InlineData(true, true)]
@@ -1990,7 +1994,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public void Can_add_non_derived_context_as_singleton(bool addSingletonFirst)
@@ -1998,14 +2002,16 @@ namespace Microsoft.EntityFrameworkCore
             var appServiceProvider = addSingletonFirst
                 ? new ServiceCollection()
                     .AddSingleton<DbContext>()
-                    .AddDbContext<DbContext>(b =>
-                        b.EnableServiceProviderCaching(false)
-                            .UseInMemoryDatabase(Guid.NewGuid().ToString()))
+                    .AddDbContext<DbContext>(
+                        b =>
+                            b.EnableServiceProviderCaching(false)
+                                .UseInMemoryDatabase(Guid.NewGuid().ToString()))
                     .BuildServiceProvider()
                 : new ServiceCollection()
-                    .AddDbContext<DbContext>(b =>
-                        b.EnableServiceProviderCaching(false)
-                            .UseInMemoryDatabase(Guid.NewGuid().ToString()))
+                    .AddDbContext<DbContext>(
+                        b =>
+                            b.EnableServiceProviderCaching(false)
+                                .UseInMemoryDatabase(Guid.NewGuid().ToString()))
                     .AddSingleton<DbContext>()
                     .BuildServiceProvider();
 
@@ -2043,7 +2049,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Same(context1.Model, context2.Model);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true, true)]
         [InlineData(false, true)]
         [InlineData(true, false)]
@@ -2111,7 +2117,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Same(context1.Model, context2.Model);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public void Can_add_non_derived_context_as_transient(bool addTransientFirst)
@@ -2119,14 +2125,16 @@ namespace Microsoft.EntityFrameworkCore
             var appServiceProvider = addTransientFirst
                 ? new ServiceCollection()
                     .AddTransient<DbContext>()
-                    .AddDbContext<DbContext>(b =>
-                        b.EnableServiceProviderCaching(false)
-                            .UseInMemoryDatabase(Guid.NewGuid().ToString()))
+                    .AddDbContext<DbContext>(
+                        b =>
+                            b.EnableServiceProviderCaching(false)
+                                .UseInMemoryDatabase(Guid.NewGuid().ToString()))
                     .BuildServiceProvider()
                 : new ServiceCollection()
-                    .AddDbContext<DbContext>(b =>
-                        b.EnableServiceProviderCaching(false)
-                            .UseInMemoryDatabase(Guid.NewGuid().ToString()))
+                    .AddDbContext<DbContext>(
+                        b =>
+                            b.EnableServiceProviderCaching(false)
+                                .UseInMemoryDatabase(Guid.NewGuid().ToString()))
                     .AddTransient<DbContext>()
                     .BuildServiceProvider();
 
@@ -2168,7 +2176,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true, true)]
         [InlineData(false, true)]
         [InlineData(true, false)]
@@ -2240,7 +2248,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_logger_before_context_exists_and_after_disposed()
         {
             var appServiceProvider = new ServiceCollection()
@@ -2263,14 +2271,15 @@ namespace Microsoft.EntityFrameworkCore
             Assert.NotNull(appServiceProvider.GetService<IDiagnosticsLogger<DbLoggerCategory.Infrastructure>>());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_logger_before_context_exists_and_after_disposed_when_logger_factory_replaced()
         {
             WrappingLoggerFactory loggerFactory = null;
 
             var appServiceProvider = new ServiceCollection()
                 .AddEntityFrameworkInMemoryDatabase()
-                .AddDbContext<DbContext>((p, b) =>
+                .AddDbContext<DbContext>(
+                    (p, b) =>
                         b.UseInMemoryDatabase(Guid.NewGuid().ToString())
                             .EnableServiceProviderCaching(false)
                             .UseLoggerFactory(loggerFactory = new WrappingLoggerFactory(p.GetService<ILoggerFactory>())))
@@ -2297,7 +2306,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Equal(3, loggerFactory.CreatedLoggers.Count(n => n == DbLoggerCategory.Infrastructure.Name));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_memory_cache_before_context_exists_and_after_disposed()
         {
             var appServiceProvider = new ServiceCollection()
@@ -2321,7 +2330,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Same(memoryCache, appServiceProvider.GetService<IMemoryCache>());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_memory_cache_before_context_exists_and_after_disposed_when_logger_factory_replaced()
         {
             var replacecMemoryCache = new MemoryCache(new MemoryCacheOptions());
@@ -2349,7 +2358,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Same(memoryCache, appServiceProvider.GetService<IMemoryCache>());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_with_new_when_no_EF_services()
         {
             var options = new DbContextOptionsBuilder<ConstructorTestContextWithSets>()
@@ -2361,7 +2370,7 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Throws<InvalidOperationException>(() => new ConstructorTestContextWithSets(options)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_with_add_when_no_EF_services()
         {
             var appServiceProvider = new ServiceCollection()
@@ -2380,7 +2389,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_with_new_when_no_EF_services_and_no_sets()
         {
             var options = new DbContextOptionsBuilder<ConstructorTestContext1A>()
@@ -2392,7 +2401,7 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Throws<InvalidOperationException>(() => new ConstructorTestContext1A(options)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_with_add_when_no_EF_services_and_no_sets()
         {
             var appServiceProvider = new ServiceCollection()
@@ -2411,7 +2420,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_with_new_when_no_provider()
         {
             var serviceCollection = new ServiceCollection();
@@ -2430,7 +2439,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_with_add_when_no_provider()
         {
             var serviceCollection = new ServiceCollection();
@@ -2453,7 +2462,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_with_new_when_no_provider_and_no_sets()
         {
             var serviceCollection = new ServiceCollection();
@@ -2472,7 +2481,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_with_add_when_no_provider_and_no_sets()
         {
             var serviceCollection = new ServiceCollection();
@@ -2495,7 +2504,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_with_new_when_no_EF_services_because_parameterless_constructor()
         {
             using (var context = new ConstructorTestContextNoConfigurationWithSets())
@@ -2506,7 +2515,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_with_add_when_no_EF_services_because_parameterless_constructor()
         {
             var appServiceProvider = new ServiceCollection()
@@ -2525,7 +2534,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_with_new_when_no_EF_services_and_no_sets_because_parameterless_constructor()
         {
             using (var context = new ConstructorTestContextNoConfiguration())
@@ -2536,7 +2545,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_with_add_when_no_EF_services_and_no_sets_because_parameterless_constructor()
         {
             var appServiceProvider = new ServiceCollection()
@@ -2555,7 +2564,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_replace_services_in_OnConfiguring()
         {
             object replacedSingleton;
@@ -2613,14 +2622,13 @@ namespace Microsoft.EntityFrameworkCore
 
         private class CustomInMemoryTableFactory : InMemoryTableFactory
         {
-            public CustomInMemoryTableFactory(
-                [NotNull] ILoggingOptions loggingOptions)
+            public CustomInMemoryTableFactory(ILoggingOptions loggingOptions)
                 : base(loggingOptions)
             {
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_replace_services_in_passed_options()
         {
             var options = new DbContextOptionsBuilder<ConstructorTestContextWithOC3A>()
@@ -2655,7 +2663,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_replace_services_using_AddDbContext()
         {
             var appServiceProvider = new ServiceCollection()
@@ -2699,7 +2707,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_replacing_services_in_OnConfiguring_when_UseInternalServiceProvider()
         {
             using (var context = new ReplaceServiceContext2())
@@ -2723,7 +2731,7 @@ namespace Microsoft.EntityFrameworkCore
                     .UseInMemoryDatabase(Guid.NewGuid().ToString());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_replacing_services_in_options_when_UseInternalServiceProvider()
         {
             var options = new DbContextOptionsBuilder<ConstructorTestContextWithOC3A>()
@@ -2741,7 +2749,7 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Throws<InvalidOperationException>(() => new ConstructorTestContextWithOC3A(options)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_replacing_services_with_AddDbContext_when_UseInternalServiceProvider()
         {
             var appServiceProvider = new ServiceCollection()
@@ -2764,7 +2772,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_setting_LoggerFactory_in_OnConfiguring_when_UseInternalServiceProvider()
         {
             using (var context = new SetLoggerFactoryContext())
@@ -2790,7 +2798,7 @@ namespace Microsoft.EntityFrameworkCore
                     .UseInMemoryDatabase(Guid.NewGuid().ToString());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_setting_LoggerFactory_in_options_when_UseInternalServiceProvider()
         {
             var options = new DbContextOptionsBuilder<ConstructorTestContextWithOC3A>()
@@ -2810,7 +2818,7 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Throws<InvalidOperationException>(() => new ConstructorTestContextWithOC3A(options)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_setting_LoggerFactory_with_AddDbContext_when_UseInternalServiceProvider()
         {
             var appServiceProvider = new ServiceCollection()
@@ -2835,7 +2843,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_setting_MemoryCache_in_OnConfiguring_when_UseInternalServiceProvider()
         {
             using (var context = new SetMemoryCacheContext())
@@ -2861,7 +2869,7 @@ namespace Microsoft.EntityFrameworkCore
                     .UseInMemoryDatabase(Guid.NewGuid().ToString());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_setting_MemoryCache_in_options_when_UseInternalServiceProvider()
         {
             var options = new DbContextOptionsBuilder<ConstructorTestContextWithOC3A>()
@@ -2881,7 +2889,7 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Throws<InvalidOperationException>(() => new ConstructorTestContextWithOC3A(options)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_setting_MemoryCache_with_AddDbContext_when_UseInternalServiceProvider()
         {
             var appServiceProvider = new ServiceCollection()
@@ -2927,7 +2935,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_changing_sensitive_data_logging_in_OnConfiguring_when_UseInternalServiceProvider()
         {
             using (var context = new ChangeSdlCacheContext(false))
@@ -2966,7 +2974,7 @@ namespace Microsoft.EntityFrameworkCore
                     .UseInMemoryDatabase(Guid.NewGuid().ToString());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_changing_sensitive_data_logging_in_options_when_UseInternalServiceProvider()
         {
             var serviceProvider = new ServiceCollection()
@@ -2998,7 +3006,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_changing_sensitive_data_logging_with_AddDbContext_when_UseInternalServiceProvider()
         {
             var serviceProvider = new ServiceCollection()
@@ -3038,7 +3046,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_changing_warnings_default_in_OnConfiguring_when_UseInternalServiceProvider()
         {
             var serviceProvider = new ServiceCollection()
@@ -3060,7 +3068,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_changing_warnings_in_OnConfiguring_when_UseInternalServiceProvider()
         {
             var serviceProvider = new ServiceCollection()
@@ -3102,7 +3110,7 @@ namespace Microsoft.EntityFrameworkCore
                     .UseInMemoryDatabase(Guid.NewGuid().ToString());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_changing_warnings_config_in_options_when_UseInternalServiceProvider()
         {
             var serviceProvider = new ServiceCollection()
@@ -3134,7 +3142,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_changing_warnings_config_with_AddDbContext_when_UseInternalServiceProvider()
         {
             var serviceProvider = new ServiceCollection()
@@ -3344,7 +3352,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_when_wrong_DbContextOptions_used()
         {
             var options = new DbContextOptionsBuilder<NonGenericOptions1>()
@@ -3356,7 +3364,7 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Throws<InvalidOperationException>(() => new NonGenericOptions2(options)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_when_adding_two_contexts_using_non_generic_options()
         {
             var appServiceProvider = new ServiceCollection()
@@ -3395,7 +3403,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void AddDbContext_adds_options_for_all_types()
         {
             var services = new ServiceCollection()
@@ -3412,7 +3420,7 @@ namespace Microsoft.EntityFrameworkCore
                     .Count());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Last_DbContextOptions_in_serviceCollection_selected()
         {
             var services = new ServiceCollection()
@@ -3423,16 +3431,18 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Equal(typeof(NonGenericOptions2), services.GetService<DbContextOptions>().ContextType);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_resolve_multiple_contexts_in_hierarchy_with_appropriate_constructors()
         {
             var services = new ServiceCollection()
-                .AddDbContext<DerivedContext1>(b =>
-                    b.EnableServiceProviderCaching(false)
-                        .UseInMemoryDatabase(nameof(DerivedContext1)))
-                .AddDbContext<DerivedContext2>(b =>
-                    b.EnableServiceProviderCaching(false)
-                        .UseInMemoryDatabase(nameof(DerivedContext2)))
+                .AddDbContext<DerivedContext1>(
+                    b =>
+                        b.EnableServiceProviderCaching(false)
+                            .UseInMemoryDatabase(nameof(DerivedContext1)))
+                .AddDbContext<DerivedContext2>(
+                    b =>
+                        b.EnableServiceProviderCaching(false)
+                            .UseInMemoryDatabase(nameof(DerivedContext2)))
                 .BuildServiceProvider();
 
             using (var scope = services.CreateScope())

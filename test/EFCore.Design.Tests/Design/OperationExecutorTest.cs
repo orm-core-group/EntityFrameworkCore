@@ -9,7 +9,7 @@ namespace Microsoft.EntityFrameworkCore.Design
 {
     public class OperationExecutorTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Ctor_validates_arguments()
         {
             var ex = Assert.Throws<ArgumentNullException>(() => new OperationExecutor(null, null));
@@ -21,7 +21,7 @@ namespace Microsoft.EntityFrameworkCore.Design
 
         public class OperationBaseTests
         {
-            [Fact]
+            [ConditionalFact]
             public void Execute_catches_exceptions()
             {
                 var handler = new OperationResultHandler();
@@ -34,7 +34,7 @@ namespace Microsoft.EntityFrameworkCore.Design
                 Assert.NotEmpty(handler.ErrorStackTrace);
             }
 
-            [Fact]
+            [ConditionalFact]
             public void Execute_sets_results()
             {
                 var handler = new OperationResultHandler();
@@ -45,7 +45,7 @@ namespace Microsoft.EntityFrameworkCore.Design
                 Assert.Equal(result, handler.Result);
             }
 
-            [Fact]
+            [ConditionalFact]
             public void Execute_enumerates_results()
             {
                 var handler = new OperationResultHandler();
@@ -64,15 +64,15 @@ namespace Microsoft.EntityFrameworkCore.Design
 
             private class MockOperation<T> : OperationExecutor.OperationBase
             {
-                public MockOperation(object resultHandler, Action action)
+                public MockOperation(IOperationResultHandler resultHandler, Action action)
                     : base(resultHandler)
                     => Execute(action);
 
-                public MockOperation(object resultHandler, Func<T> action)
+                public MockOperation(IOperationResultHandler resultHandler, Func<T> action)
                     : base(resultHandler)
                     => Execute(action);
 
-                public MockOperation(object resultHandler, Func<IEnumerable<T>> action)
+                public MockOperation(IOperationResultHandler resultHandler, Func<IEnumerable<T>> action)
                     : base(resultHandler)
                     => Execute(action);
             }

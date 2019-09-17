@@ -9,7 +9,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations.Operations
     /// <summary>
     ///     A <see cref="MigrationOperation" /> for creating a new table.
     /// </summary>
-    public class CreateTableOperation : MigrationOperation
+    public class CreateTableOperation : TableOperation
     {
         /// <summary>
         ///     The name of the table.

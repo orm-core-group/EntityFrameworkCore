@@ -2,18 +2,37 @@
   <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
   <PropertyGroup>
-    <!-- HACK: Work around dotnet/sdk#2976 in dependencies -->
-    <BundledNETCorePlatformsPackageVersion>$(MicrosoftNETCorePlatformsPackageVersion)</BundledNETCorePlatformsPackageVersion>
+    <!-- Workaround while there is no 5.0 SDK available, suppress unsupported version error. -->
+    <NETCoreAppMaximumVersion>5.0</NETCoreAppMaximumVersion>
   </PropertyGroup>
 
-  <!-- This is required to workaround overlap between System.Collections.Generic.IAsyncEnumerable in System.Runtime and System.Interactive.Async. -->
-  <Target Name="AddAssemblyAliasToReactiveAsync"
-          AfterTargets="ResolveAssemblyReferences"
-          Condition=" '$(TargetFramework)' != '' AND ( '$(TargetFramework)' == 'netcoreapp3.0' OR '$(TargetFramework)' == 'netstandard2.1' ) ">
-    <ItemGroup>
-      <ReferencePath Condition=" '%(FileName)' == 'System.Interactive.Async' ">
-        <Aliases>reactive</Aliases>
-      </ReferencePath>
-    </ItemGroup>
-  </Target>
+  <ItemGroup>
+    <!-- Workaround while there is no 5.0 SDK available, copy known apphost/framework reference info from 3.0. -->
+    <KnownAppHostPack Include="@(KnownAppHostPack->WithMetadataValue('TargetFramework', 'netcoreapp3.0'))"
+        TargetFramework="netcoreapp5.0" />
+    <KnownFrameworkReference Include="@(KnownFrameworkReference->WithMetadataValue('TargetFramework', 'netcoreapp3.0'))"
+        TargetFramework="netcoreapp5.0" />
+
+    <!-- Reference base shared framework at incoming dependency flow version, not bundled sdk version. -->
+    <FrameworkReference Update="Microsoft.NETCore.App"
+        Condition="'$(TargetFramework)' == 'netcoreapp5.0'"
+        RuntimeFrameworkVersion="$(MicrosoftNETCoreAppRuntimeVersion)"
+        TargetingPackVersion="$(MicrosoftNETCoreAppRefPackageVersion)" />
+
+    <!-- Reference netstandard library at incoming dependency flow version, not bundled sdk version. -->
+    <FrameworkReference Update="NETStandard.Library"
+        Condition="'$(TargetFramework)' == 'netstandard2.1'"
+        TargetingPackVersion="$(NETStandardLibraryRefPackageVersion)" />
+
+    <!-- Workaround for netstandard2.1 projects until we can get a 5.0 SDK containing https://github.com/dotnet/sdk/pull/3463 fix. -->
+    <KnownFrameworkReference Update="NETStandard.Library">
+      <RuntimeFrameworkName>NETStandard.Library</RuntimeFrameworkName>
+    </KnownFrameworkReference>
+
+    <!-- Track compiler separately from Arcade.-->
+    <PackageReference Include="Microsoft.Net.Compilers.Toolset"
+        Version="$(MicrosoftNetCompilersToolsetVersion)"
+        PrivateAssets="all"
+        IsImplicitlyDefined="true" />
+  </ItemGroup>
 </Project>

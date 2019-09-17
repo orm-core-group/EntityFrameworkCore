@@ -4,7 +4,6 @@
 using System;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.TestUtilities;
-using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
 using Xunit;
 
 // ReSharper disable InconsistentNaming
@@ -21,10 +20,13 @@ namespace Microsoft.EntityFrameworkCore
         [ConditionalFact]
         public virtual void Columns_have_expected_data_types()
         {
-            var actual = BuiltInDataTypesSqlServerTest.QueryForColumnTypes(CreateContext());
+            var actual = BuiltInDataTypesSqlServerTest.QueryForColumnTypes(
+                CreateContext(),
+                nameof(ObjectBackedDataTypes), nameof(NullableBackedDataTypes), nameof(NonNullableBackedDataTypes));
 
             const string expected = @"BinaryForeignKeyDataType.BinaryKeyDataTypeId ---> [nullable varbinary] [MaxLength = 900]
 BinaryForeignKeyDataType.Id ---> [int] [Precision = 10 Scale = 0]
+BinaryKeyDataType.Ex ---> [nullable nvarchar] [MaxLength = -1]
 BinaryKeyDataType.Id ---> [varbinary] [MaxLength = 900]
 BuiltInDataTypes.Enum16 ---> [bigint] [Precision = 19 Scale = 0]
 BuiltInDataTypes.Enum32 ---> [bigint] [Precision = 19 Scale = 0]
@@ -146,9 +148,14 @@ MaxLengthDataTypes.String9000 ---> [nullable varbinary] [MaxLength = -1]
 NonNullableDependent.Id ---> [int] [Precision = 10 Scale = 0]
 NonNullableDependent.PrincipalId ---> [int] [Precision = 10 Scale = 0]
 NullablePrincipal.Id ---> [int] [Precision = 10 Scale = 0]
+Order.Id ---> [nvarchar] [MaxLength = 450]
 Person.Id ---> [int] [Precision = 10 Scale = 0]
 Person.Name ---> [nullable nvarchar] [MaxLength = -1]
 Person.SSN ---> [nullable int] [Precision = 10 Scale = 0]
+SimpleCounter.CounterId ---> [int] [Precision = 10 Scale = 0]
+SimpleCounter.Discriminator ---> [nullable nvarchar] [MaxLength = -1]
+SimpleCounter.IsTest ---> [bit]
+SimpleCounter.StyleKey ---> [nullable nvarchar] [MaxLength = -1]
 StringForeignKeyDataType.Id ---> [int] [Precision = 10 Scale = 0]
 StringForeignKeyDataType.StringKeyDataTypeId ---> [nullable nvarchar] [MaxLength = 450]
 StringKeyDataType.Id ---> [nvarchar] [MaxLength = 450]
@@ -180,6 +187,8 @@ User.Id ---> [uniqueidentifier]
             protected override ITestStoreFactory TestStoreFactory => SqlServerTestStoreFactory.Instance;
 
             public override bool SupportsBinaryKeys => true;
+
+            public override bool SupportsDecimalComparisons => true;
 
             public override DateTime DefaultDateTime => new DateTime();
 

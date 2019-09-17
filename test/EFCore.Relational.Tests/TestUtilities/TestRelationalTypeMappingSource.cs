@@ -24,6 +24,9 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
         private static readonly RelationalTypeMapping _defaultIntMapping
             = new IntTypeMapping("default_int_mapping", dbType: DbType.Int32);
 
+        private static readonly RelationalTypeMapping _defaultCharMapping
+            = new CharTypeMapping("default_char_mapping", dbType: DbType.Int32);
+
         private static readonly RelationalTypeMapping _defaultLongMapping
             = new LongTypeMapping("default_long_mapping", dbType: DbType.Int64);
 
@@ -99,7 +102,7 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
                 { typeof(byte), _defaultByteMapping },
                 { typeof(double), _defaultDoubleMapping },
                 { typeof(DateTimeOffset), _defaultDateTimeOffsetMapping },
-                { typeof(char), _defaultIntMapping },
+                { typeof(char), _defaultCharMapping },
                 { typeof(short), _defaultShortMapping },
                 { typeof(float), _defaultFloatMapping },
                 { typeof(decimal), _defaultDecimalMapping },
@@ -144,6 +147,15 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
                         fixedLength))
             {
             }
+
+            protected override string ProcessStoreType(
+                RelationalTypeMappingParameters parameters,
+                string storeType,
+                string storeTypeNameBase)
+                => storeTypeNameBase == "some_string"
+                   && parameters.Size != null
+                    ? $"({parameters.Size})some_string"
+                    : storeType;
         }
 
         protected override RelationalTypeMapping FindMapping(in RelationalTypeMappingInfo mappingInfo)

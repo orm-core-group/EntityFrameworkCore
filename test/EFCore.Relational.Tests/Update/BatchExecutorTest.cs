@@ -17,7 +17,7 @@ namespace Microsoft.EntityFrameworkCore.Update
 {
     public class BatchExecutorTest
     {
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public async Task ExecuteAsync_calls_Commit_if_no_transaction(bool async)
@@ -27,10 +27,7 @@ namespace Microsoft.EntityFrameworkCore.Update
                 var connection = SetupConnection(context);
 
                 context.Add(
-                    new Foo
-                    {
-                        Id = "1"
-                    });
+                    new Foo { Id = "1" });
 
                 if (async)
                 {
@@ -45,7 +42,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public async Task ExecuteAsync_does_not_call_Commit_if_existing_transaction(bool async)
@@ -57,10 +54,7 @@ namespace Microsoft.EntityFrameworkCore.Update
                 context.Database.UseTransaction(transaction);
 
                 context.Add(
-                    new Foo
-                    {
-                        Id = "1"
-                    });
+                    new Foo { Id = "1" });
 
                 if (async)
                 {
@@ -79,10 +73,7 @@ namespace Microsoft.EntityFrameworkCore.Update
         private static FakeDbConnection SetupConnection(TestContext context)
         {
             var dataReader = new FakeDbDataReader(
-                new[] { "RowsAffected" }, new List<object[]>
-                {
-                    new object[] { 1 }
-                });
+                new[] { "RowsAffected" }, new List<object[]> { new object[] { 1 } });
 
             var connection = new FakeDbConnection(
                 "A=B", new FakeCommandExecutor(

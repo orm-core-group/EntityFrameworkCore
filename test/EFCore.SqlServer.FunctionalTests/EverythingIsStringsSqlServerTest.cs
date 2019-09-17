@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.TestUtilities;
-using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -26,10 +25,13 @@ namespace Microsoft.EntityFrameworkCore
         [ConditionalFact]
         public virtual void Columns_have_expected_data_types()
         {
-            var actual = BuiltInDataTypesSqlServerTest.QueryForColumnTypes(CreateContext());
+            var actual = BuiltInDataTypesSqlServerTest.QueryForColumnTypes(
+                CreateContext(),
+                nameof(ObjectBackedDataTypes), nameof(NullableBackedDataTypes), nameof(NonNullableBackedDataTypes));
 
             const string expected = @"BinaryForeignKeyDataType.BinaryKeyDataTypeId ---> [nullable nvarchar] [MaxLength = 450]
 BinaryForeignKeyDataType.Id ---> [nvarchar] [MaxLength = 64]
+BinaryKeyDataType.Ex ---> [nullable nvarchar] [MaxLength = -1]
 BinaryKeyDataType.Id ---> [nvarchar] [MaxLength = 450]
 BuiltInDataTypes.Enum16 ---> [nvarchar] [MaxLength = -1]
 BuiltInDataTypes.Enum32 ---> [nvarchar] [MaxLength = -1]
@@ -176,6 +178,8 @@ UnicodeDataTypes.StringUnicode ---> [nullable nvarchar] [MaxLength = -1]
 
             public override bool SupportsBinaryKeys => true;
 
+            public override bool SupportsDecimalComparisons => true;
+
             public override DateTime DefaultDateTime => new DateTime();
 
             public override DbContextOptionsBuilder AddOptions(DbContextOptionsBuilder builder)
@@ -217,12 +221,6 @@ UnicodeDataTypes.StringUnicode ---> [nullable nvarchar] [MaxLength = -1]
 
             private readonly Dictionary<string, RelationalTypeMapping> _storeTypeMappings;
 
-            /// <summary>
-            ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-            ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-            ///     any release. You should only use it directly in your code with extreme caution and knowing that
-            ///     doing so can result in application failures when updating to a new Entity Framework Core release.
-            /// </summary>
             public SqlServerStringsTypeMappingSource(
                 TypeMappingSourceDependencies dependencies,
                 RelationalTypeMappingSourceDependencies relationalDependencies)
@@ -267,28 +265,25 @@ UnicodeDataTypes.StringUnicode ---> [nullable nvarchar] [MaxLength = -1]
                     }
                 }
 
-                if (clrType != null)
+                if (clrType == typeof(string))
                 {
-                    if (clrType == typeof(string))
+                    var isAnsi = mappingInfo.IsUnicode == false;
+                    var isFixedLength = mappingInfo.IsFixedLength == true;
+                    var baseName = isAnsi ? "varchar" : "nvarchar";
+                    var maxSize = isAnsi ? 8000 : 4000;
+
+                    var size = mappingInfo.Size ?? (mappingInfo.IsKeyOrIndex ? (int?)(isAnsi ? 900 : 450) : null);
+                    if (size > maxSize)
                     {
-                        var isAnsi = mappingInfo.IsUnicode == false;
-                        var isFixedLength = mappingInfo.IsFixedLength == true;
-                        var baseName = isAnsi ? "varchar" : "nvarchar";
-                        var maxSize = isAnsi ? 8000 : 4000;
-
-                        var size = mappingInfo.Size ?? (mappingInfo.IsKeyOrIndex ? (int?)(isAnsi ? 900 : 450) : null);
-                        if (size > maxSize)
-                        {
-                            size = isFixedLength ? maxSize : (int?)null;
-                        }
-
-                        return new SqlServerStringTypeMapping(
-                            baseName + "(" + (size == null ? "max" : size.ToString()) + ")",
-                            !isAnsi,
-                            size,
-                            isFixedLength,
-                            storeTypePostfix: size == null ? StoreTypePostfix.None : (StoreTypePostfix?)null);
+                        size = isFixedLength ? maxSize : (int?)null;
                     }
+
+                    return new SqlServerStringTypeMapping(
+                        baseName + "(" + (size == null ? "max" : size.ToString()) + ")",
+                        !isAnsi,
+                        size,
+                        isFixedLength,
+                        storeTypePostfix: size == null ? StoreTypePostfix.None : (StoreTypePostfix?)null);
                 }
 
                 return null;

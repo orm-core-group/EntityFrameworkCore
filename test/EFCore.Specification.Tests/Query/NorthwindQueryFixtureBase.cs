@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.TestModels.Northwind;
@@ -23,7 +24,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 { typeof(OrderQuery), e => e?.CustomerID },
                 { typeof(Employee), e => e?.EmployeeID },
                 { typeof(Product), e => e?.ProductID },
-                { typeof(OrderDetail), e => e?.OrderID.ToString() + " " + e?.ProductID.ToString() }
+                { typeof(OrderDetail), e => (e?.OrderID.ToString(), e?.ProductID.ToString()) }
             };
 
             var entityAsserters = new Dictionary<Type, Action<dynamic, dynamic>>();
@@ -46,11 +47,11 @@ namespace Microsoft.EntityFrameworkCore.Query
 
         protected override void Seed(NorthwindContext context) => NorthwindData.Seed(context);
 
+        protected override Task SeedAsync(NorthwindContext context) => NorthwindData.SeedAsync(context);
+
         public override DbContextOptionsBuilder AddOptions(DbContextOptionsBuilder builder)
             => base.AddOptions(builder).ConfigureWarnings(
                 c => c
-                    .Log(CoreEventId.RowLimitingOperationWithoutOrderByWarning)
-                    .Log(CoreEventId.FirstWithoutOrderByAndFilterWarning)
                     .Log(CoreEventId.PossibleUnintendedCollectionNavigationNullComparisonWarning)
                     .Log(CoreEventId.PossibleUnintendedReferenceComparisonWarning));
     }

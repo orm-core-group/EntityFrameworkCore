@@ -3,10 +3,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Linq;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,7 +18,7 @@ namespace Microsoft.EntityFrameworkCore
 {
     public class ConnectionSpecificationTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Can_specify_connection_string_in_OnConfiguring()
         {
             var serviceProvider
@@ -36,7 +35,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_specify_connection_string_in_OnConfiguring_with_default_service_provider()
         {
             using (SqlServerTestStore.GetNorthwindStore())
@@ -56,7 +55,7 @@ namespace Microsoft.EntityFrameworkCore
                     .UseSqlServer(SqlServerNorthwindTestStoreFactory.NorthwindConnectionString, b => b.ApplyConfiguration());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_specify_connection_in_OnConfiguring()
         {
             var serviceProvider
@@ -73,7 +72,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_specify_connection_in_OnConfiguring_with_default_service_provider()
         {
             using (SqlServerTestStore.GetNorthwindStore())
@@ -114,7 +113,7 @@ namespace Microsoft.EntityFrameworkCore
                 => optionsBuilder.UseSqlServer("Database=Crunchie", b => b.ApplyConfiguration());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_if_no_connection_found_in_config_without_UseSqlServer()
         {
             var serviceProvider
@@ -129,7 +128,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_if_no_config_without_UseSqlServer()
         {
             var serviceProvider
@@ -150,7 +149,7 @@ namespace Microsoft.EntityFrameworkCore
                 => optionsBuilder.EnableServiceProviderCaching(false);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_depend_on_DbContextOptions()
         {
             var serviceProvider
@@ -168,7 +167,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_depend_on_DbContextOptions_with_default_service_provider()
         {
             using (SqlServerTestStore.GetNorthwindStore())
@@ -212,7 +211,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_depend_on_non_generic_options_when_only_one_context()
         {
             var serviceProvider
@@ -229,7 +228,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_depend_on_non_generic_options_when_only_one_context_with_default_service_provider()
         {
             using (SqlServerTestStore.GetNorthwindStore())
@@ -263,18 +262,15 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
-        [InlineData("MyConnectuonString", "name=MyConnectuonString")]
+        [ConditionalTheory]
+        [InlineData("MyConnectionString", "name=MyConnectionString")]
         [InlineData("ConnectionStrings:DefaultConnection", "name=ConnectionStrings:DefaultConnection")]
         [InlineData("ConnectionStrings:DefaultConnection", " NamE   =   ConnectionStrings:DefaultConnection  ")]
         public void Can_use_AddDbContext_and_get_connection_string_from_config(string key, string connectionString)
         {
             var configBuilder = new ConfigurationBuilder()
                 .AddInMemoryCollection(
-                    new Dictionary<string, string>
-                    {
-                        { key, SqlServerNorthwindTestStoreFactory.NorthwindConnectionString }
-                    });
+                    new Dictionary<string, string> { { key, SqlServerNorthwindTestStoreFactory.NorthwindConnectionString } });
 
             var serviceProvider
                 = new ServiceCollection()

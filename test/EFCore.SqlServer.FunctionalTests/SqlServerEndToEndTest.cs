@@ -31,86 +31,34 @@ namespace Microsoft.EntityFrameworkCore
             Fixture.TestSqlLoggerFactory.Clear();
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_decimal_and_byte_as_identity_columns()
         {
             using (var testDatabase = SqlServerTestStore.CreateInitialized(DatabaseName))
             {
-                var nownNum1 = new NownNum
-                {
-                    Id = 77.0m,
-                    TheWalrus = "Crying"
-                };
-                var nownNum2 = new NownNum
-                {
-                    Id = 78.0m,
-                    TheWalrus = "Walrus"
-                };
+                var nownNum1 = new NownNum { Id = 77.0m, TheWalrus = "Crying" };
+                var nownNum2 = new NownNum { Id = 78.0m, TheWalrus = "Walrus" };
 
-                var numNum1 = new NumNum
-                {
-                    TheWalrus = "I"
-                };
-                var numNum2 = new NumNum
-                {
-                    TheWalrus = "Am"
-                };
+                var numNum1 = new NumNum { TheWalrus = "I" };
+                var numNum2 = new NumNum { TheWalrus = "Am" };
 
-                var anNum1 = new AnNum
-                {
-                    TheWalrus = "Goo goo"
-                };
-                var anNum2 = new AnNum
-                {
-                    TheWalrus = "g'joob"
-                };
+                var anNum1 = new AnNum { TheWalrus = "Goo goo" };
+                var anNum2 = new AnNum { TheWalrus = "g'joob" };
 
-                var adNum1 = new AdNum
-                {
-                    TheWalrus = "Eggman"
-                };
-                var adNum2 = new AdNum
-                {
-                    TheWalrus = "Eggmen"
-                };
+                var adNum1 = new AdNum { TheWalrus = "Eggman" };
+                var adNum2 = new AdNum { TheWalrus = "Eggmen" };
 
-                var byteNownNum1 = new ByteNownNum
-                {
-                    Id = 77,
-                    Lucy = "Tangerine"
-                };
-                var byteNownNum2 = new ByteNownNum
-                {
-                    Id = 78,
-                    Lucy = "Trees"
-                };
+                var byteNownNum1 = new ByteNownNum { Id = 77, Lucy = "Tangerine" };
+                var byteNownNum2 = new ByteNownNum { Id = 78, Lucy = "Trees" };
 
-                var byteNum1 = new ByteNum
-                {
-                    Lucy = "Marmalade"
-                };
-                var byteNum2 = new ByteNum
-                {
-                    Lucy = "Skies"
-                };
+                var byteNum1 = new ByteNum { Lucy = "Marmalade" };
+                var byteNum2 = new ByteNum { Lucy = "Skies" };
 
-                var byteAnNum1 = new ByteAnNum
-                {
-                    Lucy = "Cellophane"
-                };
-                var byteAnNum2 = new ByteAnNum
-                {
-                    Lucy = "Flowers"
-                };
+                var byteAnNum1 = new ByteAnNum { Lucy = "Cellophane" };
+                var byteAnNum2 = new ByteAnNum { Lucy = "Flowers" };
 
-                var byteAdNum1 = new ByteAdNum
-                {
-                    Lucy = "Kaleidoscope"
-                };
-                var byteAdNum2 = new ByteAdNum
-                {
-                    Lucy = "Eyes"
-                };
+                var byteAdNum1 = new ByteAdNum { Lucy = "Kaleidoscope" };
+                var byteAdNum2 = new ByteAdNum { Lucy = "Eyes" };
 
                 decimal[] preSaveValues;
                 byte[] preSaveByteValues;
@@ -124,11 +72,9 @@ namespace Microsoft.EntityFrameworkCore
                         nownNum1, nownNum2, numNum1, numNum2, adNum1, adNum2, anNum1, anNum2,
                         byteNownNum1, byteNownNum2, byteNum1, byteNum2, byteAdNum1, byteAdNum2, byteAnNum1, byteAnNum2);
 
-                    preSaveValues = new[]
-                        { numNum1.Id, numNum2.Id, adNum1.Id, adNum2.Id, anNum1.Id, anNum2.Id };
+                    preSaveValues = new[] { numNum1.Id, numNum2.Id, adNum1.Id, adNum2.Id, anNum1.Id, anNum2.Id };
 
-                    preSaveByteValues = new[]
-                        { byteNum1.Id, byteNum2.Id, byteAdNum1.Id, byteAdNum2.Id, byteAnNum1.Id, byteAnNum2.Id };
+                    preSaveByteValues = new[] { byteNum1.Id, byteNum2.Id, byteAdNum1.Id, byteAdNum2.Id, byteAnNum1.Id, byteAnNum2.Id };
 
                     context.SaveChanges();
                 }
@@ -201,7 +147,7 @@ namespace Microsoft.EntityFrameworkCore
                     .Entity<NumNum>()
                     .Property(e => e.Id)
                     .HasColumnType("numeric(18, 0)")
-                    .UseSqlServerIdentityColumn();
+                    .UseIdentityColumn();
 
                 modelBuilder
                     .Entity<AdNum>()
@@ -212,7 +158,7 @@ namespace Microsoft.EntityFrameworkCore
                 modelBuilder
                     .Entity<ByteNum>()
                     .Property(e => e.Id)
-                    .UseSqlServerIdentityColumn();
+                    .UseIdentityColumn();
 
                 modelBuilder
                     .Entity<ByteAdNum>()
@@ -279,39 +225,19 @@ namespace Microsoft.EntityFrameworkCore
             public string Lucy { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_string_enum_or_byte_array_as_key()
         {
             using (var testDatabase = SqlServerTestStore.CreateInitialized(DatabaseName))
             {
-                var sNum1 = new SNum
-                {
-                    TheWalrus = "I"
-                };
-                var sNum2 = new SNum
-                {
-                    TheWalrus = "Am"
-                };
+                var sNum1 = new SNum { TheWalrus = "I" };
+                var sNum2 = new SNum { TheWalrus = "Am" };
 
-                var enNum1 = new EnNum
-                {
-                    TheWalrus = "Goo goo",
-                    Id = ENum.BNum
-                };
-                var enNum2 = new EnNum
-                {
-                    TheWalrus = "g'joob",
-                    Id = ENum.CNum
-                };
+                var enNum1 = new EnNum { TheWalrus = "Goo goo", Id = ENum.BNum };
+                var enNum2 = new EnNum { TheWalrus = "g'joob", Id = ENum.CNum };
 
-                var bNum1 = new BNum
-                {
-                    TheWalrus = "Eggman"
-                };
-                var bNum2 = new BNum
-                {
-                    TheWalrus = "Eggmen"
-                };
+                var bNum1 = new BNum { TheWalrus = "Eggman" };
+                var bNum2 = new BNum { TheWalrus = "Eggmen" };
 
                 var options = Fixture.CreateOptions(testDatabase);
                 using (var context = new ENumContext(options))
@@ -337,19 +263,13 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_remove_multiple_byte_array_as_key()
         {
             using (var testDatabase = SqlServerTestStore.CreateInitialized(DatabaseName))
             {
-                var bNum1 = new BNum
-                {
-                    TheWalrus = "Eggman"
-                };
-                var bNum2 = new BNum
-                {
-                    TheWalrus = "Eggmen"
-                };
+                var bNum1 = new BNum { TheWalrus = "Eggman" };
+                var bNum2 = new BNum { TheWalrus = "Eggmen" };
 
                 var options = Fixture.CreateOptions(testDatabase);
                 using (var context = new ENumContext(options))
@@ -389,6 +309,7 @@ namespace Microsoft.EntityFrameworkCore
         {
             [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
             public string Id { get; set; }
+
             public string TheWalrus { get; set; }
         }
 
@@ -411,10 +332,11 @@ namespace Microsoft.EntityFrameworkCore
         {
             [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
             public byte[] Id { get; set; }
+
             public string TheWalrus { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_run_linq_query_on_entity_set()
         {
             using (var testStore = SqlServerTestStore.GetNorthwindStore())
@@ -440,7 +362,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_run_linq_query_on_entity_set_with_value_buffer_reader()
         {
             using (var testStore = SqlServerTestStore.GetNorthwindStore())
@@ -466,7 +388,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_enumerate_entity_set()
         {
             using (var testStore = SqlServerTestStore.GetNorthwindStore())
@@ -486,7 +408,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Can_save_changes()
         {
             using (var testDatabase = SqlServerTestStore.CreateInitialized(DatabaseName))
@@ -561,7 +483,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Can_save_changes_in_tracked_entities()
         {
             using (var testDatabase = SqlServerTestStore.CreateInitialized(DatabaseName))
@@ -620,7 +542,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public void Can_track_an_entity_with_more_than_10_properties()
         {
             using (var testDatabase = SqlServerTestStore.CreateInitialized(DatabaseName))
@@ -632,10 +554,7 @@ namespace Microsoft.EntityFrameworkCore
 
                     context.Characters.Add(
                         new PlayerCharacter(
-                            new Level
-                            {
-                                Game = new Game()
-                            }));
+                            new Level { Game = new Game() }));
 
                     context.SaveChanges();
                 }
@@ -647,15 +566,14 @@ namespace Microsoft.EntityFrameworkCore
                         .OrderBy(c => c.Id)
                         .First();
 
-                    //issue #15318
-                    //Assert.NotNull(character.Game);
+                    Assert.NotNull(character.Game);
                     Assert.NotNull(character.Level);
                     Assert.NotNull(character.Level.Game);
                 }
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_an_item_to_a_collection_marks_it_as_modified()
         {
             using (var testDatabase = SqlServerTestStore.CreateInitialized(DatabaseName))
@@ -667,16 +585,9 @@ namespace Microsoft.EntityFrameworkCore
                     context.Database.EnsureCreatedResiliently();
 
                     var player = new PlayerCharacter(
-                        new Level
-                        {
-                            Game = new Game()
-                        });
+                        new Level { Game = new Game() });
 
-                    var weapon = new Item
-                    {
-                        Id = 1,
-                        Game = player.Game
-                    };
+                    var weapon = new Item { Id = 1, Game = player.Game };
 
                     context.Characters.Add(player);
 
@@ -691,7 +602,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "issue #15318")]
+        [ConditionalFact]
         public void Can_set_reference_twice()
         {
             using (var testDatabase = SqlServerTestStore.CreateInitialized(DatabaseName))
@@ -703,16 +614,9 @@ namespace Microsoft.EntityFrameworkCore
                     context.Database.EnsureCreatedResiliently();
 
                     var player = new PlayerCharacter(
-                        new Level
-                        {
-                            Game = new Game()
-                        });
+                        new Level { Game = new Game() });
 
-                    var weapon = new Item
-                    {
-                        Id = 1,
-                        Game = player.Game
-                    };
+                    var weapon = new Item { Id = 1, Game = player.Game };
 
                     player.Items.Add(weapon);
                     context.Characters.Add(player);
@@ -740,7 +644,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "issue #15318")]
+        [ConditionalFact]
         public void Can_include_on_loaded_entity()
         {
             using (var testDatabase = SqlServerTestStore.CreateInitialized(DatabaseName))
@@ -752,25 +656,14 @@ namespace Microsoft.EntityFrameworkCore
                     context.Database.EnsureCreatedResiliently();
 
                     var player = new PlayerCharacter(
-                        new Level
-                        {
-                            Game = new Game()
-                        });
+                        new Level { Game = new Game() });
 
-                    var weapon = new Item
-                    {
-                        Id = 1,
-                        Game = player.Game
-                    };
+                    var weapon = new Item { Id = 1, Game = player.Game };
 
                     player.Items.Add(weapon);
 
                     player.Items.Add(
-                        new Item
-                        {
-                            Id = 2,
-                            Game = player.Game
-                        });
+                        new Item { Id = 2, Game = player.Game });
 
                     context.Characters.Add(player);
 
@@ -925,11 +818,7 @@ namespace Microsoft.EntityFrameworkCore
                             .ValueGeneratedNever();
 
                         eb.HasKey(
-                            l => new
-                            {
-                                l.GameId,
-                                l.Id
-                            });
+                            l => new { l.GameId, l.Id });
                     });
 
                 modelBuilder.Entity<Actor>(
@@ -939,11 +828,7 @@ namespace Microsoft.EntityFrameworkCore
                             .ValueGeneratedNever();
 
                         eb.HasKey(
-                            a => new
-                            {
-                                a.GameId,
-                                a.Id
-                            });
+                            a => new { a.GameId, a.Id });
 
                         eb.HasOne(a => a.Level)
                             .WithMany(l => l.Actors)
@@ -970,11 +855,7 @@ namespace Microsoft.EntityFrameworkCore
                             .ValueGeneratedNever();
 
                         eb.HasKey(
-                            l => new
-                            {
-                                l.GameId,
-                                l.Id
-                            });
+                            l => new { l.GameId, l.Id });
                     });
 
                 modelBuilder.Entity<Container>();
@@ -995,7 +876,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public async Task Tracking_entities_asynchronously_returns_tracked_entities_back()
         {
             using (var testStore = SqlServerTestStore.GetNorthwindStore())
@@ -1013,7 +894,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #931
+        [ConditionalFact] // Issue #931
         public async Task Can_save_and_query_with_schema()
         {
             using (var testStore = SqlServerTestStore.CreateInitialized(DatabaseName))
@@ -1027,15 +908,9 @@ namespace Microsoft.EntityFrameworkCore
                 using (var context = new SchemaContext(options))
                 {
                     context.Add(
-                        new Jack
-                        {
-                            MyKey = 1
-                        });
+                        new Jack { MyKey = 1 });
                     context.Add(
-                        new Black
-                        {
-                            MyKey = 2
-                        });
+                        new Black { MyKey = 2 });
                     context.SaveChanges();
                 }
 
@@ -1081,19 +956,19 @@ namespace Microsoft.EntityFrameworkCore
             public int MyKey { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_round_trip_changes_with_snapshot_change_tracking()
         {
             return RoundTripChanges<Blog>();
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_round_trip_changes_with_full_notification_entities()
         {
             return RoundTripChanges<ChangedChangingBlog>();
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_round_trip_changes_with_changed_only_notification_entities()
         {
             return RoundTripChanges<ChangedOnlyBlog>();

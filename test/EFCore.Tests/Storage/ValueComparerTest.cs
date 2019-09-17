@@ -12,7 +12,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
 {
     public class ValueComparerTest
     {
-        [Theory]
+        [ConditionalTheory]
         [InlineData(typeof(byte), (byte)1, (byte)2, 1)]
         [InlineData(typeof(ushort), (ushort)1, (ushort)2, 1)]
         [InlineData(typeof(uint), (uint)1, (uint)2, 1)]
@@ -81,40 +81,24 @@ namespace Microsoft.EntityFrameworkCore.Storage
             B
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Default_comparer_works_for_decimals()
         {
             CompareTest(typeof(decimal), (decimal)1, (decimal)2);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Default_comparer_works_for_structs()
         {
             CompareTest(
                 typeof(JustAStruct),
-                new JustAStruct
-                {
-                    A = 1,
-                    B = "B1"
-                },
-                new JustAStruct
-                {
-                    A = 1,
-                    B = "B2"
-                });
+                new JustAStruct { A = 1, B = "B1" },
+                new JustAStruct { A = 1, B = "B2" });
 
             CompareTest(
                 typeof(JustAStruct),
-                new JustAStruct
-                {
-                    A = 1,
-                    B = "B"
-                },
-                new JustAStruct
-                {
-                    A = 2,
-                    B = "B"
-                });
+                new JustAStruct { A = 1, B = "B" },
+                new JustAStruct { A = 2, B = "B" });
         }
 
         private struct JustAStruct
@@ -123,21 +107,13 @@ namespace Microsoft.EntityFrameworkCore.Storage
             public string B { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Default_comparer_works_for_structs_with_equality()
         {
             CompareTest(
                 typeof(JustAStructWithEquality),
-                new JustAStructWithEquality
-                {
-                    A = 1,
-                    B = "B"
-                },
-                new JustAStructWithEquality
-                {
-                    A = 2,
-                    B = "B"
-                });
+                new JustAStructWithEquality { A = 1, B = "B" },
+                new JustAStructWithEquality { A = 2, B = "B" });
         }
 
         private struct JustAStructWithEquality
@@ -153,21 +129,13 @@ namespace Microsoft.EntityFrameworkCore.Storage
             public override int GetHashCode() => A;
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Default_comparer_works_for_structs_with_equality_operators()
         {
             CompareTest(
                 typeof(JustAStructWithEqualityOperators),
-                new JustAStructWithEqualityOperators
-                {
-                    A = 1,
-                    B = "B"
-                },
-                new JustAStructWithEqualityOperators
-                {
-                    A = 2,
-                    B = "B"
-                });
+                new JustAStructWithEqualityOperators { A = 1, B = "B" },
+                new JustAStructWithEqualityOperators { A = 2, B = "B" });
         }
 
 #pragma warning disable 660,661
@@ -185,19 +153,13 @@ namespace Microsoft.EntityFrameworkCore.Storage
                 => !(left == right);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Default_comparer_works_for_classes()
         {
             CompareTest(
                 typeof(JustAClass), // Reference equality
-                new JustAClass
-                {
-                    A = 1
-                },
-                new JustAClass
-                {
-                    A = 1
-                });
+                new JustAClass { A = 1 },
+                new JustAClass { A = 1 });
         }
 
         private class JustAClass
@@ -205,30 +167,18 @@ namespace Microsoft.EntityFrameworkCore.Storage
             public int A { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Default_comparer_works_for_classes_with_equality_members()
         {
             var comparer = CompareTest(
                 typeof(JustAClassWithEquality),
-                new JustAClassWithEquality
-                {
-                    A = 1
-                },
-                new JustAClassWithEquality
-                {
-                    A = 2
-                });
+                new JustAClassWithEquality { A = 1 },
+                new JustAClassWithEquality { A = 2 });
 
             Assert.True(
                 comparer.Equals(
-                    new JustAClassWithEquality
-                    {
-                        A = 1
-                    },
-                    new JustAClassWithEquality
-                    {
-                        A = 1
-                    }));
+                    new JustAClassWithEquality { A = 1 },
+                    new JustAClassWithEquality { A = 1 }));
         }
 
         private sealed class JustAClassWithEquality
@@ -246,30 +196,18 @@ namespace Microsoft.EntityFrameworkCore.Storage
             public override int GetHashCode() => A;
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Default_comparer_works_for_classes_with_equality_operators()
         {
             var comparer = CompareTest(
                 typeof(JustAClassWithEqualityOperators),
-                new JustAClassWithEqualityOperators
-                {
-                    A = 1
-                },
-                new JustAClassWithEqualityOperators
-                {
-                    A = 2
-                });
+                new JustAClassWithEqualityOperators { A = 1 },
+                new JustAClassWithEqualityOperators { A = 2 });
 
             Assert.True(
                 comparer.Equals(
-                    new JustAClassWithEqualityOperators
-                    {
-                        A = 1
-                    },
-                    new JustAClassWithEqualityOperators
-                    {
-                        A = 1
-                    }));
+                    new JustAClassWithEqualityOperators { A = 1 },
+                    new JustAClassWithEqualityOperators { A = 1 }));
         }
 
 #pragma warning disable 660,661
@@ -291,7 +229,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
                 => !InternalEquals(left, right);
         }
 
-        public void GenericCompareTest<T>(T value1, T value2, int? hashCode = null)
+        private void GenericCompareTest<T>(T value1, T value2, int? hashCode = null)
         {
             var comparer = new ValueComparer<T>(false);
             var equals = comparer.EqualsExpression.Compile();
@@ -316,7 +254,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Assert.Equal(hashCode ?? value1.GetHashCode(), getKeyHashCode(value1));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Default_raw_comparer_works_for_non_null_normal_types()
         {
             GenericCompareTest<byte>(1, 2, 1);
@@ -335,56 +273,20 @@ namespace Microsoft.EntityFrameworkCore.Storage
             GenericCompareTest<object>(1, "A");
             GenericCompareTest(JustAnEnum.A, JustAnEnum.B);
             GenericCompareTest(
-                new JustAClass
-                {
-                    A = 1
-                }, new JustAClass
-                {
-                    A = 2
-                });
+                new JustAClass { A = 1 }, new JustAClass { A = 2 });
             GenericCompareTest(
-                new JustAClassWithEquality
-                {
-                    A = 1
-                }, new JustAClassWithEquality
-                {
-                    A = 2
-                });
+                new JustAClassWithEquality { A = 1 }, new JustAClassWithEquality { A = 2 });
             GenericCompareTest(
-                new JustAClassWithEqualityOperators
-                {
-                    A = 1
-                }, new JustAClassWithEqualityOperators
-                {
-                    A = 2
-                });
+                new JustAClassWithEqualityOperators { A = 1 }, new JustAClassWithEqualityOperators { A = 2 });
             GenericCompareTest(
-                new JustAStruct
-                {
-                    A = 1
-                }, new JustAStruct
-                {
-                    A = 2
-                });
+                new JustAStruct { A = 1 }, new JustAStruct { A = 2 });
             GenericCompareTest(
-                new JustAStructWithEquality
-                {
-                    A = 1
-                }, new JustAStructWithEquality
-                {
-                    A = 2
-                });
+                new JustAStructWithEquality { A = 1 }, new JustAStructWithEquality { A = 2 });
             GenericCompareTest(
-                new JustAStructWithEqualityOperators
-                {
-                    A = 1
-                }, new JustAStructWithEqualityOperators
-                {
-                    A = 2
-                });
+                new JustAStructWithEqualityOperators { A = 1 }, new JustAStructWithEqualityOperators { A = 2 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Default_comparer_works_for_normal_types_mixing_nullables()
         {
             CompareTest(typeof(byte), (byte)1, (byte?)2, 1);
@@ -403,39 +305,21 @@ namespace Microsoft.EntityFrameworkCore.Storage
 
             CompareTest(
                 typeof(JustAStruct),
-                (JustAStruct?)new JustAStruct
-                {
-                    A = 1
-                },
-                new JustAStruct
-                {
-                    A = 2
-                });
+                (JustAStruct?)new JustAStruct { A = 1 },
+                new JustAStruct { A = 2 });
 
             CompareTest(
                 typeof(JustAStructWithEquality),
-                (JustAStructWithEquality?)new JustAStructWithEquality
-                {
-                    A = 1
-                },
-                new JustAStructWithEquality
-                {
-                    A = 2
-                });
+                (JustAStructWithEquality?)new JustAStructWithEquality { A = 1 },
+                new JustAStructWithEquality { A = 2 });
 
             CompareTest(
                 typeof(JustAStructWithEqualityOperators),
-                (JustAStructWithEqualityOperators?)new JustAStructWithEqualityOperators
-                {
-                    A = 1
-                },
-                new JustAStructWithEqualityOperators
-                {
-                    A = 2
-                });
+                (JustAStructWithEqualityOperators?)new JustAStructWithEqualityOperators { A = 1 },
+                new JustAStructWithEqualityOperators { A = 2 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Default_comparer_works_for_normal_nullable_types_mixing_nullables()
         {
             CompareTest(typeof(byte?), (byte)1, (byte?)2, 1);
@@ -454,39 +338,21 @@ namespace Microsoft.EntityFrameworkCore.Storage
 
             CompareTest(
                 typeof(JustAStruct?),
-                (JustAStruct?)new JustAStruct
-                {
-                    A = 1
-                },
-                new JustAStruct
-                {
-                    A = 2
-                });
+                (JustAStruct?)new JustAStruct { A = 1 },
+                new JustAStruct { A = 2 });
 
             CompareTest(
                 typeof(JustAStructWithEquality?),
-                (JustAStructWithEquality?)new JustAStructWithEquality
-                {
-                    A = 1
-                },
-                new JustAStructWithEquality
-                {
-                    A = 2
-                });
+                (JustAStructWithEquality?)new JustAStructWithEquality { A = 1 },
+                new JustAStructWithEquality { A = 2 });
 
             CompareTest(
                 typeof(JustAStructWithEqualityOperators?),
-                (JustAStructWithEqualityOperators?)new JustAStructWithEqualityOperators
-                {
-                    A = 1
-                },
-                new JustAStructWithEqualityOperators
-                {
-                    A = 2
-                });
+                (JustAStructWithEqualityOperators?)new JustAStructWithEqualityOperators { A = 1 },
+                new JustAStructWithEqualityOperators { A = 2 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_clone_to_nullable()
         {
             CompareTest(typeof(byte), (byte)1, (byte?)2, 1, true);
@@ -505,46 +371,28 @@ namespace Microsoft.EntityFrameworkCore.Storage
 
             CompareTest(
                 typeof(JustAStruct),
-                (JustAStruct?)new JustAStruct
-                {
-                    A = 1
-                },
-                new JustAStruct
-                {
-                    A = 2
-                },
+                (JustAStruct?)new JustAStruct { A = 1 },
+                new JustAStruct { A = 2 },
                 null,
                 true);
 
             CompareTest(
                 typeof(JustAStructWithEquality),
-                (JustAStructWithEquality?)new JustAStructWithEquality
-                {
-                    A = 1
-                },
-                new JustAStructWithEquality
-                {
-                    A = 2
-                },
+                (JustAStructWithEquality?)new JustAStructWithEquality { A = 1 },
+                new JustAStructWithEquality { A = 2 },
                 null,
                 true);
 
             CompareTest(
                 typeof(JustAStructWithEqualityOperators),
-                (JustAStructWithEqualityOperators?)new JustAStructWithEqualityOperators
-                {
-                    A = 1
-                },
-                new JustAStructWithEqualityOperators
-                {
-                    A = 2
-                },
+                (JustAStructWithEqualityOperators?)new JustAStructWithEqualityOperators { A = 1 },
+                new JustAStructWithEqualityOperators { A = 2 },
                 null,
                 true);
         }
 
-        [Fact]
-        public void Structural_objects_get_deep_key_comperer_by_default()
+        [ConditionalFact]
+        public void Structural_objects_get_deep_key_comparer_by_default()
         {
             var comparer = new ValueComparer<byte[]>(false);
             var keyComparer = new ValueComparer<byte[]>(true);
@@ -582,7 +430,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
             public byte Value1 { get; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_define_different_custom_equals_for_key_and_non_key()
         {
             var comparer = new ValueComparer<Binary>(
@@ -632,7 +480,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
         private static readonly MethodInfo _getValue1Method
             = typeof(DeepBinary).GetProperty(nameof(DeepBinary.Value1)).GetMethod;
 
-        [Fact]
+        [ConditionalFact]
         public void Can_create_new_comparer_composing_existing_comparers()
         {
             var bytesComparer = new ValueComparer<byte[]>(false);

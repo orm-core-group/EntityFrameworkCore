@@ -22,9 +22,9 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Update.Internal
     ///         doing so can result in application failures when updating to a new Entity Framework Core release.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Singleton"/>. This means a single instance
-    ///         is used by many <see cref="DbContext"/> instances. The implementation must be thread-safe.
-    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped"/>.
+    ///         The service lifetime is <see cref="ServiceLifetime.Singleton" />. This means a single instance
+    ///         is used by many <see cref="DbContext" /> instances. The implementation must be thread-safe.
+    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped" />.
     ///     </para>
     /// </summary>
     public class SqlServerUpdateSqlGenerator : UpdateSqlGenerator, ISqlServerUpdateSqlGenerator
@@ -57,7 +57,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Update.Internal
                     o =>
                         !o.IsKey
                         || !o.IsRead
-                        || o.Property?.SqlServer().ValueGenerationStrategy == SqlServerValueGenerationStrategy.IdentityColumn))
+                        || o.Property?.GetValueGenerationStrategy() == SqlServerValueGenerationStrategy.IdentityColumn))
             {
                 return AppendInsertOperation(commandStringBuilder, modificationCommands[0], commandPosition);
             }
@@ -68,7 +68,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Update.Internal
 
             var defaultValuesOnly = writeOperations.Count == 0;
             var nonIdentityOperations = modificationCommands[0].ColumnModifications
-                .Where(o => o.Property?.SqlServer().ValueGenerationStrategy != SqlServerValueGenerationStrategy.IdentityColumn)
+                .Where(o => o.Property?.GetValueGenerationStrategy() != SqlServerValueGenerationStrategy.IdentityColumn)
                 .ToList();
 
             if (defaultValuesOnly)
@@ -99,11 +99,12 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Update.Internal
 
             if (defaultValuesOnly)
             {
-                return AppendBulkInsertWithServerValuesOnly(commandStringBuilder, modificationCommands, commandPosition, nonIdentityOperations, keyOperations, readOperations);
+                return AppendBulkInsertWithServerValuesOnly(
+                    commandStringBuilder, modificationCommands, commandPosition, nonIdentityOperations, keyOperations, readOperations);
             }
 
             if (modificationCommands[0].Entries.SelectMany(e => e.EntityType.GetAllBaseTypesInclusive())
-                .Any(e => e.SqlServer().IsMemoryOptimized))
+                .Any(e => e.IsMemoryOptimized()))
             {
                 if (!nonIdentityOperations.Any(o => o.IsRead && o.IsKey))
                 {
@@ -116,14 +117,16 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Update.Internal
                 {
                     foreach (var modification in modificationCommands)
                     {
-                        AppendInsertOperationWithServerKeys(commandStringBuilder, modification, keyOperations, readOperations, commandPosition++);
+                        AppendInsertOperationWithServerKeys(
+                            commandStringBuilder, modification, keyOperations, readOperations, commandPosition++);
                     }
                 }
 
                 return ResultSetMapping.LastInResultSet;
             }
 
-            return AppendBulkInsertWithServerValues(commandStringBuilder, modificationCommands, commandPosition, writeOperations, keyOperations, readOperations);
+            return AppendBulkInsertWithServerValues(
+                commandStringBuilder, modificationCommands, commandPosition, writeOperations, keyOperations, readOperations);
         }
 
         private ResultSetMapping AppendBulkInsertWithoutServerValues(
@@ -190,7 +193,9 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Update.Internal
                 FullPositionColumnName);
             commandStringBuilder.AppendLine(SqlGenerationHelper.StatementTerminator);
 
-            AppendSelectCommand(commandStringBuilder, readOperations, keyOperations, InsertedTableBaseName, commandPosition, name, schema, orderColumn: PositionColumnName);
+            AppendSelectCommand(
+                commandStringBuilder, readOperations, keyOperations, InsertedTableBaseName, commandPosition, name, schema,
+                orderColumn: PositionColumnName);
 
             return ResultSetMapping.NotLastInResultSet;
         }
@@ -357,12 +362,12 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Update.Internal
 
         private string GetTypeNameForCopy(IProperty property)
         {
-            var typeName = property.SqlServer().ColumnType;
+            var typeName = property.GetColumnType();
             if (typeName == null)
             {
-                var principalProperty = property.FindPrincipal();
+                var principalProperty = property.FindFirstPrincipal();
 
-                typeName = principalProperty?.SqlServer().ColumnType
+                typeName = principalProperty?.GetColumnType()
                            ?? Dependencies.TypeMappingSource.FindMapping(property.ClrType)?.StoreType;
             }
 
@@ -425,7 +430,8 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Update.Internal
             AppendValues(commandStringBuilder, writeOperations);
             commandStringBuilder.Append(SqlGenerationHelper.StatementTerminator);
 
-            return AppendSelectCommand(commandStringBuilder, readOperations, keyOperations, InsertedTableBaseName, commandPosition, name, schema);
+            return AppendSelectCommand(
+                commandStringBuilder, readOperations, keyOperations, InsertedTableBaseName, commandPosition, name, schema);
         }
 
         private ResultSetMapping AppendSelectCommand(
@@ -484,7 +490,8 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Update.Internal
         ///     any release. You should only use it directly in your code with extreme caution and knowing that
         ///     doing so can result in application failures when updating to a new Entity Framework Core release.
         /// </summary>
-        protected override ResultSetMapping AppendSelectAffectedCountCommand(StringBuilder commandStringBuilder, string name, string schema, int commandPosition)
+        protected override ResultSetMapping AppendSelectAffectedCountCommand(
+            StringBuilder commandStringBuilder, string name, string schema, int commandPosition)
         {
             commandStringBuilder
                 .Append("SELECT @@ROWCOUNT")

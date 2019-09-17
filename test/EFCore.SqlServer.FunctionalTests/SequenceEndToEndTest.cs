@@ -59,15 +59,9 @@ namespace Microsoft.EntityFrameworkCore
                 for (var i = 0; i < 10; i++)
                 {
                     context.Add(
-                        new Pegasus
-                        {
-                            Name = "Rainbow Dash " + i
-                        });
+                        new Pegasus { Name = "Rainbow Dash " + i });
                     context.Add(
-                        new Pegasus
-                        {
-                            Name = "Fluttershy " + i
-                        });
+                        new Pegasus { Name = "Fluttershy " + i });
                 }
 
                 context.SaveChanges();
@@ -75,7 +69,7 @@ namespace Microsoft.EntityFrameworkCore
         }
 
         [ConditionalFact]
-        [PlatformSkipCondition(TestPlatform.Linux, SkipReason = "Test is flaky on CI.")]
+        [SqlServerCondition(SqlServerCondition.IsNotCI)]
         public void Can_use_sequence_end_to_end_on_multiple_databases()
         {
             var serviceProvider = new ServiceCollection()
@@ -135,22 +129,13 @@ namespace Microsoft.EntityFrameworkCore
                     for (var i = 0; i < 29; i++)
                     {
                         context1.Add(
-                            new Pegasus
-                            {
-                                Name = "Rainbow Dash " + i
-                            });
+                            new Pegasus { Name = "Rainbow Dash " + i });
 
                         context2.Add(
-                            new Pegasus
-                            {
-                                Name = "Fluttershy " + i
-                            });
+                            new Pegasus { Name = "Fluttershy " + i });
 
                         context1.Add(
-                            new Pegasus
-                            {
-                                Name = "Fluttershy " + i
-                            });
+                            new Pegasus { Name = "Fluttershy " + i });
                     }
 
                     context1.SaveChanges();
@@ -159,7 +144,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [ConditionalFact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public async Task Can_use_sequence_end_to_end_async()
         {
             var serviceProvider = new ServiceCollection()
@@ -201,22 +186,16 @@ namespace Microsoft.EntityFrameworkCore
                 for (var i = 0; i < 10; i++)
                 {
                     await context.AddAsync(
-                        new Pegasus
-                        {
-                            Name = "Rainbow Dash " + i
-                        });
+                        new Pegasus { Name = "Rainbow Dash " + i });
                     await context.AddAsync(
-                        new Pegasus
-                        {
-                            Name = "Fluttershy " + i
-                        });
+                        new Pegasus { Name = "Fluttershy " + i });
                 }
 
                 await context.SaveChangesAsync();
             }
         }
 
-        [ConditionalFact(Skip = "QueryIssue")]
+        [ConditionalFact]
         [PlatformSkipCondition(TestPlatform.Linux, SkipReason = "Test is flaky on CI.")]
         public async Task Can_use_sequence_end_to_end_from_multiple_contexts_concurrently_async()
         {
@@ -304,17 +283,9 @@ namespace Microsoft.EntityFrameworkCore
                 for (var i = 1; i < 11; i++)
                 {
                     context.Add(
-                        new Pegasus
-                        {
-                            Name = "Rainbow Dash " + i,
-                            Identifier = i * 100 + idOffset
-                        });
+                        new Pegasus { Name = "Rainbow Dash " + i, Identifier = i * 100 + idOffset });
                     context.Add(
-                        new Pegasus
-                        {
-                            Name = "Fluttershy " + i,
-                            Identifier = i * 100 + idOffset + 1
-                        });
+                        new Pegasus { Name = "Fluttershy " + i, Identifier = i * 100 + idOffset + 1 });
                 }
 
                 context.SaveChanges();
@@ -345,7 +316,7 @@ namespace Microsoft.EntityFrameworkCore
                     b =>
                     {
                         b.HasKey(e => e.Identifier);
-                        b.Property(e => e.Identifier).ForSqlServerUseSequenceHiLo();
+                        b.Property(e => e.Identifier).UseHiLo();
                     });
             }
         }
@@ -419,15 +390,9 @@ namespace Microsoft.EntityFrameworkCore
                 for (var i = 0; i < 10; i++)
                 {
                     context.Add(
-                        new Unicon
-                        {
-                            Name = "Twilight Sparkle " + i
-                        });
+                        new Unicon { Name = "Twilight Sparkle " + i });
                     context.Add(
-                        new Unicon
-                        {
-                            Name = "Rarity " + i
-                        });
+                        new Unicon { Name = "Rarity " + i });
                 }
 
                 context.SaveChanges();
@@ -462,11 +427,11 @@ namespace Microsoft.EntityFrameworkCore
                         b.HasKey(e => e.Identifier);
                         if (_useSequence)
                         {
-                            b.Property(e => e.Identifier).ForSqlServerUseSequenceHiLo();
+                            b.Property(e => e.Identifier).UseHiLo();
                         }
                         else
                         {
-                            b.Property(e => e.Identifier).UseSqlServerIdentityColumn();
+                            b.Property(e => e.Identifier).UseIdentityColumn();
                         }
                     });
             }

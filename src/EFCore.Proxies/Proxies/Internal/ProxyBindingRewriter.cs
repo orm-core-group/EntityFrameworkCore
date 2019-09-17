@@ -6,11 +6,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using JetBrains.Annotations;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Metadata.Conventions.Internal;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Metadata.Conventions;
+using Microsoft.EntityFrameworkCore.Metadata.Conventions.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace Microsoft.EntityFrameworkCore.Proxies.Internal
@@ -21,7 +22,7 @@ namespace Microsoft.EntityFrameworkCore.Proxies.Internal
     ///     any release. You should only use it directly in your code with extreme caution and knowing that
     ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
-    public class ProxyBindingRewriter : IModelBuiltConvention
+    public class ProxyBindingRewriter : IModelFinalizedConvention
     {
         private static readonly MethodInfo _createLazyLoadingProxyMethod
             = typeof(IProxyFactory).GetTypeInfo().GetDeclaredMethod(nameof(IProxyFactory.CreateLazyLoadingProxy));
@@ -30,6 +31,7 @@ namespace Microsoft.EntityFrameworkCore.Proxies.Internal
             = typeof(IProxyLazyLoader).GetProperty(nameof(IProxyLazyLoader.LazyLoader));
 
         private readonly ConstructorBindingConvention _directBindingConvention;
+        private readonly LazyLoaderParameterBindingFactoryDependencies _lazyLoaderParameterBindingFactoryDependencies;
         private readonly IProxyFactory _proxyFactory;
         private readonly ProxiesOptionsExtension _options;
 
@@ -41,22 +43,22 @@ namespace Microsoft.EntityFrameworkCore.Proxies.Internal
         /// </summary>
         public ProxyBindingRewriter(
             [NotNull] IProxyFactory proxyFactory,
-            [NotNull] IConstructorBindingFactory bindingFactory,
-            [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model> logger,
-            [CanBeNull] ProxiesOptionsExtension options)
+            [CanBeNull] ProxiesOptionsExtension options,
+            [NotNull] LazyLoaderParameterBindingFactoryDependencies lazyLoaderParameterBindingFactoryDependencies,
+            [NotNull] ProviderConventionSetBuilderDependencies conventionSetBuilderDependencies)
         {
-            _directBindingConvention = new ConstructorBindingConvention(bindingFactory, logger);
             _proxyFactory = proxyFactory;
             _options = options;
+            _lazyLoaderParameterBindingFactoryDependencies = lazyLoaderParameterBindingFactoryDependencies;
+            _directBindingConvention = new ConstructorBindingConvention(conventionSetBuilderDependencies);
         }
 
         /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        ///     Called after a model is finalized.
         /// </summary>
-        public virtual InternalModelBuilder Apply(InternalModelBuilder modelBuilder)
+        /// <param name="modelBuilder"> The builder for the model. </param>
+        /// <param name="context"> Additional information associated with convention execution. </param>
+        public virtual void ProcessModelFinalized(IConventionModelBuilder modelBuilder, IConventionContext<IConventionModelBuilder> context)
         {
             if (_options?.UseLazyLoadingProxies == true)
             {
@@ -81,33 +83,39 @@ namespace Microsoft.EntityFrameworkCore.Proxies.Internal
                         var serviceProperty = entityType.GetServiceProperties().FirstOrDefault(e => e.ClrType == typeof(ILazyLoader));
                         if (serviceProperty == null)
                         {
-                            serviceProperty = entityType.AddServiceProperty(_lazyLoaderProperty, ConfigurationSource.Convention);
+                            serviceProperty = entityType.AddServiceProperty(_lazyLoaderProperty);
                             serviceProperty.SetParameterBinding(
-                                (ServiceParameterBinding)new LazyLoaderParameterBindingFactory().Bind(
-                                    entityType,
-                                    typeof(ILazyLoader),
-                                    nameof(IProxyLazyLoader.LazyLoader)));
+                                (ServiceParameterBinding)new LazyLoaderParameterBindingFactory(
+                                        _lazyLoaderParameterBindingFactoryDependencies)
+                                    .Bind(
+                                        entityType,
+                                        typeof(ILazyLoader),
+                                        nameof(IProxyLazyLoader.LazyLoader)));
                         }
 
-                        var binding = (ConstructorBinding)entityType[CoreAnnotationNames.ConstructorBinding];
+                        // WARNING: This code is EF internal; it should not be copied. See #10789 #14554
+                        var binding = (InstantiationBinding)entityType[CoreAnnotationNames.ConstructorBinding];
                         if (binding == null)
                         {
-                            _directBindingConvention.Apply(modelBuilder);
+                            _directBindingConvention.ProcessModelFinalized(modelBuilder, context);
                         }
 
-                        binding = (ConstructorBinding)entityType[CoreAnnotationNames.ConstructorBinding];
+                        // WARNING: This code is EF internal; it should not be copied. See #10789 #14554
+                        binding = (InstantiationBinding)entityType[CoreAnnotationNames.ConstructorBinding];
 
-                        entityType[CoreAnnotationNames.ConstructorBinding]
-                            = new FactoryMethodConstructorBinding(
+                        entityType.SetAnnotation(
+                            // WARNING: This code is EF internal; it should not be copied. See #10789 #14554
+                            CoreAnnotationNames.ConstructorBinding,
+                            new FactoryMethodBinding(
                                 _proxyFactory,
                                 _createLazyLoadingProxyMethod,
                                 new List<ParameterBinding>
                                 {
                                     new EntityTypeParameterBinding(),
-                                    new DefaultServiceParameterBinding(typeof(ILazyLoader), typeof(ILazyLoader), serviceProperty),
+                                    new DependencyInjectionParameterBinding(typeof(ILazyLoader), typeof(ILazyLoader), serviceProperty),
                                     new ObjectArrayParameterBinding(binding.ParameterBindings)
                                 },
-                                proxyType);
+                                proxyType));
 
                         foreach (var navigation in entityType.GetNavigations())
                         {
@@ -128,8 +136,6 @@ namespace Microsoft.EntityFrameworkCore.Proxies.Internal
                     }
                 }
             }
-
-            return modelBuilder;
         }
     }
 }

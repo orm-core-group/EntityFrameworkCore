@@ -7,8 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
@@ -60,9 +60,9 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                 var targetType = Metadata.GetTargetType();
                 var context = InternalEntry.StateManager.Context;
                 var changeDetector = context.ChangeTracker.AutoDetectChangesEnabled
-                    && context.Model[ChangeDetector.SkipDetectChangesAnnotation] == null
-                     ? context.GetDependencies().ChangeDetector
-                     : null;
+                                     && (string)context.Model[ChangeDetector.SkipDetectChangesAnnotation] != "true"
+                    ? context.GetDependencies().ChangeDetector
+                    : null;
                 foreach (var entity in collection.OfType<object>().ToList())
                 {
                     var entry = InternalEntry.StateManager.GetOrCreateEntry(entity, targetType);
@@ -142,19 +142,19 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
         }
 
         private void EnsureInitialized()
-            => InternalEntry.GetOrCreateCollection(Metadata);
+            => Metadata.AsNavigation().CollectionAccessor.GetOrCreate(InternalEntry.Entity, forMaterialization: true);
 
         /// <summary>
         ///     The <see cref="EntityEntry" /> of an entity this navigation targets.
         /// </summary>
         /// <param name="entity"> The entity to get the entry for. </param>
         /// <value> An entry for an entity that this navigation targets. </value>
-        public virtual EntityEntry GetTargetEntry(object entity)
+        public virtual EntityEntry FindEntry([NotNull] object entity)
         {
             var entry = GetInternalTargetEntry(entity);
             return entry == null
-                    ? null
-                    : new EntityEntry(entry);
+                ? null
+                : new EntityEntry(entry);
         }
 
         /// <summary>
@@ -163,10 +163,10 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
         ///     any release. You should only use it directly in your code with extreme caution and knowing that
         ///     doing so can result in application failures when updating to a new Entity Framework Core release.
         /// </summary>
-        protected virtual InternalEntityEntry GetInternalTargetEntry(object entity)
+        protected virtual InternalEntityEntry GetInternalTargetEntry([NotNull] object entity)
             => CurrentValue == null
                || !((Navigation)Metadata).CollectionAccessor.Contains(InternalEntry.Entity, entity)
-                  ? null
-                  : InternalEntry.StateManager.GetOrCreateEntry(entity, Metadata.GetTargetType());
+                ? null
+                : InternalEntry.StateManager.GetOrCreateEntry(entity, Metadata.GetTargetType());
     }
 }

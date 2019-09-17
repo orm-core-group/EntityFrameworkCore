@@ -40,6 +40,13 @@ namespace Microsoft.EntityFrameworkCore
                 : base(options)
             {
             }
+
+            public DbSet<Foo> Foos { get; set; }
+        }
+
+        public class Foo
+        {
+            public int Id { get; set; }
         }
 
         [DbContext(typeof(MigrationsContext))]
@@ -53,11 +60,7 @@ namespace Microsoft.EntityFrameworkCore
                 migrationBuilder
                     .CreateTable(
                         name: "Table1",
-                        columns: x => new
-                        {
-                            Id = x.Column<int>(),
-                            Foo = x.Column<int>()
-                        })
+                        columns: x => new { Id = x.Column<int>(), Foo = x.Column<int>() })
                     .PrimaryKey(
                         name: "PK_Table1",
                         columns: x => x.Id);

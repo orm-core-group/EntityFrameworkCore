@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -76,29 +76,21 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding.Internal
         /// </summary>
         public virtual ScaffoldedModel ScaffoldModel(
             string connectionString,
-            DatabaseModelFactoryOptions options,
-            string rootNamespace,
-            string modelNamespace,
-            string contextNamespace,
-            string language,
-            string contextDir,
-            string contextName,
+            DatabaseModelFactoryOptions databaseOptions,
             ModelReverseEngineerOptions modelOptions,
             ModelCodeGenerationOptions codeOptions)
         {
             Check.NotEmpty(connectionString, nameof(connectionString));
-            Check.NotNull(options, nameof(options));
-            Check.NotEmpty(modelNamespace, nameof(modelNamespace));
-            Check.NotEmpty(contextNamespace, nameof(contextNamespace));
+            Check.NotNull(databaseOptions, nameof(databaseOptions));
             Check.NotNull(modelOptions, nameof(modelOptions));
             Check.NotNull(codeOptions, nameof(codeOptions));
 
-            if (!string.IsNullOrWhiteSpace(contextName)
-                && (!_cSharpUtilities.IsValidIdentifier(contextName)
-                    || _cSharpUtilities.IsCSharpKeyword(contextName)))
+            if (!string.IsNullOrWhiteSpace(codeOptions.ContextName)
+                && (!_cSharpUtilities.IsValidIdentifier(codeOptions.ContextName)
+                    || _cSharpUtilities.IsCSharpKeyword(codeOptions.ContextName)))
             {
                 throw new ArgumentException(
-                    DesignStrings.ContextClassNotValidCSharpIdentifier(contextName));
+                    DesignStrings.ContextClassNotValidCSharpIdentifier(codeOptions.ContextName));
             }
 
             var resolvedConnectionString = _connectionStringResolver.ResolveConnectionString(connectionString);
@@ -107,7 +99,12 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding.Internal
                 codeOptions.SuppressConnectionStringWarning = true;
             }
 
-            var databaseModel = _databaseModelFactory.Create(resolvedConnectionString, options);
+            if (codeOptions.ConnectionString == null)
+            {
+                codeOptions.ConnectionString = connectionString;
+            }
+
+            var databaseModel = _databaseModelFactory.Create(resolvedConnectionString, databaseOptions);
             var model = _factory.Create(databaseModel, modelOptions.UseDatabaseNames);
 
             if (model == null)
@@ -117,20 +114,17 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding.Internal
                         _factory.GetType().ShortDisplayName()));
             }
 
-            if (string.IsNullOrEmpty(contextName))
+            if (string.IsNullOrEmpty(codeOptions.ContextName))
             {
-                contextName = DefaultDbContextName;
-
-                var annotatedName = model.Scaffolding().DatabaseName;
-                if (!string.IsNullOrEmpty(annotatedName))
-                {
-                    contextName = _code.Identifier(annotatedName + DbContextSuffix);
-                }
+                var annotatedName = model.GetDatabaseName();
+                codeOptions.ContextName = !string.IsNullOrEmpty(annotatedName)
+                    ? _code.Identifier(annotatedName + DbContextSuffix)
+                    : DefaultDbContextName;
             }
 
-            var codeGenerator = ModelCodeGeneratorSelector.Select(language);
+            var codeGenerator = ModelCodeGeneratorSelector.Select(codeOptions.Language);
 
-            return codeGenerator.GenerateModel(model, rootNamespace, modelNamespace, contextNamespace, contextDir ?? string.Empty, contextName, connectionString, codeOptions);
+            return codeGenerator.GenerateModel(model, codeOptions);
         }
 
         /// <summary>

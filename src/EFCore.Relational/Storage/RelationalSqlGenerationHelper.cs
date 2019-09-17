@@ -1,6 +1,7 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System.IO;
 using System.Text;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Utilities;
@@ -17,9 +18,9 @@ namespace Microsoft.EntityFrameworkCore.Storage
     ///         not used in application code.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Singleton"/>. This means a single instance
-    ///         is used by many <see cref="DbContext"/> instances. The implementation must be thread-safe.
-    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped"/>.
+    ///         The service lifetime is <see cref="ServiceLifetime.Singleton" />. This means a single instance
+    ///         is used by many <see cref="DbContext" /> instances. The implementation must be thread-safe.
+    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped" />.
     ///     </para>
     /// </summary>
     public class RelationalSqlGenerationHelper : ISqlGenerationHelper
@@ -44,6 +45,11 @@ namespace Microsoft.EntityFrameworkCore.Storage
         public virtual string BatchTerminator => string.Empty;
 
         /// <summary>
+        ///     The default single-line comment prefix.
+        /// </summary>
+        public virtual string SingleLineCommentToken => "--";
+
+        /// <summary>
         ///     Generates a valid parameter name for the given candidate name.
         /// </summary>
         /// <param name="name">The candidate name for the parameter.</param>
@@ -51,7 +57,9 @@ namespace Microsoft.EntityFrameworkCore.Storage
         ///     A valid name based on the candidate name.
         /// </returns>
         public virtual string GenerateParameterName(string name)
-            => "@" + name;
+            => name.StartsWith("@")
+                ? name
+                : "@" + name;
 
         /// <summary>
         ///     Writes a valid parameter name for the given candidate name.
@@ -86,7 +94,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
         /// <returns>
         ///     The generated string.
         /// </returns>
-        public virtual string EscapeIdentifier(string identifier)
+        public virtual string EscapeIdentifier([NotNull] string identifier)
             => Check.NotEmpty(identifier, nameof(identifier)).Replace("\"", "\"\"");
 
         /// <summary>
@@ -94,7 +102,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
         /// </summary>
         /// <param name="builder">The <see cref="StringBuilder" /> to write generated string to.</param>
         /// <param name="identifier">The identifier to be escaped.</param>
-        public virtual void EscapeIdentifier(StringBuilder builder, string identifier)
+        public virtual void EscapeIdentifier([NotNull] StringBuilder builder, [NotNull] string identifier)
         {
             Check.NotEmpty(identifier, nameof(identifier));
 
@@ -156,6 +164,28 @@ namespace Microsoft.EntityFrameworkCore.Storage
             }
 
             DelimitIdentifier(builder, name);
+        }
+
+        /// <summary>
+        ///     Generates a SQL comment.
+        /// </summary>
+        /// <param name="text"> The comment text. </param>
+        /// <returns> The generated SQL. </returns>
+        public virtual string GenerateComment(string text)
+        {
+            Check.NotEmpty(text, nameof(text));
+
+            var builder = new StringBuilder();
+            using (var reader = new StringReader(text))
+            {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    builder.Append(SingleLineCommentToken).Append(" ").AppendLine(line);
+                }
+            }
+
+            return builder.ToString();
         }
     }
 }

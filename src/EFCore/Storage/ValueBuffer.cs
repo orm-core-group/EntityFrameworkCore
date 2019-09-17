@@ -1,6 +1,7 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
@@ -26,31 +27,16 @@ namespace Microsoft.EntityFrameworkCore.Storage
         public static readonly ValueBuffer Empty = new ValueBuffer();
 
         private readonly object[] _values;
-        private readonly int _offset;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ValueBuffer" /> class.
         /// </summary>
         /// <param name="values"> The list of values for this buffer. </param>
         public ValueBuffer([NotNull] object[] values)
-            : this(values, 0)
-        {
-        }
-
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="ValueBuffer" /> class.
-        /// </summary>
-        /// <param name="values"> The list of values for this buffer. </param>
-        /// <param name="offset">
-        ///     The starting slot in <paramref name="values" /> for this buffer.
-        /// </param>
-        public ValueBuffer([NotNull] object[] values, int offset)
         {
             Debug.Assert(values != null);
-            Debug.Assert(offset >= 0);
 
             _values = values;
-            _offset = offset;
         }
 
         /// <summary>
@@ -61,9 +47,9 @@ namespace Microsoft.EntityFrameworkCore.Storage
         public object this[int index]
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _values[_offset + index];
+            get => _values[index];
 
-            [param: CanBeNull] set => _values[_offset + index] = value;
+            [param: CanBeNull] set => _values[index] = value;
         }
 
         internal static readonly MethodInfo GetValueMethod
@@ -72,23 +58,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
         /// <summary>
         ///     Gets the number of values in this buffer.
         /// </summary>
-        public int Count => _values.Length - _offset;
-
-        /// <summary>
-        ///     Creates a new buffer with data starting at the given index in the current buffer.
-        /// </summary>
-        /// <param name="offset">
-        ///     The slot in the current buffer that will be the starting slot in the new buffer.
-        /// </param>
-        /// <returns> The newly created buffer. </returns>
-        public ValueBuffer WithOffset(int offset)
-        {
-            Debug.Assert(offset >= _offset);
-
-            return offset > _offset
-                ? new ValueBuffer(_values, offset)
-                : this;
-        }
+        public int Count => _values.Length;
 
         /// <summary>
         ///     Gets a value indicating whether the value buffer is empty.
@@ -114,11 +84,6 @@ namespace Microsoft.EntityFrameworkCore.Storage
 
         private bool Equals(ValueBuffer other)
         {
-            if (_offset != other._offset)
-            {
-                return false;
-            }
-
             if (_values.Length != other._values.Length)
             {
                 return false;
@@ -143,12 +108,13 @@ namespace Microsoft.EntityFrameworkCore.Storage
         /// </returns>
         public override int GetHashCode()
         {
-            unchecked
+            var hash = new HashCode();
+            foreach (var value in _values)
             {
-                return _values != null
-                    ? _values.Aggregate((_offset.GetHashCode()), (current, value) => (current * 397) ^ (value?.GetHashCode() ?? 0))
-                    : _offset.GetHashCode();
+                hash.Add(value);
             }
+
+            return hash.ToHashCode();
         }
     }
 }

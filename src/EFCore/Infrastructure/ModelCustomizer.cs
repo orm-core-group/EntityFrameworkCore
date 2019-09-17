@@ -9,7 +9,7 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
 {
     /// <summary>
     ///     <para>
-    ///         Builds the model for a given context. This default implementation builds the model by calling
+    ///         Builds the model for a given context. This implementation builds the model by calling
     ///         <see cref="DbContext.OnConfiguring(DbContextOptionsBuilder)" /> on the context.
     ///     </para>
     ///     <para>
@@ -17,9 +17,9 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
     ///         not used in application code.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Singleton"/>. This means a single instance
-    ///         is used by many <see cref="DbContext"/> instances. The implementation must be thread-safe.
-    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped"/>.
+    ///         The service lifetime is <see cref="ServiceLifetime.Singleton" />. This means a single instance
+    ///         is used by many <see cref="DbContext" /> instances. The implementation must be thread-safe.
+    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped" />.
     ///     </para>
     /// </summary>
     public class ModelCustomizer : IModelCustomizer
@@ -53,29 +53,7 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         /// </param>
         public virtual void Customize(ModelBuilder modelBuilder, DbContext context)
         {
-            FindSets(modelBuilder, context);
-
             context.OnModelCreating(modelBuilder);
-        }
-
-        /// <summary>
-        ///     Adds the entity types found in <see cref="DbSet{TEntity}" /> properties on the context to the model.
-        /// </summary>
-        /// <param name="modelBuilder"> The <see cref="ModelBuilder" /> being used to build the model. </param>
-        /// <param name="context"> The context to find <see cref="DbSet{TEntity}" /> properties on. </param>
-        protected virtual void FindSets([NotNull] ModelBuilder modelBuilder, [NotNull] DbContext context)
-        {
-            foreach (var setInfo in Dependencies.SetFinder.FindSets(context))
-            {
-                if (setInfo.IsKeyless)
-                {
-                    modelBuilder.Entity(setInfo.ClrType).HasNoKey();
-                }
-                else
-                {
-                    modelBuilder.Entity(setInfo.ClrType);
-                }
-            }
         }
     }
 }

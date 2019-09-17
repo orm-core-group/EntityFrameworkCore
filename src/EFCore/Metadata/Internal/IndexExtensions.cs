@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
+using Microsoft.EntityFrameworkCore.Infrastructure.Internal;
 
 namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 {
@@ -53,13 +54,12 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             }
 
             builder
-                .Append(
-                    string.Join(
-                        ", ",
-                        index.Properties.Select(
-                            p => singleLine
-                                ? p.DeclaringEntityType.DisplayName() + "." + p.Name
-                                : p.Name)));
+                .AppendJoin(
+                    ", ",
+                    index.Properties.Select(
+                        p => singleLine
+                            ? p.DeclaringEntityType.DisplayName() + "." + p.Name
+                            : p.Name));
 
             if (index.IsUnique)
             {

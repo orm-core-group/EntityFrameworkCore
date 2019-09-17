@@ -7,8 +7,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Utilities;
 
 namespace Microsoft.EntityFrameworkCore.Metadata.Builders
@@ -37,11 +35,11 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         /// </summary>
         [EntityFrameworkInternal]
         public ReferenceNavigationBuilder(
-            [NotNull] EntityType declaringEntityType,
-            [NotNull] EntityType relatedEntityType,
+            [NotNull] IMutableEntityType declaringEntityType,
+            [NotNull] IMutableEntityType relatedEntityType,
             [CanBeNull] string navigationName,
-            [NotNull] InternalRelationshipBuilder builder)
-            : base(declaringEntityType, relatedEntityType, navigationName, builder)
+            [NotNull] IMutableForeignKey foreignKey)
+            : base(declaringEntityType, relatedEntityType, navigationName, foreignKey)
         {
         }
 
@@ -53,11 +51,11 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         /// </summary>
         [EntityFrameworkInternal]
         public ReferenceNavigationBuilder(
-            [NotNull] EntityType declaringEntityType,
-            [NotNull] EntityType relatedEntityType,
-            [CanBeNull] PropertyInfo navigationProperty,
-            [NotNull] InternalRelationshipBuilder builder)
-            : base(declaringEntityType, relatedEntityType, navigationProperty, builder)
+            [NotNull] IMutableEntityType declaringEntityType,
+            [NotNull] IMutableEntityType relatedEntityType,
+            [CanBeNull] MemberInfo navigationMemberInfo,
+            [NotNull] IMutableForeignKey foreignKey)
+            : base(declaringEntityType, relatedEntityType, navigationMemberInfo, foreignKey)
         {
         }
 
@@ -80,7 +78,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
             => new ReferenceCollectionBuilder<TRelatedEntity, TEntity>(
                 RelatedEntityType,
                 DeclaringEntityType,
-                WithManyBuilder(Check.NullButNotEmpty(navigationName, nameof(navigationName))));
+                WithManyBuilder(Check.NullButNotEmpty(navigationName, nameof(navigationName))).Metadata);
 
         /// <summary>
         ///     <para>
@@ -103,7 +101,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
             => new ReferenceCollectionBuilder<TRelatedEntity, TEntity>(
                 RelatedEntityType,
                 DeclaringEntityType,
-                WithManyBuilder(navigationExpression?.GetPropertyAccess()));
+                WithManyBuilder(navigationExpression?.GetPropertyAccess()).Metadata);
 
         /// <summary>
         ///     <para>
@@ -124,7 +122,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
             => new ReferenceReferenceBuilder<TEntity, TRelatedEntity>(
                 DeclaringEntityType,
                 RelatedEntityType,
-                WithOneBuilder(Check.NullButNotEmpty(navigationName, nameof(navigationName))));
+                WithOneBuilder(Check.NullButNotEmpty(navigationName, nameof(navigationName))).Metadata);
 
         /// <summary>
         ///     <para>
@@ -147,6 +145,6 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
             => new ReferenceReferenceBuilder<TEntity, TRelatedEntity>(
                 DeclaringEntityType,
                 RelatedEntityType,
-                WithOneBuilder(navigationExpression?.GetPropertyAccess()));
+                WithOneBuilder(navigationExpression?.GetPropertyAccess()).Metadata);
     }
 }

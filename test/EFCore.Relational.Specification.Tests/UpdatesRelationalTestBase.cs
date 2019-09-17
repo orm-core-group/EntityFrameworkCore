@@ -3,7 +3,6 @@
 
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using Xunit;
 
@@ -18,7 +17,7 @@ namespace Microsoft.EntityFrameworkCore
         {
         }
 
-        [Fact]
+        [ConditionalFact]
         public abstract void Identifiers_are_generated_correctly();
 
         protected override void UseTransaction(DatabaseFacade facade, IDbContextTransaction transaction)

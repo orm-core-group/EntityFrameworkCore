@@ -6,8 +6,6 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 {
@@ -25,18 +23,18 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
         ///     any release. You should only use it directly in your code with extreme caution and knowing that
         ///     doing so can result in application failures when updating to a new Entity Framework Core release.
         /// </summary>
+        public override IClrPropertyGetter Create(IPropertyBase property)
+            => property as IClrPropertyGetter ?? Create(property.GetMemberInfo(forMaterialization: false, forSet: false), property);
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         protected override IClrPropertyGetter CreateGeneric<TEntity, TValue, TNonNullableEnumValue>(
-            PropertyInfo propertyInfo, IPropertyBase propertyBase)
+            MemberInfo memberInfo, IPropertyBase propertyBase)
         {
-            var memberInfo = propertyBase?.GetMemberInfo(forConstruction: false, forSet: false)
-                             ?? propertyInfo.FindGetterProperty();
-
-            if (memberInfo == null)
-            {
-                throw new InvalidOperationException(
-                    CoreStrings.NoGetter(propertyInfo.Name, propertyInfo.DeclaringType.ShortDisplayName(), nameof(PropertyAccessMode)));
-            }
-
             var entityParameter = Expression.Parameter(typeof(TEntity), "entity");
 
             Expression readExpression;
@@ -90,7 +88,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             {
                 var property = propertyBase as IProperty;
                 var comparer = property?.GetValueComparer()
-                               ?? property?.FindMapping()?.Comparer
+                               ?? property?.FindTypeMapping()?.Comparer
                                ?? (ValueComparer)Activator.CreateInstance(
                                    typeof(ValueComparer<>).MakeGenericType(typeof(TValue)),
                                    new object[] { false });

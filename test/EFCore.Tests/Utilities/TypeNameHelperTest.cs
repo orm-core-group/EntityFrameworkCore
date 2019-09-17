@@ -12,7 +12,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
 {
     public class TypeNameHelperTest
     {
-        [Theory]
+        [ConditionalTheory]
         // Predefined Types
         [InlineData(typeof(int), "int")]
         [InlineData(typeof(List<int>), "System.Collections.Generic.List<int>")]
@@ -63,7 +63,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             Assert.Equal(expected, type.DisplayName());
         }
 
-        [Theory]
+        [ConditionalTheory]
         // Predefined Types
         [InlineData(typeof(int), "int")]
         [InlineData(typeof(List<int>), "List<int>")]
@@ -89,7 +89,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             Assert.Equal(expected, type.ShortDisplayName());
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(typeof(bool), "bool")]
         [InlineData(typeof(byte), "byte")]
         [InlineData(typeof(char), "char")]
@@ -111,7 +111,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             Assert.Equal(expected, type.DisplayName());
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(typeof(int[]), true, "int[]")]
         [InlineData(typeof(string[][]), true, "string[][]")]
         [InlineData(typeof(int[,]), true, "int[,]")]
@@ -142,24 +142,17 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             var closedInnerType = openInnerType.MakeGenericType(genArgsInnerType);
             return new TheoryData<Type, bool, string>
             {
-                {
-                    typeof(List<>), false, "List<>"
-                },
-                {
-                    typeof(Dictionary<,>), false, "Dictionary<,>"
-                },
-                {
-                    typeof(List<>), true, "System.Collections.Generic.List<>"
-                },
-                {
-                    typeof(Dictionary<,>), true, "System.Collections.Generic.Dictionary<,>"
-                },
+                { typeof(List<>), false, "List<>" },
+                { typeof(Dictionary<,>), false, "Dictionary<,>" },
+                { typeof(List<>), true, "System.Collections.Generic.List<>" },
+                { typeof(Dictionary<,>), true, "System.Collections.Generic.Dictionary<,>" },
                 {
                     typeof(Level1<>.Level2<>.Level3<>), true,
                     "Microsoft.EntityFrameworkCore.Utilities.TypeNameHelperTest+Level1<>+Level2<>+Level3<>"
                 },
                 {
-                    typeof(PartiallyClosedGeneric<>).BaseType, true, "Microsoft.EntityFrameworkCore.Utilities.TypeNameHelperTest+C<, int>"
+                    typeof(PartiallyClosedGeneric<>).BaseType, true,
+                    "Microsoft.EntityFrameworkCore.Utilities.TypeNameHelperTest+C<, int>"
                 },
                 {
                     typeof(OuterGeneric<>.InnerNonGeneric.InnerGeneric<,>.InnerGenericLeafNode<>), true,
@@ -179,7 +172,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             };
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_pretty_print_open_generics()
         {
             foreach (var testData in OpenGenericsTestData)

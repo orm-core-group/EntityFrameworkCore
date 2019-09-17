@@ -4,15 +4,14 @@
 using System;
 using System.Data;
 using System.Data.Common;
-using System.Data.SqlClient;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal;
 using Microsoft.EntityFrameworkCore.TestUtilities;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 // ReSharper disable InconsistentNaming
@@ -20,7 +19,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
 {
     public class SqlServerTypeMappingTest : RelationalTypeMappingTest
     {
-        [Theory]
+        [ConditionalTheory]
         [InlineData(nameof(ChangeTracker.DetectChanges), false)]
         [InlineData(nameof(PropertyEntry.CurrentValue), false)]
         [InlineData(nameof(PropertyEntry.OriginalValue), false)]
@@ -35,11 +34,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
                 var newToken = changeValue ? new byte[] { 1, 2, 3, 4, 0, 6, 7, 8 } : token;
 
                 var entity = context.Attach(
-                    new WithRowVersion
-                    {
-                        Id = 789,
-                        Version = token.ToArray()
-                    }).Entity;
+                    new WithRowVersion { Id = 789, Version = token.ToArray() }).Entity;
 
                 var propertyEntry = context.Entry(entity).Property(e => e.Version);
 
@@ -96,6 +91,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
         protected override DbType DefaultParameterType
             => DbType.Int32;
 
+        [ConditionalTheory]
         [InlineData(typeof(SqlServerDateTimeOffsetTypeMapping), typeof(DateTimeOffset))]
         [InlineData(typeof(SqlServerDateTimeTypeMapping), typeof(DateTime))]
         [InlineData(typeof(SqlServerDoubleTypeMapping), typeof(double))]
@@ -106,19 +102,25 @@ namespace Microsoft.EntityFrameworkCore.Storage
             base.Create_and_clone_with_converter(mappingType, clrType);
         }
 
-        [InlineData(typeof(SqlServerByteArrayTypeMapping), typeof(byte[]))]
-        public override void Create_and_clone_sized_mappings_with_converter(Type mappingType, Type clrType)
+        [ConditionalFact]
+        public virtual void Create_and_clone_SQL_Server_sized_mappings_with_converter()
         {
-            base.Create_and_clone_sized_mappings_with_converter(mappingType, clrType);
+            ConversionCloneTest(
+                typeof(SqlServerByteArrayTypeMapping),
+                typeof(byte[]),
+                SqlDbType.Image);
         }
 
-        [InlineData(typeof(SqlServerStringTypeMapping), typeof(string))]
-        public override void Create_and_clone_unicode_sized_mappings_with_converter(Type mappingType, Type clrType)
+        [ConditionalFact]
+        public virtual void Create_and_clone_SQL_Server_unicode_sized_mappings_with_converter()
         {
-            base.Create_and_clone_unicode_sized_mappings_with_converter(mappingType, clrType);
+            UnicodeConversionCloneTest(
+                typeof(SqlServerStringTypeMapping),
+                typeof(string),
+                SqlDbType.Text);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Create_and_clone_UDT_mapping_with_converter()
         {
             Func<object, Expression> literalGenerator = Expression.Constant;
@@ -229,7 +231,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Test_GenerateSqlLiteral_helper(
                 GetMapping("smalldatetime"),
                 new DateTime(2015, 3, 12, 13, 36, 37, 371, DateTimeKind.Utc),
-                "'2015-03-12T13:36:37.371'");
+                "'2015-03-12T13:36:37'");
 
             Test_GenerateSqlLiteral_helper(
                 GetMapping("datetime2"),
@@ -244,13 +246,8 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Test_GenerateSqlLiteral_helper(typeMapping, float.NaN, "CAST(NaN AS real)");
             Test_GenerateSqlLiteral_helper(typeMapping, float.PositiveInfinity, "CAST(Infinity AS real)");
             Test_GenerateSqlLiteral_helper(typeMapping, float.NegativeInfinity, "CAST(-Infinity AS real)");
-#if NETCOREAPP3_0
             Test_GenerateSqlLiteral_helper(typeMapping, float.MinValue, "CAST(-3.4028235E+38 AS real)");
             Test_GenerateSqlLiteral_helper(typeMapping, float.MaxValue, "CAST(3.4028235E+38 AS real)");
-#else
-            Test_GenerateSqlLiteral_helper(typeMapping, float.MinValue, "CAST(-3.40282347E+38 AS real)");
-            Test_GenerateSqlLiteral_helper(typeMapping, float.MaxValue, "CAST(3.40282347E+38 AS real)");
-#endif
         }
 
         public override void Long_literal_generated_correctly()
@@ -269,7 +266,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Test_GenerateSqlLiteral_helper(typeMapping, short.MaxValue, "CAST(32767 AS smallint)");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void SqlVariant_literal_generated_correctly()
         {
             var typeMapping = GetMapping("sql_variant");
@@ -289,7 +286,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
                     TestServiceFactory.Instance.Create<RelationalTypeMappingSourceDependencies>())
                 .FindMapping(type);
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData("Microsoft.SqlServer.Types.SqlHierarchyId", "hierarchyid")]
         [InlineData("Microsoft.SqlServer.Types.SqlGeography", "geography")]
         [InlineData("Microsoft.SqlServer.Types.SqlGeometry", "geometry")]

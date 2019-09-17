@@ -49,43 +49,43 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.True(list.SequenceEqual(sortedList, new ListElementComparer()));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void SortableBindingList_can_sort_ascending_using_IComparable_on_value_type()
         {
             SortTest("Int", ListSortDirection.Ascending);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void SortableBindingList_can_sort_ascending_using_IComparable_on_nullable_value_type()
         {
             SortTest("NullableInt", ListSortDirection.Ascending);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void SortableBindingList_can_sort_ascending_using_IComparable_on_reference_type()
         {
             SortTest("String", ListSortDirection.Ascending);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void SortableBindingList_can_sort_descending_using_IComparable_on_value_type()
         {
             SortTest("Int", ListSortDirection.Descending);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void SortableBindingList_can_sort_descending_using_IComparable_on_nullable_value_type()
         {
             SortTest("NullableInt", ListSortDirection.Descending);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void SortableBindingList_can_sort_descending_using_IComparable_on_reference_type()
         {
             SortTest("String", ListSortDirection.Descending);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void SortableBindingList_does_not_sort_for_non_XNode_that_does_not_implement_IComparable()
         {
             var list = new List<ListElement>
@@ -113,7 +113,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.True(list.SequenceEqual(unsortedList, new ListElementComparer()));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void SortableBindingList_does_not_sort_for_byte_arrays()
         {
             var list = new List<ListElement>
@@ -141,21 +141,11 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.True(list.SequenceEqual(unsortedList, new ListElementComparer()));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void SortableBindingList_can_sort_when_list_contains_derived_objects()
         {
-            var list = new List<ListElement>
-            {
-                new DerivedListElement(3),
-                new DerivedListElement(1),
-                new DerivedListElement(4)
-            };
-            var sortedList = new List<ListElement>
-            {
-                new DerivedListElement(1),
-                new DerivedListElement(3),
-                new DerivedListElement(4)
-            };
+            var list = new List<ListElement> { new DerivedListElement(3), new DerivedListElement(1), new DerivedListElement(4) };
+            var sortedList = new List<ListElement> { new DerivedListElement(1), new DerivedListElement(3), new DerivedListElement(4) };
 
             var bindingList = new SortableBindingList<ListElement>(list);
 
@@ -164,20 +154,13 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.True(list.SequenceEqual(sortedList, new ListElementComparer()));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void SortableBindingList_can_sort_when_list_is_of_derived_type()
         {
-            var list = new List<DerivedListElement>
-            {
-                new DerivedListElement(3),
-                new DerivedListElement(1),
-                new DerivedListElement(4)
-            };
+            var list = new List<DerivedListElement> { new DerivedListElement(3), new DerivedListElement(1), new DerivedListElement(4) };
             var sortedList = new List<DerivedListElement>
             {
-                new DerivedListElement(1),
-                new DerivedListElement(3),
-                new DerivedListElement(4)
+                new DerivedListElement(1), new DerivedListElement(3), new DerivedListElement(4)
             };
 
             var bindingList = new SortableBindingList<DerivedListElement>(list);

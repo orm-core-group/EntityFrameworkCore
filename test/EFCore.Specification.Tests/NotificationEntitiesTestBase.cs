@@ -19,7 +19,7 @@ namespace Microsoft.EntityFrameworkCore
 
         protected virtual TFixture Fixture { get; }
 
-        [Fact(Skip = "issue #15318")] // Issue #4020
+        [ConditionalFact] // Issue #4020
         public virtual void Include_brings_entities_referenced_from_already_tracked_notification_entities_as_Unchanged()
         {
             using (var context = CreateContext())
@@ -34,7 +34,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "issue #15318")] // Issue #4020
+        [ConditionalFact] // Issue #4020
         public virtual void Include_brings_collections_referenced_from_already_tracked_notification_entities_as_Unchanged()
         {
             using (var context = CreateContext())
@@ -125,21 +125,7 @@ namespace Microsoft.EntityFrameworkCore
             protected override void Seed(PoolableDbContext context)
             {
                 context.Add(
-                    new Blog
-                    {
-                        Id = 1,
-                        Posts = new List<Post>
-                        {
-                            new Post
-                            {
-                                Id = 1
-                            },
-                            new Post
-                            {
-                                Id = 2
-                            }
-                        }
-                    });
+                    new Blog { Id = 1, Posts = new List<Post> { new Post { Id = 1 }, new Post { Id = 2 } } });
 
                 context.SaveChanges();
             }

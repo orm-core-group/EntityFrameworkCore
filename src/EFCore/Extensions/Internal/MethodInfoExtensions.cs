@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System.Diagnostics;
@@ -6,7 +6,7 @@ using System.Reflection;
 using JetBrains.Annotations;
 
 // ReSharper disable once CheckNamespace
-namespace Microsoft.EntityFrameworkCore.Extensions.Internal
+namespace Microsoft.EntityFrameworkCore.Internal
 {
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to

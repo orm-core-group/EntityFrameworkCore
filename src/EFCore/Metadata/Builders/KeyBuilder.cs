@@ -18,7 +18,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
     ///         and it is not designed to be directly constructed in your application code.
     ///     </para>
     /// </summary>
-    public class KeyBuilder : IInfrastructure<IMutableModel>, IInfrastructure<InternalKeyBuilder>
+    public class KeyBuilder : IInfrastructure<InternalKeyBuilder>
     {
         private readonly InternalKeyBuilder _builder;
 
@@ -29,11 +29,11 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         ///     doing so can result in application failures when updating to a new Entity Framework Core release.
         /// </summary>
         [EntityFrameworkInternal]
-        public KeyBuilder([NotNull] InternalKeyBuilder builder)
+        public KeyBuilder([NotNull] IMutableKey key)
         {
-            Check.NotNull(builder, nameof(builder));
+            Check.NotNull(key, nameof(key));
 
-            _builder = builder;
+            _builder = ((Key)key).Builder;
         }
 
         /// <summary>
@@ -45,11 +45,6 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         ///     The key being configured.
         /// </summary>
         public virtual IMutableKey Metadata => Builder.Metadata;
-
-        /// <summary>
-        ///     The model that the key belongs to.
-        /// </summary>
-        IMutableModel IInfrastructure<IMutableModel>.Instance => Builder.ModelBuilder.Metadata;
 
         /// <summary>
         ///     Adds or updates an annotation on the key. If an annotation with the key specified in
@@ -69,7 +64,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
             return this;
         }
 
-        private InternalKeyBuilder Builder => this.GetInfrastructure<InternalKeyBuilder>();
+        private InternalKeyBuilder Builder => this.GetInfrastructure();
 
         #region Hidden System.Object members
 
@@ -86,6 +81,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         /// <param name="obj"> The object to compare with the current object. </param>
         /// <returns> true if the specified object is equal to the current object; otherwise, false. </returns>
         [EditorBrowsable(EditorBrowsableState.Never)]
+        // ReSharper disable once BaseObjectEqualsIsObjectEquals
         public override bool Equals(object obj) => base.Equals(obj);
 
         /// <summary>
@@ -93,6 +89,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         /// </summary>
         /// <returns> A hash code for the current object. </returns>
         [EditorBrowsable(EditorBrowsableState.Never)]
+        // ReSharper disable once BaseObjectGetHashCodeCallInGetHashCode
         public override int GetHashCode() => base.GetHashCode();
 
         #endregion

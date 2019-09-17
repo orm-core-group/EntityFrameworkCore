@@ -130,7 +130,8 @@ namespace Microsoft.EntityFrameworkCore.Update
         ///     The list of <see cref="ColumnModification" />s needed to perform the insert, update, or delete.
         /// </summary>
         public virtual IReadOnlyList<ColumnModification> ColumnModifications
-            => NonCapturingLazyInitializer.EnsureInitialized(ref _columnModifications, this, command => command.GenerateColumnModifications());
+            => NonCapturingLazyInitializer.EnsureInitialized(
+                ref _columnModifications, this, command => command.GenerateColumnModifications());
 
         /// <summary>
         ///     Indicates whether or not the database will return values for some mapped properties
@@ -232,12 +233,11 @@ namespace Microsoft.EntityFrameworkCore.Update
             {
                 foreach (var property in entry.EntityType.GetProperties())
                 {
-                    var propertyAnnotations = property.Relational();
                     var isKey = property.IsPrimaryKey();
                     var isConcurrencyToken = property.IsConcurrencyToken;
                     var isCondition = !adding && (isKey || isConcurrencyToken);
                     var readValue = entry.IsStoreGenerated(property);
-                    var columnName = propertyAnnotations.ColumnName;
+                    var columnName = property.GetColumnName();
                     var columnPropagator = sharedColumnMap?[columnName];
 
                     var writeValue = false;
@@ -249,9 +249,8 @@ namespace Microsoft.EntityFrameworkCore.Update
                         }
                         else if (updating && property.GetAfterSaveBehavior() == PropertySaveBehavior.Save)
                         {
-                            writeValue = columnPropagator == null
-                                ? entry.IsModified(property)
-                                : columnPropagator.TryPropagate(property, (InternalEntityEntry)entry);
+                            writeValue = columnPropagator?.TryPropagate(property, (InternalEntityEntry)entry)
+                                         ?? entry.IsModified(property);
                         }
                     }
 
@@ -267,7 +266,6 @@ namespace Microsoft.EntityFrameworkCore.Update
                         var columnModification = new ColumnModification(
                             entry,
                             property,
-                            propertyAnnotations,
                             _generateParameterName,
                             readValue,
                             writeValue,
@@ -300,7 +298,7 @@ namespace Microsoft.EntityFrameworkCore.Update
         {
             foreach (var property in entry.EntityType.GetProperties())
             {
-                var columnName = property.Relational().ColumnName;
+                var columnName = property.GetColumnName();
                 if (!columnMap.TryGetValue(columnName, out var columnPropagator))
                 {
                     columnPropagator = new ColumnValuePropagator();
@@ -346,11 +344,13 @@ namespace Microsoft.EntityFrameworkCore.Update
                 switch (entry.EntityState)
                 {
                     case EntityState.Modified:
-                        if (!_write && entry.IsModified(property))
+                        if (!_write
+                            && entry.IsModified(property))
                         {
                             _write = true;
                             _currentValue = entry.GetCurrentValue(property);
                         }
+
                         break;
                     case EntityState.Added:
                         if (!_write)
@@ -358,6 +358,7 @@ namespace Microsoft.EntityFrameworkCore.Update
                             _currentValue = entry.GetCurrentValue(property);
                             _write = !Equals(_originalValue, _currentValue);
                         }
+
                         break;
                     case EntityState.Deleted:
                         _originalValue = entry.GetOriginalValue(property);
@@ -369,8 +370,8 @@ namespace Microsoft.EntityFrameworkCore.Update
             {
                 if (_write
                     && (entry.EntityState == EntityState.Unchanged
-                       || (entry.EntityState == EntityState.Modified && !entry.IsModified(property))
-                       || (entry.EntityState == EntityState.Added && Equals(_originalValue, entry.GetCurrentValue(property)))))
+                        || (entry.EntityState == EntityState.Modified && !entry.IsModified(property))
+                        || (entry.EntityState == EntityState.Added && Equals(_originalValue, entry.GetCurrentValue(property)))))
                 {
                     entry[property] = _currentValue;
 

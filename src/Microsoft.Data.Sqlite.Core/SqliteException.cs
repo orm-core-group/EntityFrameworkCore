@@ -1,11 +1,9 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
 using System.Data.Common;
 using Microsoft.Data.Sqlite.Properties;
 using SQLitePCL;
-
 using static SQLitePCL.raw;
 
 namespace Microsoft.Data.Sqlite
@@ -72,15 +70,15 @@ namespace Microsoft.Data.Sqlite
             string message;
             int extendedErrorCode;
             if (db == null
-                || db.ptr == IntPtr.Zero
+                || db.IsInvalid
                 || rc != sqlite3_errcode(db))
             {
-                message = sqlite3_errstr(rc) + " " + Resources.DefaultNativeError;
+                message = sqlite3_errstr(rc).utf8_to_string() + " " + Resources.DefaultNativeError;
                 extendedErrorCode = rc;
             }
             else
             {
-                message = sqlite3_errmsg(db);
+                message = sqlite3_errmsg(db).utf8_to_string();
                 extendedErrorCode = sqlite3_extended_errcode(db);
             }
 

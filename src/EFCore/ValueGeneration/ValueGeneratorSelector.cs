@@ -6,7 +6,6 @@ using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Utilities;
 using Microsoft.EntityFrameworkCore.ValueGeneration.Internal;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,8 +21,8 @@ namespace Microsoft.EntityFrameworkCore.ValueGeneration
     ///         not used in application code.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Scoped"/>. This means that each
-    ///         <see cref="DbContext"/> instance will use its own instance of this service.
+    ///         The service lifetime is <see cref="ServiceLifetime.Scoped" />. This means that each
+    ///         <see cref="DbContext" /> instance will use its own instance of this service.
     ///         The implementation may depend on other services registered with any lifetime.
     ///         The implementation does not need to be thread-safe.
     ///     </para>
@@ -74,7 +73,7 @@ namespace Microsoft.EntityFrameworkCore.ValueGeneration
 
             if (factory == null)
             {
-                var mapping = property.FindMapping();
+                var mapping = property.FindTypeMapping();
                 factory = mapping?.ValueGeneratorFactory;
 
                 if (factory == null)

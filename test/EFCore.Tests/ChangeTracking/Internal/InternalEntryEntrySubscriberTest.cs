@@ -10,17 +10,18 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
+// ReSharper disable UnusedMember.Local
+// ReSharper disable InconsistentNaming
 namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
 {
     public class InternalEntryEntrySubscriberTest
     {
-        [Theory]
+        [ConditionalTheory]
         [InlineData(ChangeTrackingStrategy.Snapshot)]
         [InlineData(ChangeTrackingStrategy.ChangedNotifications)]
         public void Original_and_relationship_values_recorded_when_no_changing_notifications(
@@ -35,7 +36,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.True(entry.HasRelationshipSnapshot);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(ChangeTrackingStrategy.ChangingAndChangedNotifications)]
         [InlineData(ChangeTrackingStrategy.ChangingAndChangedNotificationsWithOriginalValues)]
         public void Original_and_relationship_values_not_recorded_when_full_notifications(
@@ -50,7 +51,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.False(entry.HasRelationshipSnapshot);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Notifying_collections_are_not_created_when_snapshot_tracking()
         {
             var entry = InMemoryTestHelpers.Instance.CreateInternalEntry<FullNotificationEntity>(
@@ -61,7 +62,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.Null(((FullNotificationEntity)entry.Entity).RelatedCollection);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(ChangeTrackingStrategy.ChangedNotifications)]
         [InlineData(ChangeTrackingStrategy.ChangingAndChangedNotifications)]
         [InlineData(ChangeTrackingStrategy.ChangingAndChangedNotificationsWithOriginalValues)]
@@ -77,7 +78,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
                 ((FullNotificationEntity)entry.Entity).RelatedCollection);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Non_notifying_collection_acceptable_when_snapshot_tracking()
         {
             var entry = InMemoryTestHelpers.Instance.CreateInternalEntry<FullNotificationEntity>(
@@ -91,11 +92,11 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.Same(collection, ((FullNotificationEntity)entry.Entity).RelatedCollection);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(ChangeTrackingStrategy.ChangedNotifications)]
         [InlineData(ChangeTrackingStrategy.ChangingAndChangedNotifications)]
         [InlineData(ChangeTrackingStrategy.ChangingAndChangedNotificationsWithOriginalValues)]
-        public void Non_notifying_collections_not_acceotable_when_noitification_tracking(
+        public void Non_notifying_collections_not_acceptable_when_notification_tracking(
             ChangeTrackingStrategy changeTrackingStrategy)
         {
             var entry = InMemoryTestHelpers.Instance.CreateInternalEntry<FullNotificationEntity>(
@@ -109,7 +110,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
                     () => entry.SetEntityState(EntityState.Unchanged)).Message);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public void Entry_subscribes_to_INotifyCollectionChanged_for_Add(bool ourCollection)
@@ -125,7 +126,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.Empty(testListener.CollectionChanged.Single().Item4);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public void Entry_subscribes_to_INotifyCollectionChanged_for_Remove(bool ourCollection)
@@ -141,14 +142,11 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.Same(item, testListener.CollectionChanged.Single().Item4.Single());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Entry_subscribes_to_INotifyCollectionChanged_for_Replace()
         {
             var item1 = new ChangedOnlyNotificationEntity();
-            var collection = new ObservableCollection<ChangedOnlyNotificationEntity>
-            {
-                item1
-            };
+            var collection = new ObservableCollection<ChangedOnlyNotificationEntity> { item1 };
             var testListener = SetupTestCollectionListener(collection);
 
             var item2 = new ChangedOnlyNotificationEntity();
@@ -159,16 +157,12 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.Same(item1, testListener.CollectionChanged.Single().Item4.Single());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Entry_ignores_INotifyCollectionChanged_for_Move()
         {
             var item1 = new ChangedOnlyNotificationEntity();
             var item2 = new ChangedOnlyNotificationEntity();
-            var collection = new ObservableCollection<ChangedOnlyNotificationEntity>
-            {
-                item1,
-                item2
-            };
+            var collection = new ObservableCollection<ChangedOnlyNotificationEntity> { item1, item2 };
             var testListener = SetupTestCollectionListener(collection);
 
             collection.Move(0, 1);
@@ -176,16 +170,12 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.Empty(testListener.CollectionChanged);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Entry_throws_for_INotifyCollectionChanged_Reset()
         {
             var item1 = new ChangedOnlyNotificationEntity();
             var item2 = new ChangedOnlyNotificationEntity();
-            var collection = new ObservableCollection<ChangedOnlyNotificationEntity>
-            {
-                item1,
-                item2
-            };
+            var collection = new ObservableCollection<ChangedOnlyNotificationEntity> { item1, item2 };
             var testListener = SetupTestCollectionListener(collection);
 
             Assert.Equal(
@@ -195,16 +185,12 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.Empty(testListener.CollectionChanged);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Entry_handles_clear_as_replace_with_ObservableHashSet()
         {
             var item1 = new ChangedOnlyNotificationEntity();
             var item2 = new ChangedOnlyNotificationEntity();
-            var collection = new ObservableHashSet<ChangedOnlyNotificationEntity>
-            {
-                item1,
-                item2
-            };
+            var collection = new ObservableHashSet<ChangedOnlyNotificationEntity> { item1, item2 };
             var testListener = SetupTestCollectionListener(collection);
 
             collection.Clear();
@@ -227,32 +213,29 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             ICollection<ChangedOnlyNotificationEntity> collection)
         {
             var contextServices = InMemoryTestHelpers.Instance.CreateContextServices(
-                new ServiceCollection().AddScoped<INavigationListener, TestNavigationListener>(),
+                new ServiceCollection().AddScoped<INavigationFixer, TestNavigationListener>(),
                 BuildModel());
 
             var testListener = contextServices
-                .GetRequiredService<IEnumerable<INavigationListener>>()
+                .GetRequiredService<IEnumerable<INavigationFixer>>()
                 .OfType<TestNavigationListener>()
                 .Single();
 
-            var entity = new FullNotificationEntity
-            {
-                RelatedCollection = collection
-            };
+            var entity = new FullNotificationEntity { RelatedCollection = collection };
             var entry = contextServices.GetRequiredService<IStateManager>().GetOrCreateEntry(entity);
             entry.SetEntityState(EntityState.Unchanged);
 
             return testListener;
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Entry_subscribes_to_INotifyPropertyChanging_and_INotifyPropertyChanged_for_properties()
         {
             var contextServices = InMemoryTestHelpers.Instance.CreateContextServices(
-                new ServiceCollection().AddScoped<IPropertyListener, TestPropertyListener>(),
+                new ServiceCollection().AddScoped<IChangeDetector, TestPropertyListener>(),
                 BuildModel());
 
-            var testListener = contextServices.GetRequiredService<IEnumerable<IPropertyListener>>().OfType<TestPropertyListener>().Single();
+            var testListener = contextServices.GetRequiredService<IEnumerable<IChangeDetector>>().OfType<TestPropertyListener>().Single();
 
             var entity = new FullNotificationEntity();
             var entry = contextServices.GetRequiredService<IStateManager>().GetOrCreateEntry(entity);
@@ -268,14 +251,14 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.Same(property, testListener.Changed.Single().Item2);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Entry_handles_null_or_empty_string_in_INotifyPropertyChanging_and_INotifyPropertyChanged()
         {
             var contextServices = InMemoryTestHelpers.Instance.CreateContextServices(
-                new ServiceCollection().AddScoped<IPropertyListener, TestPropertyListener>(),
+                new ServiceCollection().AddScoped<IChangeDetector, TestPropertyListener>(),
                 BuildModel());
 
-            var testListener = contextServices.GetRequiredService<IEnumerable<IPropertyListener>>().OfType<TestPropertyListener>().Single();
+            var testListener = contextServices.GetRequiredService<IEnumerable<IChangeDetector>>().OfType<TestPropertyListener>().Single();
 
             var entity = new FullNotificationEntity();
             var entry = contextServices.GetRequiredService<IStateManager>().GetOrCreateEntry(entity);
@@ -299,14 +282,14 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
                 testListener.Changed.Select(e => e.Item2.Name).OrderBy(e => e).ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Entry_subscribes_to_INotifyPropertyChanging_and_INotifyPropertyChanged_for_navigations()
         {
             var contextServices = InMemoryTestHelpers.Instance.CreateContextServices(
-                new ServiceCollection().AddScoped<IPropertyListener, TestPropertyListener>(),
+                new ServiceCollection().AddScoped<IChangeDetector, TestPropertyListener>(),
                 BuildModel());
 
-            var testListener = contextServices.GetRequiredService<IEnumerable<IPropertyListener>>().OfType<TestPropertyListener>().Single();
+            var testListener = contextServices.GetRequiredService<IEnumerable<IChangeDetector>>().OfType<TestPropertyListener>().Single();
 
             var entity = new FullNotificationEntity();
             var entry = contextServices.GetRequiredService<IStateManager>().GetOrCreateEntry(entity);
@@ -322,14 +305,14 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.Same(property, testListener.Changed.Single().Item2);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Subscriptions_to_INotifyPropertyChanging_and_INotifyPropertyChanged_ignore_unmapped_properties()
         {
             var contextServices = InMemoryTestHelpers.Instance.CreateContextServices(
-                new ServiceCollection().AddScoped<IPropertyListener, TestPropertyListener>(),
+                new ServiceCollection().AddScoped<IChangeDetector, TestPropertyListener>(),
                 BuildModel());
 
-            var testListener = contextServices.GetRequiredService<IEnumerable<IPropertyListener>>().OfType<TestPropertyListener>().Single();
+            var testListener = contextServices.GetRequiredService<IEnumerable<IChangeDetector>>().OfType<TestPropertyListener>().Single();
 
             var entity = new FullNotificationEntity();
             contextServices.GetRequiredService<IStateManager>().GetOrCreateEntry(entity);
@@ -343,15 +326,15 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.Empty(testListener.Changed);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Entry_unsubscribes_to_INotifyPropertyChanging_and_INotifyPropertyChanged()
         {
             var contextServices = InMemoryTestHelpers.Instance.CreateContextServices(
-                new ServiceCollection().AddScoped<IPropertyListener, TestPropertyListener>(),
+                new ServiceCollection().AddScoped<IChangeDetector, TestPropertyListener>(),
                 BuildModel());
 
             var testListener = contextServices
-                .GetRequiredService<IEnumerable<IPropertyListener>>()
+                .GetRequiredService<IEnumerable<IChangeDetector>>()
                 .OfType<TestPropertyListener>().Single();
 
             var entities = new List<FullNotificationEntity>();
@@ -359,10 +342,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             for (var i = 0; i < 10; i++)
             {
                 entities.Add(
-                    new FullNotificationEntity
-                    {
-                        Id = i + 1
-                    });
+                    new FullNotificationEntity { Id = i + 1 });
                 entries.Add(contextServices.GetRequiredService<IStateManager>().GetOrCreateEntry(entities[i]));
                 entries[i].SetEntityState(EntityState.Unchanged);
             }
@@ -401,15 +381,15 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.Same(entries[2], testListener.Changed.Skip(2).Single().Item1);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Entry_unsubscribes_to_INotifyCollectionChanged()
         {
             var contextServices = InMemoryTestHelpers.Instance.CreateContextServices(
-                new ServiceCollection().AddScoped<INavigationListener, TestNavigationListener>(),
+                new ServiceCollection().AddScoped<INavigationFixer, TestNavigationListener>(),
                 BuildModel());
 
             var testListener = contextServices
-                .GetRequiredService<IEnumerable<INavigationListener>>()
+                .GetRequiredService<IEnumerable<INavigationFixer>>()
                 .OfType<TestNavigationListener>()
                 .Single();
 
@@ -418,11 +398,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             for (var i = 0; i < 10; i++)
             {
                 entities.Add(
-                    new FullNotificationEntity
-                    {
-                        Id = i + 1,
-                        RelatedCollection = new ObservableHashSet<ChangedOnlyNotificationEntity>()
-                    });
+                    new FullNotificationEntity { Id = i + 1, RelatedCollection = new ObservableHashSet<ChangedOnlyNotificationEntity>() });
                 entries.Add(contextServices.GetRequiredService<IStateManager>().GetOrCreateEntry(entities[i]));
                 entries[i].SetEntityState(EntityState.Unchanged);
             }
@@ -452,15 +428,15 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.Same(entries[2], testListener.CollectionChanged.Skip(2).Single().Item1);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Entries_are_unsubscribed_when_context_is_disposed()
         {
             var context = InMemoryTestHelpers.Instance.CreateContext(
-                new ServiceCollection().AddScoped<IPropertyListener, TestPropertyListener>(),
+                new ServiceCollection().AddScoped<IChangeDetector, TestPropertyListener>(),
                 BuildModel());
 
             var testListener = context
-                .GetService<IEnumerable<IPropertyListener>>()
+                .GetService<IEnumerable<IChangeDetector>>()
                 .OfType<TestPropertyListener>().Single();
 
             var entities = new List<FullNotificationEntity>();
@@ -468,10 +444,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             for (var i = 0; i < 10; i++)
             {
                 entities.Add(
-                    new FullNotificationEntity
-                    {
-                        Id = i + 1
-                    });
+                    new FullNotificationEntity { Id = i + 1 });
                 entries.Add(context.Add(entities[i]));
                 entries[i].State = EntityState.Unchanged;
             }
@@ -496,7 +469,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.Equal(2, testListener.Changed.Count);
         }
 
-        private class TestPropertyListener : IPropertyListener
+        private class TestPropertyListener : IChangeDetector
         {
             public List<Tuple<InternalEntityEntry, IPropertyBase>> Changing { get; } =
                 new List<Tuple<InternalEntityEntry, IPropertyBase>>();
@@ -508,9 +481,25 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
 
             public void PropertyChanging(InternalEntityEntry entry, IPropertyBase property)
                 => Changing.Add(Tuple.Create(entry, property));
+
+            public void DetectChanges(IStateManager stateManager)
+            {
+            }
+
+            public void DetectChanges(InternalEntityEntry entry)
+            {
+            }
+
+            public void Suspend()
+            {
+            }
+
+            public void Resume()
+            {
+            }
         }
 
-        private class TestNavigationListener : INavigationListener
+        private class TestNavigationListener : INavigationFixer
         {
             public List<Tuple<InternalEntityEntry, INavigation, IEnumerable<object>, IEnumerable<object>>> CollectionChanged { get; }
                 = new List<Tuple<InternalEntityEntry, INavigation, IEnumerable<object>, IEnumerable<object>>>();
@@ -523,6 +512,25 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             public void NavigationCollectionChanged(
                 InternalEntityEntry entry, INavigation navigation, IEnumerable<object> added, IEnumerable<object> removed)
                 => CollectionChanged.Add(Tuple.Create(entry, navigation, added, removed));
+
+            public void TrackedFromQuery(InternalEntityEntry entry)
+            {
+            }
+
+            public void StateChanging(InternalEntityEntry entry, EntityState newState)
+            {
+            }
+
+            public void StateChanged(InternalEntityEntry entry, EntityState oldState, bool fromQuery)
+            {
+            }
+
+            public void KeyPropertyChanged(
+                InternalEntityEntry entry, IProperty property, IReadOnlyList<IKey> containingPrincipalKeys,
+                IReadOnlyList<IForeignKey> containingForeignKeys,
+                object oldValue, object newValue)
+            {
+            }
         }
 
         private static IModel BuildModel(
@@ -538,7 +546,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
                     b.HasChangeTrackingStrategy(changeTrackingStrategy);
                 });
 
-            return builder.Model;
+            return builder.Model.FinalizeModel();
         }
 
         private class FullNotificationEntity : INotifyPropertyChanging, INotifyPropertyChanged

@@ -3,7 +3,6 @@
 
 using System.Linq;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.TestModels.ConcurrencyModel;
 using Xunit;
 
@@ -17,7 +16,7 @@ namespace Microsoft.EntityFrameworkCore
 
         protected TFixture Fixture { get; }
 
-        [Fact(Skip = "issue #15285")]
+        [ConditionalFact]
         public virtual void Property_entry_original_value_is_set()
         {
             using (var c = CreateF1Context())

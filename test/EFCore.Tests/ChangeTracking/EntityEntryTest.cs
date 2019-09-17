@@ -7,14 +7,13 @@ using System.Linq;
 using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
 using Xunit;
 
 namespace Microsoft.EntityFrameworkCore.ChangeTracking
 {
     public class EntityEntryTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Non_store_generated_key_is_always_set()
         {
             using (var context = new KeySetContext())
@@ -22,14 +21,11 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                 Assert.True(context.Entry(new NotStoreGenerated()).IsKeySet);
                 Assert.True(
                     context.Entry(
-                        new NotStoreGenerated
-                        {
-                            Id = 1
-                        }).IsKeySet);
+                        new NotStoreGenerated { Id = 1 }).IsKeySet);
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Non_store_generated_composite_key_is_always_set()
         {
             using (var context = new KeySetContext())
@@ -37,27 +33,17 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                 Assert.True(context.Entry(new CompositeNotStoreGenerated()).IsKeySet);
                 Assert.True(
                     context.Entry(
-                        new CompositeNotStoreGenerated
-                        {
-                            Id1 = 1
-                        }).IsKeySet);
+                        new CompositeNotStoreGenerated { Id1 = 1 }).IsKeySet);
                 Assert.True(
                     context.Entry(
-                        new CompositeNotStoreGenerated
-                        {
-                            Id2 = true
-                        }).IsKeySet);
+                        new CompositeNotStoreGenerated { Id2 = true }).IsKeySet);
                 Assert.True(
                     context.Entry(
-                        new CompositeNotStoreGenerated
-                        {
-                            Id1 = 1,
-                            Id2 = true
-                        }).IsKeySet);
+                        new CompositeNotStoreGenerated { Id1 = 1, Id2 = true }).IsKeySet);
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Store_generated_key_is_set_only_if_non_default_value()
         {
             using (var context = new KeySetContext())
@@ -65,14 +51,11 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                 Assert.False(context.Entry(new StoreGenerated()).IsKeySet);
                 Assert.True(
                     context.Entry(
-                        new StoreGenerated
-                        {
-                            Id = 1
-                        }).IsKeySet);
+                        new StoreGenerated { Id = 1 }).IsKeySet);
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Composite_store_generated_key_is_set_only_if_non_default_value_in_store_generated_part()
         {
             using (var context = new KeySetContext())
@@ -80,27 +63,17 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                 Assert.False(context.Entry(new CompositeStoreGenerated()).IsKeySet);
                 Assert.False(
                     context.Entry(
-                        new CompositeStoreGenerated
-                        {
-                            Id1 = 1
-                        }).IsKeySet);
+                        new CompositeStoreGenerated { Id1 = 1 }).IsKeySet);
                 Assert.True(
                     context.Entry(
-                        new CompositeStoreGenerated
-                        {
-                            Id2 = true
-                        }).IsKeySet);
+                        new CompositeStoreGenerated { Id2 = true }).IsKeySet);
                 Assert.True(
                     context.Entry(
-                        new CompositeStoreGenerated
-                        {
-                            Id1 = 1,
-                            Id2 = true
-                        }).IsKeySet);
+                        new CompositeStoreGenerated { Id1 = 1, Id2 = true }).IsKeySet);
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Primary_key_that_is_also_foreign_key_is_set_only_if_non_default_value()
         {
             using (var context = new KeySetContext())
@@ -108,10 +81,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                 Assert.False(context.Entry(new Dependent()).IsKeySet);
                 Assert.True(
                     context.Entry(
-                        new Dependent
-                        {
-                            Id = 1
-                        }).IsKeySet);
+                        new Dependent { Id = 1 }).IsKeySet);
             }
         }
 
@@ -169,54 +139,43 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                 modelBuilder.Entity<NotStoreGenerated>().Property(e => e.Id).ValueGeneratedNever();
 
                 modelBuilder.Entity<CompositeNotStoreGenerated>().HasKey(
-                    e => new
-                    {
-                        e.Id1,
-                        e.Id2
-                    });
+                    e => new { e.Id1, e.Id2 });
 
                 modelBuilder.Entity<CompositeStoreGenerated>(
                     b =>
                     {
                         b.HasKey(
-                            e => new
-                            {
-                                e.Id1,
-                                e.Id2
-                            });
+                            e => new { e.Id1, e.Id2 });
                         b.Property(e => e.Id2).ValueGeneratedOnAdd();
                     });
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Detached_entities_are_not_returned_from_the_change_tracker()
         {
             using (var context = new FreezerContext())
             {
-                var entity = new Chunky
-                {
-                    Id = 808
-                };
+                var entity = new Chunky { Id = 808 };
                 context.Attach(entity);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 context.Entry(entity).State = EntityState.Detached;
 
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Empty(context.ChangeTracker.Entries());
 
                 context.ChangeTracker.DetectChanges();
 
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Empty(context.ChangeTracker.Entries());
 
                 context.Entry(entity);
 
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Empty(context.ChangeTracker.Entries());
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_obtain_entity_instance()
         {
             using (var context = new FreezerContext())
@@ -229,7 +188,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_obtain_context()
         {
             using (var context = new FreezerContext())
@@ -241,7 +200,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_obtain_underlying_state_entry()
         {
             using (var context = new FreezerContext())
@@ -254,7 +213,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_metadata()
         {
             using (var context = new FreezerContext())
@@ -267,7 +226,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_and_change_state()
         {
             using (var context = new FreezerContext())
@@ -285,7 +244,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_entry_to_change_state_to_Added()
         {
             ChangeStateOnEntry(EntityState.Detached, EntityState.Added);
@@ -295,7 +254,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             ChangeStateOnEntry(EntityState.Added, EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_entry_to_change_state_to_Unchanged()
         {
             ChangeStateOnEntry(EntityState.Detached, EntityState.Unchanged);
@@ -305,7 +264,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             ChangeStateOnEntry(EntityState.Added, EntityState.Unchanged);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_entry_to_change_state_to_Modified()
         {
             ChangeStateOnEntry(EntityState.Detached, EntityState.Modified);
@@ -315,7 +274,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             ChangeStateOnEntry(EntityState.Added, EntityState.Modified);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_entry_to_change_state_to_Deleted()
         {
             ChangeStateOnEntry(EntityState.Detached, EntityState.Deleted);
@@ -325,7 +284,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             ChangeStateOnEntry(EntityState.Added, EntityState.Deleted);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_entry_to_change_state_to_Unknown()
         {
             ChangeStateOnEntry(EntityState.Detached, EntityState.Detached);
@@ -348,7 +307,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_property_entry_by_name()
         {
             using (var context = new FreezerContext())
@@ -360,7 +319,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_generic_property_entry_by_name()
         {
             using (var context = new FreezerContext())
@@ -371,7 +330,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_when_wrong_generic_type_is_used_while_getting_property_entry_by_name()
         {
             using (var context = new FreezerContext())
@@ -384,7 +343,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_generic_property_entry_by_lambda()
         {
             using (var context = new FreezerContext())
@@ -395,7 +354,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_when_wrong_property_name_is_used_while_getting_property_entry_by_name()
         {
             using (var context = new FreezerContext())
@@ -414,7 +373,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_when_accessing_navigation_as_property()
         {
             using (var context = new FreezerContext())
@@ -444,7 +403,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_reference_entry_by_name()
         {
             using (var context = new FreezerContext())
@@ -456,7 +415,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_generic_reference_entry_by_name()
         {
             using (var context = new FreezerContext())
@@ -467,7 +426,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_generic_reference_entry_by_lambda()
         {
             using (var context = new FreezerContext())
@@ -478,7 +437,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_when_wrong_reference_name_is_used_while_getting_property_entry_by_name()
         {
             using (var context = new FreezerContext())
@@ -497,7 +456,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_when_accessing_property_as_reference()
         {
             using (var context = new FreezerContext())
@@ -529,7 +488,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_when_accessing_collection_as_reference()
         {
             using (var context = new FreezerContext())
@@ -561,7 +520,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_collection_entry_by_name()
         {
             using (var context = new FreezerContext())
@@ -573,7 +532,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_generic_collection_entry_by_name()
         {
             using (var context = new FreezerContext())
@@ -584,7 +543,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_generic_collection_entry_by_lambda()
         {
             using (var context = new FreezerContext())
@@ -595,7 +554,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_when_wrong_collection_name_is_used_while_getting_property_entry_by_name()
         {
             using (var context = new FreezerContext())
@@ -616,7 +575,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_when_accessing_property_as_collection()
         {
             using (var context = new FreezerContext())
@@ -643,8 +602,8 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
-        public void Throws_when_accessing_refernce_as_collection()
+        [ConditionalFact]
+        public void Throws_when_accessing_reference_as_collection()
         {
             using (var context = new FreezerContext())
             {
@@ -670,7 +629,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_property_entry_by_name_using_Member()
         {
             using (var context = new FreezerContext())
@@ -687,7 +646,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_when_wrong_property_name_is_used_while_getting_property_entry_by_name_using_Member()
         {
             using (var context = new FreezerContext())
@@ -703,7 +662,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_reference_entry_by_name_using_Member()
         {
             using (var context = new FreezerContext())
@@ -720,7 +679,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_collection_entry_by_name_using_Member()
         {
             using (var context = new FreezerContext())
@@ -737,7 +696,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_when_wrong_property_name_is_used_while_getting_property_entry_by_name_using_Navigation()
         {
             using (var context = new FreezerContext())
@@ -754,7 +713,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_reference_entry_by_name_using_Navigation()
         {
             using (var context = new FreezerContext())
@@ -771,7 +730,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_collection_entry_by_name_using_Navigation()
         {
             using (var context = new FreezerContext())
@@ -788,7 +747,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_when_accessing_property_as_navigation()
         {
             using (var context = new FreezerContext())
@@ -809,7 +768,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_all_modified_properties()
         {
             using (var context = new FreezerContext())
@@ -830,15 +789,11 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                     .Where(e => e.IsModified).Select(e => e.Metadata.Name).ToList();
 
                 Assert.Equal(
-                    new List<string>
-                    {
-                        "GarciaId",
-                        "Nonkey"
-                    }, modified);
+                    new List<string> { "GarciaId", "Nonkey" }, modified);
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_all_member_entries()
         {
             using (var context = new FreezerContext())
@@ -855,119 +810,73 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                     context.Attach(new Chunky()).Members.Select(e => e.Metadata.Name).ToList());
 
                 Assert.Equal(
-                    new List<string>
-                    {
-                        "Id",
-                        "Garcia",
-                        "Baked",
-                        "Monkeys"
-                    },
+                    new List<string> { "Id", "Garcia", "Baked", "Monkeys" },
                     context.Attach(new Cherry()).Members.Select(e => e.Metadata.Name).ToList());
 
                 Assert.Equal(
-                    new List<string>
-                    {
-                        "Id",
-                        "Baked",
-                        "GarciaId",
-                        "Garcia"
-                    },
+                    new List<string> { "Id", "Baked", "GarciaId", "Garcia" },
                     context.Attach(new Half()).Members.Select(e => e.Metadata.Name).ToList());
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_all_property_entries()
         {
             using (var context = new FreezerContext())
             {
                 Assert.Equal(
-                    new List<string>
-                    {
-                        "Id",
-                        "GarciaId",
-                        "Monkey",
-                        "Nonkey"
-                    },
+                    new List<string> { "Id", "GarciaId", "Monkey", "Nonkey" },
                     context.Attach(new Chunky()).Properties.Select(e => e.Metadata.Name).ToList());
 
                 Assert.Equal(
-                    new List<string>
-                    {
-                        "Id",
-                        "Garcia"
-                    },
+                    new List<string> { "Id", "Garcia" },
                     context.Attach(new Cherry()).Properties.Select(e => e.Metadata.Name).ToList());
 
                 Assert.Equal(
-                    new List<string>
-                    {
-                        "Id",
-                        "Baked",
-                        "GarciaId"
-                    },
+                    new List<string> { "Id", "Baked", "GarciaId" },
                     context.Attach(new Half()).Properties.Select(e => e.Metadata.Name).ToList());
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_all_navigation_entries()
         {
             using (var context = new FreezerContext())
             {
                 Assert.Equal(
-                    new List<string>
-                    {
-                        "Garcia"
-                    },
+                    new List<string> { "Garcia" },
                     context.Attach(new Chunky()).Navigations.Select(e => e.Metadata.Name).ToList());
 
                 Assert.Equal(
-                    new List<string>
-                    {
-                        "Baked",
-                        "Monkeys"
-                    },
+                    new List<string> { "Baked", "Monkeys" },
                     context.Attach(new Cherry()).Navigations.Select(e => e.Metadata.Name).ToList());
 
                 Assert.Equal(
-                    new List<string>
-                    {
-                        "Garcia"
-                    },
+                    new List<string> { "Garcia" },
                     context.Attach(new Half()).Navigations.Select(e => e.Metadata.Name).ToList());
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_all_reference_entries()
         {
             using (var context = new FreezerContext())
             {
                 Assert.Equal(
-                    new List<string>
-                    {
-                        "Garcia"
-                    },
+                    new List<string> { "Garcia" },
                     context.Attach(new Chunky()).References.Select(e => e.Metadata.Name).ToList());
 
                 Assert.Equal(
-                    new List<string>
-                    {
-                        "Baked"
-                    },
+                    new List<string> { "Baked" },
                     context.Attach(new Cherry()).References.Select(e => e.Metadata.Name).ToList());
 
                 Assert.Equal(
-                    new List<string>
-                    {
-                        "Garcia"
-                    },
+                    new List<string> { "Garcia" },
                     context.Attach(new Half()).References.Select(e => e.Metadata.Name).ToList());
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_all_collection_entries()
         {
             using (var context = new FreezerContext())
@@ -975,10 +884,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                 Assert.Empty(context.Attach(new Chunky()).Collections.Select(e => e.Metadata.Name).ToList());
 
                 Assert.Equal(
-                    new List<string>
-                    {
-                        "Monkeys"
-                    },
+                    new List<string> { "Monkeys" },
                     context.Attach(new Cherry()).Collections.Select(e => e.Metadata.Name).ToList());
 
                 Assert.Empty(context.Attach(new Half()).Collections.Select(e => e.Metadata.Name).ToList());

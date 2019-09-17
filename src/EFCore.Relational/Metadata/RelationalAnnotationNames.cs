@@ -5,8 +5,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata
 {
     /// <summary>
     ///     Names for well-known relational model annotations. Applications should not use these names
-    ///     directly, but should instead use the 'Relational()' methods on <see cref="RelationalMetadataExtensions" />.
-    ///     They are exposed here for use by database providers and conventions.
+    ///     directly, but should instead use the extension methods on metadata objects.
     /// </summary>
     public static class RelationalAnnotationNames
     {
@@ -51,6 +50,11 @@ namespace Microsoft.EntityFrameworkCore.Metadata
         public const string Schema = Prefix + "Schema";
 
         /// <summary>
+        ///     The name for comment annotations.
+        /// </summary>
+        public const string Comment = Prefix + "Comment";
+
+        /// <summary>
         ///     The name for default schema annotations.
         /// </summary>
         public const string DefaultSchema = Prefix + "DefaultSchema";
@@ -66,19 +70,9 @@ namespace Microsoft.EntityFrameworkCore.Metadata
         public const string SequencePrefix = Prefix + "Sequence:";
 
         /// <summary>
-        ///     The prefix for serialized check constraint annotations.
+        ///     The name for check constraint annotations.
         /// </summary>
         public const string CheckConstraints = Prefix + "CheckConstraints";
-
-        /// <summary>
-        ///     The name for discriminator property annotations.
-        /// </summary>
-        public const string DiscriminatorProperty = Prefix + "DiscriminatorProperty";
-
-        /// <summary>
-        ///     The name for discriminator value annotations.
-        /// </summary>
-        public const string DiscriminatorValue = Prefix + "DiscriminatorValue";
 
         /// <summary>
         ///     The name for filter annotations.
@@ -99,5 +93,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata
         ///     A flag indicating whether the property is constrained to fixed length values.
         /// </summary>
         public const string IsFixedLength = Prefix + "IsFixedLength";
+
+        /// <summary>
+        ///     The definition of a database view.
+        /// </summary>
+        public const string ViewDefinition = Prefix + "ViewDefinition";
     }
 }

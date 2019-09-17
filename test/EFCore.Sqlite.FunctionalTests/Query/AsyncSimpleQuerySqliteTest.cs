@@ -17,13 +17,7 @@ namespace Microsoft.EntityFrameworkCore.Query
         {
         }
 
-        public override Task Query_backed_by_database_view()
-        {
-            // Not present on SQLite
-            return Task.CompletedTask;
-        }
-
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public async Task Single_Predicate_Cancellation()
         {
             await Assert.ThrowsAnyAsync<OperationCanceledException>(

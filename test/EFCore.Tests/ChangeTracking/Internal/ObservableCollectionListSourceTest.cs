@@ -9,14 +9,14 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
 {
     public class ObservableCollectionListSourceTest
     {
-        [Fact]
+        [ConditionalFact]
         public void ObservableCollectionListSource_exposes_ObservableCollection_parameterless_constructor()
         {
             var ols = new ObservableCollectionListSource<FakeEntity>();
-            Assert.Equal(0, ols.Count);
+            Assert.Empty(ols);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void ObservableCollectionListSource_exposes_ObservableCollection_IEnumerable_constructor()
         {
             IEnumerable<FakeEntity> entities = new[] { new FakeEntity(), new FakeEntity() };
@@ -24,32 +24,24 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.Equal(2, ols.Count);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void ObservableCollectionListSource_exposes_ObservableCollection_List_constructor()
         {
-            var entities = new List<FakeEntity>
-            {
-                new FakeEntity(),
-                new FakeEntity()
-            };
+            var entities = new List<FakeEntity> { new FakeEntity(), new FakeEntity() };
             var ols = new ObservableCollectionListSource<FakeEntity>(entities);
             Assert.Equal(2, ols.Count);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void ObservableCollectionListSource_ContainsListCollection_returns_false()
         {
             Assert.False(((IListSource)new ObservableCollectionListSource<FakeEntity>()).ContainsListCollection);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void ObservableCollectionListSource_GetList_returns_BindingList_attached_to_the_ObservableCollection()
         {
-            var ols = new ObservableCollectionListSource<FakeEntity>
-            {
-                new FakeEntity(),
-                new FakeEntity()
-            };
+            var ols = new ObservableCollectionListSource<FakeEntity> { new FakeEntity(), new FakeEntity() };
             var bindingList = ((IListSource)ols).GetList();
 
             Assert.Equal(2, bindingList.Count);
@@ -67,7 +59,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             Assert.Equal(2, ols.Count);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void The_BindingList_returned_from_ObservableCollectionListSource_GetList_is_cached()
         {
             var ols = new ObservableCollectionListSource<FakeEntity>();

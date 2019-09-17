@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Utilities;
@@ -12,224 +11,151 @@ using Microsoft.EntityFrameworkCore.Utilities;
 namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 {
     /// <summary>
-    ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-    ///     directly from your code. This API may change or be removed in future releases.
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
-    public class CheckConstraint : ICheckConstraint
+    public class CheckConstraint : IConventionCheckConstraint
     {
-        private readonly IModel _model;
-        private readonly string _annotationName;
+        private ConfigurationSource _configurationSource;
 
         /// <summary>
-        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
         /// </summary>
         public CheckConstraint(
-            [NotNull] IMutableModel model,
+            [NotNull] IMutableEntityType entityType,
             [NotNull] string name,
-            [NotNull] string constraintSql,
-            [NotNull] string table,
-            [CanBeNull] string schema = null)
-            : this(model, GetAnnotationKey(name, table, schema))
+            [NotNull] string sql,
+            ConfigurationSource configurationSource)
         {
+            Check.NotNull(entityType, nameof(entityType));
             Check.NotEmpty(name, nameof(name));
-            Check.NotEmpty(constraintSql, nameof(constraintSql));
-            Check.NotEmpty(table, nameof(table));
-            Check.NullButNotEmpty(schema, nameof(schema));
+            Check.NotEmpty(sql, nameof(sql));
 
-            SetData(
-                new CheckContraintData
-                {
-                    Name = name,
-                    ConstraintSql = constraintSql,
-                    Table = table,
-                    Schema = schema
-                });
-        }
+            EntityType = entityType;
+            Name = name;
+            Sql = sql;
+            _configurationSource = configurationSource;
 
-        /// <summary>
-        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public CheckConstraint([NotNull] IModel model, [NotNull] string annotationName)
-        {
-            Check.NotNull(model, nameof(model));
-
-            _model = model;
-            _annotationName = annotationName;
-        }
-
-        /// <summary>
-        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public static IEnumerable<CheckConstraint> GetCheckConstraints([NotNull] IModel model)
-        {
-            Check.NotNull(model, nameof(model));
-
-            return GetAnnotationsDictionary(model)?
-                .Select(a => new CheckConstraint(model, a.Key)) ?? Enumerable.Empty<CheckConstraint>();
-        }
-
-        /// <summary>
-        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public static ICheckConstraint FindCheckConstraint([NotNull] IModel model, [NotNull] string name, [NotNull] string table, [CanBeNull] string schema = null)
-        {
-            Check.NotNull(model, nameof(model));
-            Check.NotEmpty(name, nameof(name));
-            Check.NotEmpty(table, nameof(table));
-            Check.NullButNotEmpty(schema, nameof(schema));
-
-            var dataDictionary = GetAnnotationsDictionary(model);
-            var annotationKey = GetAnnotationKey(name, table, schema);
-
-            return dataDictionary?.ContainsKey(annotationKey) == true ? new CheckConstraint(model, annotationKey) : null;
-        }
-
-        private static string GetAnnotationKey(string name, string table, string schema = null)
-            => $"{schema}.{table}:{name}";
-
-        /// <summary>
-        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public virtual Model Model => (Model)_model;
-
-        /// <summary>
-        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public virtual string Name => GetData().Name;
-
-        /// <summary>
-        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public virtual string Table => GetData().Table;
-
-        /// <summary>
-        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public virtual string Schema => GetData().Schema ?? Model.Relational().DefaultSchema;
-
-        /// <summary>
-        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public virtual string ConstraintSql
-        {
-            get => GetData().ConstraintSql;
-            set
-            {
-                var data = GetData();
-                data.ConstraintSql = value;
-                SetData(data);
-            }
-        }
-
-        private CheckContraintData GetData()
-        {
-            var dataDictionary = GetAnnotationsDictionary(Model);
-            return CheckContraintData.Deserialize(dataDictionary?[_annotationName]);
-        }
-
-        private void SetData(CheckContraintData data)
-        {
-            var dataDictionary = GetAnnotationsDictionary(Model);
+            var dataDictionary = GetAnnotationsDictionary(EntityType);
             if (dataDictionary == null)
             {
-                dataDictionary = new Dictionary<string, string>();
-                Model[RelationalAnnotationNames.CheckConstraints] = dataDictionary;
+                dataDictionary = new Dictionary<string, CheckConstraint>();
+                ((IMutableEntityType)EntityType).SetOrRemoveAnnotation(RelationalAnnotationNames.CheckConstraints, dataDictionary);
             }
-            dataDictionary[_annotationName] = data.Serialize();
+
+            if (dataDictionary.ContainsKey(Name))
+            {
+                throw new InvalidOperationException(RelationalStrings.DuplicateCheckConstraint(Name, EntityType.DisplayName()));
+            }
+
+            dataDictionary.Add(name, this);
         }
 
-        internal static Dictionary<string, string> GetAnnotationsDictionary(IModel model) =>
-            (Dictionary<string, string>)model[RelationalAnnotationNames.CheckConstraints];
-
-        IModel ICheckConstraint.Model => _model;
-
-        private class CheckContraintData
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        public static IEnumerable<CheckConstraint> GetCheckConstraints([NotNull] IEntityType entityType)
         {
-            public string Name { get; set; }
+            Check.NotNull(entityType, nameof(entityType));
 
-            public string Table { get; set; }
-
-            public string Schema { get; set; }
-
-            public string ConstraintSql { get; set; }
-
-            public string Serialize()
-            {
-                var builder = new StringBuilder();
-
-                EscapeAndQuote(builder, Name);
-                builder.Append(", ");
-                EscapeAndQuote(builder, Table);
-                builder.Append(", ");
-                EscapeAndQuote(builder, Schema);
-                builder.Append(", ");
-                EscapeAndQuote(builder, ConstraintSql);
-
-                return builder.ToString();
-            }
-
-            public static CheckContraintData Deserialize([NotNull] string value)
-            {
-                Check.NotEmpty(value, nameof(value));
-
-                try
-                {
-                    var data = new CheckContraintData();
-
-                    // ReSharper disable PossibleInvalidOperationException
-                    var position = 0;
-                    data.Name = ExtractValue(value, ref position);
-                    data.Table = ExtractValue(value, ref position);
-                    data.Schema = ExtractValue(value, ref position);
-                    data.ConstraintSql = ExtractValue(value, ref position);
-                    // ReSharper restore PossibleInvalidOperationException
-
-                    return data;
-                }
-                catch (Exception ex)
-                {
-                    throw new ArgumentException(RelationalStrings.BadCheckConstraintString, ex);
-                }
-            }
-
-            private static string ExtractValue(string value, ref int position)
-            {
-                position = value.IndexOf('\'', position) + 1;
-
-                var end = value.IndexOf('\'', position);
-
-                while (end + 1 < value.Length
-                       && value[end + 1] == '\'')
-                {
-                    end = value.IndexOf('\'', end + 2);
-                }
-
-                var extracted = value.Substring(position, end - position).Replace("''", "'");
-                position = end + 1;
-
-                return extracted.Length == 0 ? null : extracted;
-            }
-
-            private static void EscapeAndQuote(StringBuilder builder, object value)
-            {
-                builder.Append("'");
-
-                if (value != null)
-                {
-                    builder.Append(value.ToString().Replace("'", "''"));
-                }
-
-                builder.Append("'");
-            }
+            return GetAnnotationsDictionary(entityType)?.Values ?? Enumerable.Empty<CheckConstraint>();
         }
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        public static ICheckConstraint FindCheckConstraint(
+            [NotNull] IEntityType entityType, [NotNull] string name)
+        {
+            var dataDictionary = GetAnnotationsDictionary(entityType);
+
+            if (dataDictionary == null)
+            {
+                return null;
+            }
+
+            return dataDictionary.TryGetValue(name, out var checkConstraint) ? checkConstraint : null;
+        }
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        public static bool RemoveCheckConstraint(
+            [NotNull] IMutableEntityType entityType, [NotNull] string name)
+        {
+            var dataDictionary = GetAnnotationsDictionary(entityType);
+
+            return dataDictionary?.Remove(name) ?? false;
+        }
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        public virtual IEntityType EntityType { get; }
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        public virtual string Name { get; }
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        public virtual string Sql { get; }
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        public virtual ConfigurationSource GetConfigurationSource() => _configurationSource;
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        public virtual void UpdateConfigurationSource(ConfigurationSource configurationSource)
+        {
+            _configurationSource = configurationSource.Max(_configurationSource);
+        }
+
+        private static Dictionary<string, CheckConstraint> GetAnnotationsDictionary(IEntityType entityType)
+        {
+            return (Dictionary<string, CheckConstraint>)entityType[RelationalAnnotationNames.CheckConstraints];
+        }
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        IConventionEntityType IConventionCheckConstraint.EntityType => (IConventionEntityType)EntityType;
     }
 }

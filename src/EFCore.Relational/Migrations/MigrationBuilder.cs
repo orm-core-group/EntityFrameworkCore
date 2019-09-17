@@ -60,6 +60,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         /// <param name="defaultValueSql"> The SQL expression to use for the column's default constraint. </param>
         /// <param name="computedColumnSql"> The SQL expression to use to compute the column value. </param>
         /// <param name="fixedLength"> Indicates whether or not the column is constrained to fixed-length data. </param>
+        /// <param name="comment"> A comment to associate with the column. </param>
         /// <returns> A builder to allow annotations to be added to the operation. </returns>
         public virtual OperationBuilder<AddColumnOperation> AddColumn<T>(
             [NotNull] string name,
@@ -73,7 +74,8 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             [CanBeNull] object defaultValue = null,
             [CanBeNull] string defaultValueSql = null,
             [CanBeNull] string computedColumnSql = null,
-            bool? fixedLength = null)
+            bool? fixedLength = null,
+            [CanBeNull] string comment = null)
         {
             Check.NotEmpty(name, nameof(name));
             Check.NotEmpty(table, nameof(table));
@@ -92,7 +94,8 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                 DefaultValue = defaultValue,
                 DefaultValueSql = defaultValueSql,
                 ComputedColumnSql = computedColumnSql,
-                IsFixedLength = fixedLength
+                IsFixedLength = fixedLength,
+                Comment = comment
             };
             Operations.Add(operation);
 
@@ -226,13 +229,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             Check.NotEmpty(table, nameof(table));
             Check.NotEmpty(columns, nameof(columns));
 
-            var operation = new AddPrimaryKeyOperation
-            {
-                Schema = schema,
-                Table = table,
-                Name = name,
-                Columns = columns
-            };
+            var operation = new AddPrimaryKeyOperation { Schema = schema, Table = table, Name = name, Columns = columns };
             Operations.Add(operation);
 
             return new OperationBuilder<AddPrimaryKeyOperation>(operation);
@@ -275,13 +272,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             Check.NotEmpty(table, nameof(table));
             Check.NotEmpty(columns, nameof(columns));
 
-            var operation = new AddUniqueConstraintOperation
-            {
-                Schema = schema,
-                Table = table,
-                Name = name,
-                Columns = columns
-            };
+            var operation = new AddUniqueConstraintOperation { Schema = schema, Table = table, Name = name, Columns = columns };
             Operations.Add(operation);
 
             return new OperationBuilder<AddUniqueConstraintOperation>(operation);
@@ -341,6 +332,8 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         /// </param>
         /// <param name="fixedLength"> Indicates whether or not the column is constrained to fixed-length data. </param>
         /// <param name="oldFixedLength"> Indicates whether or not the column was previously constrained to fixed-length data. </param>
+        /// <param name="comment"> A comment to associate with the column. </param>
+        /// <param name="oldComment"> The previous comment to associate with the column. </param>
         /// <returns> A builder to allow annotations to be added to the operation. </returns>
         public virtual AlterOperationBuilder<AlterColumnOperation> AlterColumn<T>(
             [NotNull] string name,
@@ -364,7 +357,9 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             [CanBeNull] string oldDefaultValueSql = null,
             [CanBeNull] string oldComputedColumnSql = null,
             bool? fixedLength = null,
-            bool? oldFixedLength = null)
+            bool? oldFixedLength = null,
+            [CanBeNull] string comment = null,
+            [CanBeNull] string oldComment = null)
         {
             Check.NotEmpty(name, nameof(name));
             Check.NotEmpty(table, nameof(table));
@@ -384,6 +379,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                 DefaultValueSql = defaultValueSql,
                 ComputedColumnSql = computedColumnSql,
                 IsFixedLength = fixedLength,
+                Comment = comment,
                 OldColumn = new ColumnOperation
                 {
                     ClrType = oldClrType ?? typeof(T),
@@ -395,7 +391,8 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                     DefaultValue = oldDefaultValue,
                     DefaultValueSql = oldDefaultValueSql,
                     ComputedColumnSql = oldComputedColumnSql,
-                    IsFixedLength = oldFixedLength
+                    IsFixedLength = oldFixedLength,
+                    Comment = oldComment
                 }
             };
 
@@ -454,10 +451,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                 IsCyclic = cyclic,
                 OldSequence = new SequenceOperation
                 {
-                    IncrementBy = oldIncrementBy,
-                    MinValue = oldMinValue,
-                    MaxValue = oldMaxValue,
-                    IsCyclic = oldCyclic
+                    IncrementBy = oldIncrementBy, MinValue = oldMinValue, MaxValue = oldMaxValue, IsCyclic = oldCyclic
                 }
             };
             Operations.Add(operation);
@@ -470,17 +464,20 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         /// </summary>
         /// <param name="name"> The table name. </param>
         /// <param name="schema"> The schema that contains the table, or <c>null</c> to use the default schema. </param>
+        /// <param name="comment"> A comment to associate with the table. </param>
+        /// <param name="oldComment"> The previous comment to associate with the table. </param>
         /// <returns> A builder to allow annotations to be added to the operation. </returns>
         public virtual AlterOperationBuilder<AlterTableOperation> AlterTable(
             [NotNull] string name,
-            [CanBeNull] string schema = null)
+            [CanBeNull] string schema = null,
+            [CanBeNull] string comment = null,
+            [CanBeNull] string oldComment = null)
         {
             Check.NotEmpty(name, nameof(name));
 
             var operation = new AlterTableOperation
             {
-                Schema = schema,
-                Name = name
+                Schema = schema, Name = name, Comment = comment, OldTable = new TableOperation { Comment = oldComment }
             };
             Operations.Add(operation);
 
@@ -558,10 +555,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         {
             Check.NotEmpty(name, nameof(name));
 
-            var operation = new EnsureSchemaOperation
-            {
-                Name = name
-            };
+            var operation = new EnsureSchemaOperation { Name = name };
             Operations.Add(operation);
 
             return new OperationBuilder<EnsureSchemaOperation>(operation);
@@ -632,24 +626,18 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         /// </summary>
         /// <param name="name"> The check constraint name. </param>
         /// <param name="table"> The name of the table for the check constraint. </param>
-        /// <param name="constraintSql"> The constraint sql for the check constraint. </param>
+        /// <param name="sql"> The constraint sql for the check constraint. </param>
         /// <param name="schema"> The schema that contains the check constraint, or <c>null</c> to use the default schema. </param>
         /// <returns> A builder to allow annotations to be added to the operation. </returns>
         public virtual OperationBuilder<CreateCheckConstraintOperation> CreateCheckConstraint(
             [NotNull] string name,
             [NotNull] string table,
-            [NotNull] string constraintSql,
+            [NotNull] string sql,
             [CanBeNull] string schema = null)
         {
             Check.NotEmpty(name, nameof(name));
 
-            var operation = new CreateCheckConstraintOperation
-            {
-                Schema = schema,
-                Name = name,
-                Table = table,
-                ConstraintSql = constraintSql
-            };
+            var operation = new CreateCheckConstraintOperation { Schema = schema, Name = name, Table = table, Sql = sql };
             Operations.Add(operation);
 
             return new OperationBuilder<CreateCheckConstraintOperation>(operation);
@@ -667,21 +655,19 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         /// <param name="constraints">
         ///     A delegate allowing constraints to be applied over the columns configured by the 'columns' delegate above.
         /// </param>
+        /// <param name="comment"> A comment to be applied to the table. </param>
         /// <returns> A <see cref="CreateTableBuilder{TColumns}" /> to allow further configuration to be chained. </returns>
         public virtual CreateTableBuilder<TColumns> CreateTable<TColumns>(
             [NotNull] string name,
             [NotNull] Func<ColumnsBuilder, TColumns> columns,
             [CanBeNull] string schema = null,
-            [CanBeNull] Action<CreateTableBuilder<TColumns>> constraints = null)
+            [CanBeNull] Action<CreateTableBuilder<TColumns>> constraints = null,
+            [CanBeNull] string comment = null)
         {
             Check.NotEmpty(name, nameof(name));
             Check.NotNull(columns, nameof(columns));
 
-            var createTableOperation = new CreateTableOperation
-            {
-                Schema = schema,
-                Name = name
-            };
+            var createTableOperation = new CreateTableOperation { Schema = schema, Name = name, Comment = comment };
 
             var columnsBuilder = new ColumnsBuilder(createTableOperation);
             var columnsObject = columns(columnsBuilder);
@@ -720,12 +706,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             Check.NotEmpty(name, nameof(name));
             Check.NotEmpty(table, nameof(table));
 
-            var operation = new DropColumnOperation
-            {
-                Schema = schema,
-                Table = table,
-                Name = name
-            };
+            var operation = new DropColumnOperation { Schema = schema, Table = table, Name = name };
             Operations.Add(operation);
 
             return new OperationBuilder<DropColumnOperation>(operation);
@@ -746,12 +727,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             Check.NotEmpty(name, nameof(name));
             Check.NotEmpty(table, nameof(table));
 
-            var operation = new DropForeignKeyOperation
-            {
-                Schema = schema,
-                Table = table,
-                Name = name
-            };
+            var operation = new DropForeignKeyOperation { Schema = schema, Table = table, Name = name };
             Operations.Add(operation);
 
             return new OperationBuilder<DropForeignKeyOperation>(operation);
@@ -771,12 +747,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         {
             Check.NotEmpty(name, nameof(name));
 
-            var operation = new DropIndexOperation
-            {
-                Schema = schema,
-                Table = table,
-                Name = name
-            };
+            var operation = new DropIndexOperation { Schema = schema, Table = table, Name = name };
             Operations.Add(operation);
 
             return new OperationBuilder<DropIndexOperation>(operation);
@@ -797,12 +768,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             Check.NotEmpty(name, nameof(name));
             Check.NotEmpty(table, nameof(table));
 
-            var operation = new DropPrimaryKeyOperation
-            {
-                Schema = schema,
-                Table = table,
-                Name = name
-            };
+            var operation = new DropPrimaryKeyOperation { Schema = schema, Table = table, Name = name };
             Operations.Add(operation);
 
             return new OperationBuilder<DropPrimaryKeyOperation>(operation);
@@ -818,10 +784,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         {
             Check.NotEmpty(name, nameof(name));
 
-            var operation = new DropSchemaOperation
-            {
-                Name = name
-            };
+            var operation = new DropSchemaOperation { Name = name };
             Operations.Add(operation);
 
             return new OperationBuilder<DropSchemaOperation>(operation);
@@ -839,11 +802,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         {
             Check.NotEmpty(name, nameof(name));
 
-            var operation = new DropSequenceOperation
-            {
-                Schema = schema,
-                Name = name
-            };
+            var operation = new DropSequenceOperation { Schema = schema, Name = name };
             Operations.Add(operation);
 
             return new OperationBuilder<DropSequenceOperation>(operation);
@@ -863,12 +822,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         {
             Check.NotEmpty(name, nameof(name));
 
-            var operation = new DropCheckConstraintOperation
-            {
-                Name = name,
-                Table = table,
-                Schema = schema
-            };
+            var operation = new DropCheckConstraintOperation { Name = name, Table = table, Schema = schema };
             Operations.Add(operation);
 
             return new OperationBuilder<DropCheckConstraintOperation>(operation);
@@ -886,11 +840,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         {
             Check.NotEmpty(name, nameof(name));
 
-            var operation = new DropTableOperation
-            {
-                Schema = schema,
-                Name = name
-            };
+            var operation = new DropTableOperation { Schema = schema, Name = name };
             Operations.Add(operation);
 
             return new OperationBuilder<DropTableOperation>(operation);
@@ -911,12 +861,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             Check.NotEmpty(name, nameof(name));
             Check.NotEmpty(table, nameof(table));
 
-            var operation = new DropUniqueConstraintOperation
-            {
-                Schema = schema,
-                Table = table,
-                Name = name
-            };
+            var operation = new DropUniqueConstraintOperation { Schema = schema, Table = table, Name = name };
             Operations.Add(operation);
 
             return new OperationBuilder<DropUniqueConstraintOperation>(operation);
@@ -940,13 +885,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             Check.NotEmpty(table, nameof(table));
             Check.NotEmpty(newName, nameof(newName));
 
-            var operation = new RenameColumnOperation
-            {
-                Name = name,
-                Schema = schema,
-                Table = table,
-                NewName = newName
-            };
+            var operation = new RenameColumnOperation { Name = name, Schema = schema, Table = table, NewName = newName };
             Operations.Add(operation);
 
             return new OperationBuilder<RenameColumnOperation>(operation);
@@ -969,13 +908,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             Check.NotEmpty(name, nameof(name));
             Check.NotEmpty(newName, nameof(newName));
 
-            var operation = new RenameIndexOperation
-            {
-                Schema = schema,
-                Table = table,
-                Name = name,
-                NewName = newName
-            };
+            var operation = new RenameIndexOperation { Schema = schema, Table = table, Name = name, NewName = newName };
             Operations.Add(operation);
 
             return new OperationBuilder<RenameIndexOperation>(operation);
@@ -997,13 +930,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         {
             Check.NotEmpty(name, nameof(name));
 
-            var operation = new RenameSequenceOperation
-            {
-                Name = name,
-                Schema = schema,
-                NewName = newName,
-                NewSchema = newSchema
-            };
+            var operation = new RenameSequenceOperation { Name = name, Schema = schema, NewName = newName, NewSchema = newSchema };
             Operations.Add(operation);
 
             return new OperationBuilder<RenameSequenceOperation>(operation);
@@ -1025,13 +952,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         {
             Check.NotEmpty(name, nameof(name));
 
-            var operation = new RenameTableOperation
-            {
-                Schema = schema,
-                Name = name,
-                NewName = newName,
-                NewSchema = newSchema
-            };
+            var operation = new RenameTableOperation { Schema = schema, Name = name, NewName = newName, NewSchema = newSchema };
             Operations.Add(operation);
 
             return new OperationBuilder<RenameTableOperation>(operation);
@@ -1051,12 +972,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         {
             Check.NotEmpty(name, nameof(name));
 
-            var operation = new RestartSequenceOperation
-            {
-                Name = name,
-                Schema = schema,
-                StartValue = startValue
-            };
+            var operation = new RestartSequenceOperation { Name = name, Schema = schema, StartValue = startValue };
             Operations.Add(operation);
 
             return new OperationBuilder<RestartSequenceOperation>(operation);
@@ -1076,11 +992,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         {
             Check.NotEmpty(sql, nameof(sql));
 
-            var operation = new SqlOperation
-            {
-                Sql = sql,
-                SuppressTransaction = suppressTransaction
-            };
+            var operation = new SqlOperation { Sql = sql, SuppressTransaction = suppressTransaction };
             Operations.Add(operation);
 
             return new OperationBuilder<SqlOperation>(operation);
@@ -1156,13 +1068,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             Check.NotNull(columns, nameof(columns));
             Check.NotNull(values, nameof(values));
 
-            var operation = new InsertDataOperation
-            {
-                Table = table,
-                Schema = schema,
-                Columns = columns,
-                Values = values
-            };
+            var operation = new InsertDataOperation { Table = table, Schema = schema, Columns = columns, Values = values };
             Operations.Add(operation);
 
             return new OperationBuilder<InsertDataOperation>(operation);
@@ -1244,13 +1150,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             Check.NotNull(keyColumns, nameof(keyColumns));
             Check.NotNull(keyValues, nameof(keyValues));
 
-            var operation = new DeleteDataOperation
-            {
-                Table = table,
-                Schema = schema,
-                KeyColumns = keyColumns,
-                KeyValues = keyValues
-            };
+            var operation = new DeleteDataOperation { Table = table, Schema = schema, KeyColumns = keyColumns, KeyValues = keyValues };
             Operations.Add(operation);
 
             return new OperationBuilder<DeleteDataOperation>(operation);

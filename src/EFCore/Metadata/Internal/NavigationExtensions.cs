@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Infrastructure.Internal;
 
 namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 {
@@ -22,16 +23,11 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
         ///     any release. You should only use it directly in your code with extreme caution and knowing that
         ///     doing so can result in application failures when updating to a new Entity Framework Core release.
         /// </summary>
-        public static IClrCollectionAccessor GetCollectionAccessor([NotNull] this INavigation navigation)
-            => navigation.AsNavigation().CollectionAccessor;
-
-        /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
-        /// </summary>
-        public static string ToDebugString([NotNull] this INavigation navigation, bool singleLine = true, [NotNull] string indent = "")
+        public static string ToDebugString(
+            [NotNull] this INavigation navigation,
+            bool singleLine = true,
+            bool includeIndexes = false,
+            [NotNull] string indent = "")
         {
             var builder = new StringBuilder();
 
@@ -74,12 +70,15 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 builder.Append(" PropertyAccessMode.").Append(navigation.GetPropertyAccessMode());
             }
 
-            var indexes = navigation.GetPropertyIndexes();
-            builder.Append(" ").Append(indexes.Index);
-            builder.Append(" ").Append(indexes.OriginalValueIndex);
-            builder.Append(" ").Append(indexes.RelationshipIndex);
-            builder.Append(" ").Append(indexes.ShadowIndex);
-            builder.Append(" ").Append(indexes.StoreGenerationIndex);
+            if (includeIndexes)
+            {
+                var indexes = navigation.GetPropertyIndexes();
+                builder.Append(" ").Append(indexes.Index);
+                builder.Append(" ").Append(indexes.OriginalValueIndex);
+                builder.Append(" ").Append(indexes.RelationshipIndex);
+                builder.Append(" ").Append(indexes.ShadowIndex);
+                builder.Append(" ").Append(indexes.StoreGenerationIndex);
+            }
 
             if (!singleLine)
             {
@@ -88,6 +87,17 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 
             return builder.ToString();
         }
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        public static MemberIdentity CreateMemberIdentity([CanBeNull] this INavigation navigation)
+            => navigation?.GetIdentifyingMemberInfo() == null
+                ? MemberIdentity.Create(navigation?.Name)
+                : MemberIdentity.Create(navigation.GetIdentifyingMemberInfo());
 
         /// <summary>
         ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to

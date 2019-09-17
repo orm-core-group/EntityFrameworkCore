@@ -66,7 +66,7 @@ namespace Microsoft.EntityFrameworkCore.Update.Internal
             var tables = new Dictionary<(string Schema, string TableName), List<IEntityType>>();
             foreach (var entityType in model.GetEntityTypes().Where(et => et.FindPrimaryKey() != null))
             {
-                var fullName = (entityType.Relational().Schema, entityType.Relational().TableName);
+                var fullName = (entityType.GetSchema(), entityType.GetTableName());
                 if (!tables.TryGetValue(fullName, out var mappedEntityTypes))
                 {
                     mappedEntityTypes = new List<IEntityType>();
@@ -84,7 +84,8 @@ namespace Microsoft.EntityFrameworkCore.Update.Internal
                     continue;
                 }
 
-                var factory = CreateSharedTableEntryMapFactory(tableMapping.Value, updateAdapter, tableMapping.Key.TableName, tableMapping.Key.Schema);
+                var factory = CreateSharedTableEntryMapFactory(
+                    tableMapping.Value, updateAdapter, tableMapping.Key.TableName, tableMapping.Key.Schema);
 
                 sharedTablesMap.Add(tableMapping.Key, factory);
             }
@@ -106,7 +107,7 @@ namespace Microsoft.EntityFrameworkCore.Update.Internal
         {
             var principals = new Dictionary<IEntityType, IReadOnlyList<IEntityType>>(entityTypes.Count);
             var dependents = new Dictionary<IEntityType, IReadOnlyList<IEntityType>>(entityTypes.Count);
-            foreach (var entityType in entityTypes)
+            foreach (var entityType in entityTypes.Where(t => t.FindPrimaryKey() != null))
             {
                 var principalList = new List<IEntityType>();
                 foreach (var foreignKey in entityType.FindForeignKeys(entityType.FindPrimaryKey().Properties))
@@ -192,7 +193,7 @@ namespace Microsoft.EntityFrameworkCore.Update.Internal
 
         private IUpdateEntry GetMainEntry(IUpdateEntry entry)
         {
-            var entityType = entry.EntityType.RootType();
+            var entityType = entry.EntityType.GetRootType();
             if (_principals[entityType].Count == 0)
             {
                 return entry;

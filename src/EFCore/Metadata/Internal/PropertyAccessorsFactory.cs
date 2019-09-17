@@ -28,7 +28,8 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
         public virtual PropertyAccessors Create([NotNull] IPropertyBase propertyBase)
             => (PropertyAccessors)_genericCreate
                 .MakeGenericMethod(propertyBase.ClrType)
-                .Invoke(null, new object[] { propertyBase });
+                .Invoke(
+                    null, new object[] { propertyBase });
 
         private static readonly MethodInfo _genericCreate
             = typeof(PropertyAccessorsFactory).GetTypeInfo().GetDeclaredMethod(nameof(CreateGeneric));
@@ -66,19 +67,9 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     Expression.Property(entryParameter, "Entity"),
                     entityClrType);
 
-                if (propertyBase.IsIndexedProperty())
-                {
-                    currentValueExpression = Expression.MakeIndex(
-                        convertedExpression,
-                        propertyBase.PropertyInfo,
-                        new[] { Expression.Constant(propertyBase.Name) });
-                }
-                else
-                {
-                    currentValueExpression = Expression.MakeMemberAccess(
-                        convertedExpression,
-                        propertyBase.GetMemberInfo(forConstruction: false, forSet: false));
-                }
+                currentValueExpression = Expression.MakeMemberAccess(
+                    convertedExpression,
+                    propertyBase.GetMemberInfo(forMaterialization: false, forSet: false));
 
                 if (currentValueExpression.Type != typeof(TProperty))
                 {

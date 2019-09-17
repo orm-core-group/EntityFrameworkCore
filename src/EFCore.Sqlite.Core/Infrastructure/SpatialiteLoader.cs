@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -13,7 +13,6 @@ using JetBrains.Annotations;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore.Utilities;
 using Microsoft.Extensions.DependencyModel;
-
 using RuntimeEnvironment = Microsoft.DotNet.PlatformAbstractions.RuntimeEnvironment;
 
 namespace Microsoft.EntityFrameworkCore.Infrastructure
@@ -59,10 +58,11 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
             var opened = false;
             if (connection.State != ConnectionState.Open)
             {
-                // NB: If closed, LoadExtension won't throw immidiately
+                // NB: If closed, LoadExtension won't throw immediately
                 connection.Open();
                 opened = true;
             }
+
             try
             {
                 Load(connection);

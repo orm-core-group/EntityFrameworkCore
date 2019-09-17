@@ -1,7 +1,6 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 
 namespace Microsoft.EntityFrameworkCore
@@ -23,7 +22,7 @@ namespace Microsoft.EntityFrameworkCore
             {
                 base.OnModelCreating<TMessage, TProduct, TProductPhoto, TProductReview, TComputerDetail, TDimensions>(builder);
 
-                builder.Entity<TMessage>().Property(e => e.MessageId).UseSqlServerIdentityColumn();
+                builder.Entity<TMessage>().Property(e => e.MessageId).UseIdentityColumn();
 
                 builder.Entity<TProduct>()
                     .OwnsOne(
@@ -34,8 +33,8 @@ namespace Microsoft.EntityFrameworkCore
                             db.Property(d => d.Height).HasColumnType("decimal(18,2)");
                         });
 
-                builder.Entity<TProductPhoto>().Property(e => e.PhotoId).UseSqlServerIdentityColumn();
-                builder.Entity<TProductReview>().Property(e => e.ReviewId).UseSqlServerIdentityColumn();
+                builder.Entity<TProductPhoto>().Property(e => e.PhotoId).UseIdentityColumn();
+                builder.Entity<TProductReview>().Property(e => e.ReviewId).UseIdentityColumn();
 
                 builder.Entity<TComputerDetail>()
                     .OwnsOne(

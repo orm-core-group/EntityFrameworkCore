@@ -14,38 +14,14 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 {
     public class PropertyAccessorsFactoryTest
     {
-        [Fact]
-        public void Can_use_PropertyAccessorsFactory_on_indexed_property()
-        {
-            IMutableModel model = new Model();
-            var entityType = model.AddEntityType(typeof(IndexedClass));
-            var id = entityType.AddProperty("Id", typeof(int));
-            var propertyA = entityType.AddIndexedProperty("PropertyA", typeof(string));
-
-            var contextServices = InMemoryTestHelpers.Instance.CreateContextServices(model);
-            var stateManager = contextServices.GetRequiredService<IStateManager>();
-            var factory = contextServices.GetRequiredService<IInternalEntityEntryFactory>();
-
-            var entity = new IndexedClass();
-            var entry = factory.Create(stateManager, entityType, entity);
-
-            var propertyAccessors = new PropertyAccessorsFactory().Create(propertyA);
-            Assert.Equal("ValueA", ((Func<InternalEntityEntry, string>)propertyAccessors.CurrentValueGetter)(entry));
-            Assert.Equal("ValueA", ((Func<InternalEntityEntry, string>)propertyAccessors.OriginalValueGetter)(entry));
-            Assert.Equal("ValueA", ((Func<InternalEntityEntry, string>)propertyAccessors.PreStoreGeneratedCurrentValueGetter)(entry));
-            Assert.Equal("ValueA", ((Func<InternalEntityEntry, string>)propertyAccessors.RelationshipSnapshotGetter)(entry));
-
-            var valueBuffer = new ValueBuffer(new object[] { 1, "ValueA" });
-            Assert.Equal("ValueA", ((Func<ValueBuffer, object>)propertyAccessors.ValueBufferGetter)(valueBuffer));
-        }
-
-        [Fact]
+        [ConditionalFact]
         public void Can_use_PropertyAccessorsFactory_on_non_indexed_property()
         {
             IMutableModel model = new Model();
             var entityType = model.AddEntityType(typeof(NonIndexedClass));
-            var id = entityType.AddProperty("Id", typeof(int));
+            entityType.AddProperty("Id", typeof(int));
             var propA = entityType.AddProperty("PropA", typeof(string));
+            model.FinalizeModel();
 
             var contextServices = InMemoryTestHelpers.Instance.CreateContextServices(model);
             var stateManager = contextServices.GetRequiredService<IStateManager>();
@@ -61,22 +37,16 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal("ValueA", ((Func<InternalEntityEntry, string>)propertyAccessors.RelationshipSnapshotGetter)(entry));
 
             var valueBuffer = new ValueBuffer(new object[] { 1, "ValueA" });
-            Assert.Equal("ValueA", ((Func<ValueBuffer, object>)propertyAccessors.ValueBufferGetter)(valueBuffer));
+            Assert.Equal("ValueA", propertyAccessors.ValueBufferGetter(valueBuffer));
         }
 
         private class IndexedClass
         {
-            private Dictionary<string, object> _internalValues = new Dictionary<string, object>()
-                {
-                    { "PropertyA", "ValueA" }
-                };
+            private readonly Dictionary<string, object> _internalValues = new Dictionary<string, object> { { "PropertyA", "ValueA" } };
 
             internal int Id { get; set; }
 
-            public object this[string name]
-            {
-                get => _internalValues[name];
-            }
+            public object this[string name] => _internalValues[name];
         }
 
         private class NonIndexedClass

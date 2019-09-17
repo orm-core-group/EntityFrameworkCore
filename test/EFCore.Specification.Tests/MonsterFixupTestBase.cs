@@ -5,7 +5,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.TestModels;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 using Xunit;
@@ -28,7 +27,7 @@ namespace Microsoft.EntityFrameworkCore
         protected TestStore TestStore { get; }
         protected DbContextOptions Options { get; }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Can_build_monster_model_and_seed_data_using_FKs()
         {
             CreateAndSeedDatabase(context => context.SeedUsingFKs());
@@ -38,7 +37,7 @@ namespace Microsoft.EntityFrameworkCore
             NavigationVerification();
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Can_build_monster_model_and_seed_data_using_all_navigations()
         {
             CreateAndSeedDatabase(context => context.SeedUsingNavigations(dependentNavs: true, principalNavs: true));
@@ -48,7 +47,7 @@ namespace Microsoft.EntityFrameworkCore
             NavigationVerification();
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Can_build_monster_model_and_seed_data_using_dependent_navigations()
         {
             CreateAndSeedDatabase(context => context.SeedUsingNavigations(dependentNavs: true, principalNavs: false));
@@ -58,7 +57,7 @@ namespace Microsoft.EntityFrameworkCore
             NavigationVerification();
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Can_build_monster_model_and_seed_data_using_principal_navigations()
         {
             CreateAndSeedDatabase(context => context.SeedUsingNavigations(dependentNavs: false, principalNavs: true));
@@ -68,7 +67,7 @@ namespace Microsoft.EntityFrameworkCore
             NavigationVerification();
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Can_build_monster_model_and_seed_data_using_navigations_with_deferred_add()
         {
             CreateAndSeedDatabase(context => context.SeedUsingNavigationsWithDeferredAdd());
@@ -78,7 +77,7 @@ namespace Microsoft.EntityFrameworkCore
             NavigationVerification();
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void One_to_many_fixup_happens_when_FKs_change_test()
         {
             CreateAndSeedDatabase(context => context.SeedUsingFKs());
@@ -168,7 +167,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void One_to_many_fixup_happens_when_reference_changes()
         {
             CreateAndSeedDatabase(context => context.SeedUsingFKs());
@@ -258,7 +257,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void One_to_many_fixup_happens_when_collection_changes()
         {
             CreateAndSeedDatabase(context => context.SeedUsingFKs());
@@ -337,7 +336,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void One_to_one_fixup_happens_when_FKs_change_test()
         {
             CreateAndSeedDatabase(context => context.SeedUsingFKs());
@@ -421,7 +420,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void One_to_one_fixup_happens_when_reference_change_test()
         {
             CreateAndSeedDatabase(context => context.SeedUsingFKs());
@@ -505,7 +504,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Composite_fixup_happens_when_FKs_change_test()
         {
             CreateAndSeedDatabase(context => context.SeedUsingFKs());
@@ -520,8 +519,7 @@ namespace Microsoft.EntityFrameworkCore
                 var productReview2 = context.ProductReviews.Single(e => e.Review.StartsWith("Good"));
                 var productReview3 = context.ProductReviews.Single(e => e.Review.StartsWith("Eeky"));
 
-                // Issue #14935. Cannot eval 'where (Convert([e].Photo[0], Int32) == 101)'
-                // ToList() added.
+                // Issue #16428
                 var productPhotos = context.ProductPhotos.ToList();
                 var productPhoto1 = productPhotos.Single(e => e.Photo[0] == 101);
                 var productPhoto2 = productPhotos.Single(e => e.Photo[0] == 103);
@@ -603,7 +601,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Fixup_with_binary_keys_happens_when_FKs_or_navigations_change_test()
         {
             CreateAndSeedDatabase(context => context.SeedUsingFKs());
@@ -837,8 +835,7 @@ namespace Microsoft.EntityFrameworkCore
                     new[] { "Better than Tarqies!", "Eeky says yes!", "Good with maple syrup." },
                     context.ProductReviews.Select(c => c.Review).OrderBy(n => n));
 
-                // Issue #14935. Cannot eval 'orderby {[c].Photo => First()}.ToString() asc'
-                // ToList() added.
+                // Issue #16428
                 Assert.Equal(
                     new[] { "101", "103", "105" },
                     context.ProductPhotos.ToList().Select(c => c.Photo.First().ToString()).OrderBy(n => n));
@@ -851,8 +848,7 @@ namespace Microsoft.EntityFrameworkCore
                     new[] { "Ants By Boris", "Trading As Trent" },
                     context.Suppliers.Select(c => c.Name).OrderBy(n => n));
 
-                // Issue #14935. Cannot eval 'from Byte l in [c].Logo'
-                // ToList() added.
+                // Issue #16428
                 Assert.Equal(
                     new[] { "201", "202" },
                     context.SupplierLogos.ToList().SelectMany(c => c.Logo).Select(l => l.ToString()).OrderBy(n => n));
@@ -1034,8 +1030,7 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Equal(product1.ProductId, productReview2.ProductId);
                 Assert.Equal(product2.ProductId, productReview3.ProductId);
 
-                // Issue #14935. Cannot eval 'where (Convert([e].Photo[0], Int32) == 101)'
-                // ToList() added.
+                // Issue #16428
                 var productPhotos = context.ProductPhotos.ToList();
                 var productPhoto1 = productPhotos.Single(e => e.Photo[0] == 101);
                 var productPhoto2 = productPhotos.Single(e => e.Photo[0] == 103);
@@ -1058,8 +1053,7 @@ namespace Microsoft.EntityFrameworkCore
                 var supplier1 = context.Suppliers.Single(e => e.Name.StartsWith("Trading"));
                 var supplier2 = context.Suppliers.Single(e => e.Name.StartsWith("Ants"));
 
-                // Issue #14935. Cannot eval 'where (Convert([e].Logo[0], Int32) == 201)'
-                // ToList() added.
+                // Issue #16428
                 var supplierLogo1 = context.SupplierLogos.ToList().Single(e => e.Logo[0] == 201);
 
                 Assert.Equal(supplier1.SupplierId, supplierLogo1.SupplierId);
@@ -1304,8 +1298,7 @@ namespace Microsoft.EntityFrameworkCore
 
                 Assert.True(product3.Reviews == null || product3.Reviews.Count == 0);
 
-                // Issue #14935. Cannot eval 'where (Convert([e].Photo[0], Int32) == 101)'
-                // ToList() added.
+                // Issue #16428
                 var productPhotos = context.ProductPhotos.ToList();
                 var productPhoto1 = productPhotos.Single(e => e.Photo[0] == 101);
                 var productPhoto2 = productPhotos.Single(e => e.Photo[0] == 103);
@@ -1339,8 +1332,7 @@ namespace Microsoft.EntityFrameworkCore
                 var supplier1 = context.Suppliers.Single(e => e.Name.StartsWith("Trading"));
                 var supplier2 = context.Suppliers.Single(e => e.Name.StartsWith("Ants"));
 
-                // Issue #14935. Cannot eval 'where (Convert([e].Logo[0], Int32) == 201)'
-                // ToList() added.
+                // Issue #16428
                 var supplierLogo1 = context.SupplierLogos.ToList().Single(e => e.Logo[0] == 201);
 
                 Assert.Same(supplierLogo1, supplier1.Logo);
@@ -1402,7 +1394,7 @@ namespace Microsoft.EntityFrameworkCore
             public TestStore CreateTestStore() => TestStoreFactory.Create(StoreName);
 
             public override DbContextOptionsBuilder AddOptions(DbContextOptionsBuilder builder)
-                => base.AddOptions(builder).ConfigureWarnings(w => w.Log(CoreEventId.FirstWithoutOrderByAndFilterWarning));
+                => base.AddOptions(builder);
 
             public abstract MonsterContext CreateContext(DbContextOptions options);
 

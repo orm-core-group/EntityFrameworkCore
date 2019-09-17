@@ -16,8 +16,8 @@ namespace Microsoft.EntityFrameworkCore.Update
     ///         This type is typically used by database providers; it is generally not used in application code.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Scoped"/>. This means that each
-    ///         <see cref="DbContext"/> instance will use its own instance of this service.
+    ///         The service lifetime is <see cref="ServiceLifetime.Scoped" />. This means that each
+    ///         <see cref="DbContext" /> instance will use its own instance of this service.
     ///         The implementation may depend on other services registered with any lifetime.
     ///         The implementation does not need to be thread-safe.
     ///     </para>
@@ -29,10 +29,10 @@ namespace Microsoft.EntityFrameworkCore.Update
         ///     list of <see cref="IUpdateEntry" />s.
         /// </summary>
         /// <param name="entries"> The entries that represent the entities to be modified. </param>
-        /// <param name="modelData"> The model data. </param>
+        /// <param name="updateAdapter"> The model data. </param>
         /// <returns> The list of batches to execute. </returns>
         IEnumerable<ModificationCommandBatch> BatchCommands(
             [NotNull] IList<IUpdateEntry> entries,
-            [NotNull] IUpdateAdapter modelData);
+            [NotNull] IUpdateAdapter updateAdapter);
     }
 }

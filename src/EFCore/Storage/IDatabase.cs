@@ -10,7 +10,6 @@ using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Update;
 using Microsoft.Extensions.DependencyInjection;
-using Remotion.Linq;
 
 namespace Microsoft.EntityFrameworkCore.Storage
 {
@@ -23,8 +22,8 @@ namespace Microsoft.EntityFrameworkCore.Storage
     ///         not used in application code.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Scoped"/>. This means that each
-    ///         <see cref="DbContext"/> instance will use its own instance of this service.
+    ///         The service lifetime is <see cref="ServiceLifetime.Scoped" />. This means that each
+    ///         <see cref="DbContext" /> instance will use its own instance of this service.
     ///         The implementation may depend on other services registered with any lifetime.
     ///         The implementation does not need to be thread-safe.
     ///     </para>
@@ -51,22 +50,6 @@ namespace Microsoft.EntityFrameworkCore.Storage
             [NotNull] IList<IUpdateEntry> entries,
             CancellationToken cancellationToken = default);
 
-        /// <summary>
-        ///     Translates a query model into a function that can be executed to get query results from the database.
-        /// </summary>
-        /// <typeparam name="TResult"> The type of results returned by the query. </typeparam>
-        /// <param name="queryModel"> An object model representing the query to be executed. </param>
-        /// <returns> A function that will execute the query. </returns>
-        Func<QueryContext, IEnumerable<TResult>> CompileQuery<TResult>([NotNull] QueryModel queryModel);
-
-        /// <summary>
-        ///     Translates a query model into a function that can be executed to asynchronously get query results from the database.
-        /// </summary>
-        /// <typeparam name="TResult"> The type of results returned by the query. </typeparam>
-        /// <param name="queryModel"> An object model representing the query to be executed. </param>
-        /// <returns> A function that will asynchronously execute the query. </returns>
-        Func<QueryContext, IAsyncEnumerable<TResult>> CompileAsyncQuery<TResult>([NotNull] QueryModel queryModel);
-
-        Func<QueryContext, TResult> CompileQuery2<TResult>([NotNull] Expression query, bool async);
+        Func<QueryContext, TResult> CompileQuery<TResult>([NotNull] Expression query, bool async);
     }
 }

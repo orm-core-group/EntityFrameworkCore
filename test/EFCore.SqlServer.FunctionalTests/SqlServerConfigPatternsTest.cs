@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -20,7 +19,7 @@ namespace Microsoft.EntityFrameworkCore
     {
         public class ImplicitServicesAndConfig
         {
-            [Fact]
+            [ConditionalFact]
             public async Task Can_query_with_implicit_services_and_OnConfiguring()
             {
                 using (SqlServerTestStore.GetNorthwindStore())
@@ -50,7 +49,7 @@ namespace Microsoft.EntityFrameworkCore
 
         public class ImplicitServicesExplicitConfig
         {
-            [Fact]
+            [ConditionalFact]
             public async Task Can_query_with_implicit_services_and_explicit_config()
             {
                 using (SqlServerTestStore.GetNorthwindStore())
@@ -82,7 +81,7 @@ namespace Microsoft.EntityFrameworkCore
 
         public class ExplicitServicesImplicitConfig
         {
-            [Fact]
+            [ConditionalFact]
             public async Task Can_query_with_explicit_services_and_OnConfiguring()
             {
                 using (SqlServerTestStore.GetNorthwindStore())
@@ -118,7 +117,7 @@ namespace Microsoft.EntityFrameworkCore
 
         public class ExplicitServicesAndConfig
         {
-            [Fact]
+            [ConditionalFact]
             public async Task Can_query_with_explicit_services_and_explicit_config()
             {
                 using (SqlServerTestStore.GetNorthwindStore())
@@ -152,7 +151,7 @@ namespace Microsoft.EntityFrameworkCore
 
         public class ExplicitServicesAndNoConfig
         {
-            [Fact]
+            [ConditionalFact]
             public void Throws_on_attempt_to_use_SQL_Server_without_providing_connection_string()
             {
                 using (SqlServerTestStore.GetNorthwindStore())
@@ -190,7 +189,7 @@ namespace Microsoft.EntityFrameworkCore
 
         public class NoServicesAndNoConfig
         {
-            [Fact]
+            [ConditionalFact]
             public void Throws_on_attempt_to_use_context_with_no_store()
             {
                 using (SqlServerTestStore.GetNorthwindStore())
@@ -222,7 +221,7 @@ namespace Microsoft.EntityFrameworkCore
 
         public class ImplicitConfigButNoServices
         {
-            [Fact]
+            [ConditionalFact]
             public void Throws_on_attempt_to_use_store_with_no_store_services()
             {
                 var serviceCollection = new ServiceCollection();
@@ -265,7 +264,7 @@ namespace Microsoft.EntityFrameworkCore
 
         public class InjectContext
         {
-            [Fact]
+            [ConditionalFact]
             public async Task Can_register_context_with_DI_container_and_have_it_injected()
             {
                 var serviceProvider = new ServiceCollection()
@@ -317,7 +316,7 @@ namespace Microsoft.EntityFrameworkCore
 
         public class InjectContextAndConfiguration
         {
-            [Fact]
+            [ConditionalFact]
             public async Task Can_register_context_and_configuration_with_DI_container_and_have_both_injected()
             {
                 var serviceProvider = new ServiceCollection()
@@ -367,7 +366,7 @@ namespace Microsoft.EntityFrameworkCore
 
         public class ConstructorArgsToBuilder
         {
-            [Fact]
+            [ConditionalFact]
             public async Task Can_pass_context_options_to_constructor_and_use_in_builder()
             {
                 using (SqlServerTestStore.GetNorthwindStore())
@@ -399,7 +398,7 @@ namespace Microsoft.EntityFrameworkCore
 
         public class ConstructorArgsToOnConfiguring
         {
-            [Fact]
+            [ConditionalFact]
             public async Task Can_pass_connection_string_to_constructor_and_use_in_OnConfiguring()
             {
                 using (SqlServerTestStore.GetNorthwindStore())
@@ -434,7 +433,7 @@ namespace Microsoft.EntityFrameworkCore
 
         public class NestedContext
         {
-            [Fact(Skip = "QueryIssue")]
+            [ConditionalFact]
             public async Task Can_use_one_context_nested_inside_another_of_the_same_type()
             {
                 using (SqlServerTestStore.GetNorthwindStore())
@@ -451,7 +450,7 @@ namespace Microsoft.EntityFrameworkCore
 
                         using (var context2 = new NorthwindContext(serviceProvider))
                         {
-                            Assert.Equal(0, context2.ChangeTracker.Entries().Count());
+                            Assert.Empty(context2.ChangeTracker.Entries());
 
                             var customers2 = await context2.Customers.ToListAsync();
                             Assert.Equal(91, customers2.Count);

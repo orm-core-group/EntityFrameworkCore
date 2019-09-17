@@ -7,35 +7,19 @@ using Xunit;
 
 namespace Microsoft.EntityFrameworkCore.Query
 {
-    internal class CompiledQueryInMemoryTest : CompiledQueryTestBase<NorthwindQueryInMemoryFixture<NoopModelCustomizer>>
+    public class CompiledQueryInMemoryTest : CompiledQueryTestBase<NorthwindQueryInMemoryFixture<NoopModelCustomizer>>
     {
         public CompiledQueryInMemoryTest(NorthwindQueryInMemoryFixture<NoopModelCustomizer> fixture)
             : base(fixture)
         {
         }
 
-        [Fact(Skip = "See issue#13857")]
-        public override void DbQuery_query()
+        [ConditionalFact(Skip = "See issue #17386")]
+        public override void Query_with_array_parameter()
         {
-            base.DbQuery_query();
         }
 
-        [Fact(Skip = "See issue#13857")]
-        public override Task DbQuery_query_async()
-        {
-            return base.DbQuery_query_async();
-        }
-
-        [Fact(Skip = "See issue#13857")]
-        public override void DbQuery_query_first()
-        {
-            base.DbQuery_query_first();
-        }
-
-        [Fact(Skip = "See issue#13857")]
-        public override Task DbQuery_query_first_async()
-        {
-            return base.DbQuery_query_first_async();
-        }
+        [ConditionalFact(Skip = "See issue #17386")]
+        public override Task Query_with_array_parameter_async() => null;
     }
 }

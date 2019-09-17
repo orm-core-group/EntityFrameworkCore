@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -6,7 +6,6 @@ using System.Data;
 using System.IO;
 using Microsoft.Data.Sqlite.Properties;
 using SQLitePCL;
-
 using static SQLitePCL.raw;
 
 namespace Microsoft.Data.Sqlite
@@ -179,7 +178,7 @@ namespace Microsoft.Data.Sqlite
                 count = (int)(Length - position);
             }
 
-            var rc = sqlite3_blob_read(_blob, buffer, offset, count, (int)position);
+            var rc = sqlite3_blob_read(_blob, buffer.AsSpan(offset, count), (int)position);
             SqliteException.ThrowExceptionForRC(rc, _db);
             _position += count;
             return count;
@@ -236,7 +235,7 @@ namespace Microsoft.Data.Sqlite
                 throw new NotSupportedException(Resources.ResizeNotSupported);
             }
 
-            var rc = sqlite3_blob_write(_blob, buffer, offset, count, (int)position);
+            var rc = sqlite3_blob_write(_blob, buffer.AsSpan(offset, count), (int)position);
             SqliteException.ThrowExceptionForRC(rc, _db);
             _position += count;
         }

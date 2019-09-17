@@ -5,8 +5,6 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore.Cosmos.Infrastructure;
-using Microsoft.EntityFrameworkCore.Cosmos.Infrastructure.Internal;
 using Microsoft.EntityFrameworkCore.Cosmos.Storage.Internal;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.TestUtilities;
@@ -19,24 +17,30 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.TestUtilities
     {
         private readonly TestStoreContext _storeContext;
         private readonly string _dataFilePath;
+        private readonly Action<CosmosDbContextOptionsBuilder> _configureCosmos;
+        private static readonly Guid _runId = Guid.NewGuid();
 
-        public static CosmosTestStore Create(string name, Action<CosmosDbContextOptionsBuilder> extensionConfiguration = null) => new CosmosTestStore(name, shared: false, extensionConfiguration: extensionConfiguration);
+        public static CosmosTestStore Create(string name, Action<CosmosDbContextOptionsBuilder> extensionConfiguration = null)
+            => new CosmosTestStore(name, shared: false, extensionConfiguration: extensionConfiguration);
 
         public static CosmosTestStore CreateInitialized(string name, Action<CosmosDbContextOptionsBuilder> extensionConfiguration = null)
-            => (CosmosTestStore)Create(name, extensionConfiguration).Initialize(null, (Func<DbContext>)null, null);
+            => (CosmosTestStore)Create(name, extensionConfiguration).Initialize(null, (Func<DbContext>)null);
 
         public static CosmosTestStore GetOrCreate(string name) => new CosmosTestStore(name);
 
         public static CosmosTestStore GetOrCreate(string name, string dataFilePath)
             => new CosmosTestStore(name, dataFilePath: dataFilePath);
 
-        private CosmosTestStore(string name, bool shared = true, string dataFilePath = null, Action<CosmosDbContextOptionsBuilder> extensionConfiguration = null)
-            : base(name, shared)
+        private CosmosTestStore(
+            string name, bool shared = true, string dataFilePath = null,
+            Action<CosmosDbContextOptionsBuilder> extensionConfiguration = null)
+            : base(CreateName(name), shared)
         {
             ConnectionUri = TestEnvironment.DefaultConnection;
             AuthToken = TestEnvironment.AuthToken;
+            _configureCosmos = extensionConfiguration;
 
-            _storeContext = new TestStoreContext(this, extensionConfiguration);
+            _storeContext = new TestStoreContext(this);
 
             if (dataFilePath != null)
             {
@@ -46,20 +50,26 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.TestUtilities
             }
         }
 
+        private static string CreateName(string name) => name == "Northwind" ? name : (name + _runId);
+
         public string ConnectionUri { get; }
         public string AuthToken { get; }
+        public Action<CosmosDbContextOptionsBuilder> ConfigureCosmos => _configureCosmos ?? (_ => { });
+
+        protected override DbContext CreateDefaultContext() => new TestStoreContext(this);
 
         public override DbContextOptionsBuilder AddProviderOptions(DbContextOptionsBuilder builder)
             => builder.UseCosmos(
                 ConnectionUri,
                 AuthToken,
-                Name);
+                Name,
+                ConfigureCosmos);
 
-        protected override void Initialize(Func<DbContext> createContext, Action<DbContext> seed)
+        protected override void Initialize(Func<DbContext> createContext, Action<DbContext> seed, Action<DbContext> clean)
         {
             if (_dataFilePath == null)
             {
-                base.Initialize(createContext ?? (() => _storeContext), seed);
+                base.Initialize(createContext ?? (() => _storeContext), seed, clean);
             }
             else
             {
@@ -109,15 +119,15 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.TestUtilities
 
                                                             document["id"] = $"{entityName}|{document["id"]}";
                                                             document["Discriminator"] = entityName;
-                                                            document["__partitionKey"] = "0";
 
-                                                            await cosmosClient.CreateItemAsync("NorthwindContext", document);
+                                                            await cosmosClient.CreateItemAsync("NorthwindContext", document, null);
                                                         }
                                                         else if (reader.TokenType == JsonToken.EndObject)
                                                         {
                                                             goto NextEntityType;
                                                         }
                                                     }
+
                                                     break;
                                             }
                                         }
@@ -136,33 +146,37 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.TestUtilities
             context.Database.EnsureCreated();
         }
 
+        public override async Task CleanAsync(DbContext context)
+        {
+            await context.Database.EnsureDeletedAsync();
+            await context.Database.EnsureCreatedAsync();
+        }
+
         public override void Dispose()
+            => throw new InvalidOperationException("Calling Dispose can cause deadlocks. Use DisposeAsync instead.");
+
+        public override async Task DisposeAsync()
         {
             if (_dataFilePath == null)
             {
-                _storeContext.Database.EnsureDeleted();
+                await _storeContext.Database.EnsureDeletedAsync();
             }
 
             _storeContext.Dispose();
-            base.Dispose();
         }
 
         private class TestStoreContext : DbContext
         {
             private readonly CosmosTestStore _testStore;
-            private readonly Action<CosmosDbContextOptionsBuilder> _extensionConfiguration;
 
-            public TestStoreContext(CosmosTestStore testStore,
-                Action<CosmosDbContextOptionsBuilder> extensionConfiguration)
+            public TestStoreContext(CosmosTestStore testStore)
             {
                 _testStore = testStore;
-                _extensionConfiguration = extensionConfiguration;
             }
 
             protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
             {
-                var extensionConfiguration = _extensionConfiguration ?? (_ => { });
-                optionsBuilder.UseCosmos(_testStore.ConnectionUri, _testStore.AuthToken, _testStore.Name, extensionConfiguration);
+                optionsBuilder.UseCosmos(_testStore.ConnectionUri, _testStore.AuthToken, _testStore.Name, _testStore.ConfigureCosmos);
             }
         }
     }

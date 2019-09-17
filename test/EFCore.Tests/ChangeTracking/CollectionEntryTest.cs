@@ -11,7 +11,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
 {
     public class CollectionEntryTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Can_get_back_reference()
         {
             using (var context = new FreezerContext())
@@ -24,7 +24,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_back_reference_generic()
         {
             using (var context = new FreezerContext())
@@ -37,7 +37,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_metadata()
         {
             using (var context = new FreezerContext())
@@ -49,7 +49,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_metadata_generic()
         {
             using (var context = new FreezerContext())
@@ -61,7 +61,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_and_set_current_value()
         {
             using (var context = new FreezerContext())
@@ -74,16 +74,13 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
 
                 Assert.Null(collection.CurrentValue);
 
-                collection.CurrentValue = new List<Chunky>
-                {
-                    chunky
-                };
+                collection.CurrentValue = new List<Chunky> { chunky };
 
                 Assert.Same(cherry, chunky.Garcia);
                 Assert.Same(chunky, cherry.Monkeys.Single());
                 Assert.Equal(cherry.Id, chunky.GarciaId);
                 Assert.Same(chunky, collection.CurrentValue.Cast<Chunky>().Single());
-                Assert.Same(collection.GetTargetEntry(chunky).GetInfrastructure(), context.Entry(chunky).GetInfrastructure());
+                Assert.Same(collection.FindEntry(chunky).GetInfrastructure(), context.Entry(chunky).GetInfrastructure());
 
                 collection.CurrentValue = null;
 
@@ -91,11 +88,11 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                 Assert.Null(cherry.Monkeys);
                 Assert.Null(chunky.GarciaId);
                 Assert.Null(collection.CurrentValue);
-                Assert.Null(collection.GetTargetEntry(chunky));
+                Assert.Null(collection.FindEntry(chunky));
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_and_set_current_value_generic()
         {
             using (var context = new FreezerContext())
@@ -108,16 +105,13 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
 
                 Assert.Null(collection.CurrentValue);
 
-                collection.CurrentValue = new List<Chunky>
-                {
-                    chunky
-                };
+                collection.CurrentValue = new List<Chunky> { chunky };
 
                 Assert.Same(cherry, chunky.Garcia);
                 Assert.Same(chunky, cherry.Monkeys.Single());
                 Assert.Equal(cherry.Id, chunky.GarciaId);
                 Assert.Same(chunky, collection.CurrentValue.Single());
-                Assert.Same(collection.GetTargetEntry(chunky).GetInfrastructure(), context.Entry(chunky).GetInfrastructure());
+                Assert.Same(collection.FindEntry(chunky).GetInfrastructure(), context.Entry(chunky).GetInfrastructure());
 
                 collection.CurrentValue = null;
 
@@ -125,11 +119,11 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                 Assert.Null(cherry.Monkeys);
                 Assert.Null(chunky.GarciaId);
                 Assert.Null(collection.CurrentValue);
-                Assert.Null(collection.GetTargetEntry(chunky));
+                Assert.Null(collection.FindEntry(chunky));
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_and_set_current_value_not_tracked()
         {
             using (var context = new FreezerContext())
@@ -141,10 +135,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
 
                 Assert.Null(collection.CurrentValue);
 
-                collection.CurrentValue = new List<Chunky>
-                {
-                    chunky
-                };
+                collection.CurrentValue = new List<Chunky> { chunky };
 
                 Assert.Null(chunky.Garcia);
                 Assert.Same(chunky, cherry.Monkeys.Single());
@@ -160,7 +151,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_and_set_current_value_generic_not_tracked()
         {
             using (var context = new FreezerContext())
@@ -172,10 +163,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
 
                 Assert.Null(collection.CurrentValue);
 
-                collection.CurrentValue = new List<Chunky>
-                {
-                    chunky
-                };
+                collection.CurrentValue = new List<Chunky> { chunky };
 
                 Assert.Null(chunky.Garcia);
                 Assert.Same(chunky, cherry.Monkeys.Single());
@@ -191,7 +179,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_and_set_current_value_start_tracking()
         {
             using (var context = new FreezerContext())
@@ -204,10 +192,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
 
                 Assert.Null(collection.CurrentValue);
 
-                collection.CurrentValue = new List<Chunky>
-                {
-                    chunky
-                };
+                collection.CurrentValue = new List<Chunky> { chunky };
 
                 Assert.Same(cherry, chunky.Garcia);
                 Assert.Same(chunky, cherry.Monkeys.Single());
@@ -229,7 +214,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_and_set_current_value_start_tracking_generic()
         {
             using (var context = new FreezerContext())
@@ -242,10 +227,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
 
                 Assert.Null(collection.CurrentValue);
 
-                collection.CurrentValue = new List<Chunky>
-                {
-                    chunky
-                };
+                collection.CurrentValue = new List<Chunky> { chunky };
 
                 Assert.Same(cherry, chunky.Garcia);
                 Assert.Same(chunky, cherry.Monkeys.Single());
@@ -267,8 +249,8 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
-        public void Can_get_and_set_current_value_attched()
+        [ConditionalFact]
+        public void Can_get_and_set_current_value_attached()
         {
             using (var context = new FreezerContext())
             {
@@ -280,10 +262,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
 
                 Assert.Null(collection.CurrentValue);
 
-                collection.CurrentValue = new List<Chunky>
-                {
-                    chunky
-                };
+                collection.CurrentValue = new List<Chunky> { chunky };
 
                 Assert.Same(cherry, chunky.Garcia);
                 Assert.Same(chunky, cherry.Monkeys.Single());
@@ -307,8 +286,8 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
-        public void Can_get_and_set_current_value_generic_attched()
+        [ConditionalFact]
+        public void Can_get_and_set_current_value_generic_attached()
         {
             using (var context = new FreezerContext())
             {
@@ -320,10 +299,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
 
                 Assert.Null(collection.CurrentValue);
 
-                collection.CurrentValue = new List<Chunky>
-                {
-                    chunky
-                };
+                collection.CurrentValue = new List<Chunky> { chunky };
 
                 Assert.Same(cherry, chunky.Garcia);
                 Assert.Same(chunky, cherry.Monkeys.Single());
@@ -347,27 +323,15 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void IsModified_tracks_state_of_FK_property_principal()
         {
             using (var context = new FreezerContext())
             {
                 var cherry = new Cherry();
-                var chunky1 = new Chunky
-                {
-                    Id = 1,
-                    Garcia = cherry
-                };
-                var chunky2 = new Chunky
-                {
-                    Id = 2,
-                    Garcia = cherry
-                };
-                cherry.Monkeys = new List<Chunky>
-                {
-                    chunky1,
-                    chunky2
-                };
+                var chunky1 = new Chunky { Id = 1, Garcia = cherry };
+                var chunky2 = new Chunky { Id = 2, Garcia = cherry };
+                cherry.Monkeys = new List<Chunky> { chunky1, chunky2 };
                 context.AttachRange(cherry, chunky1, chunky2);
 
                 var collection = context.Entry(cherry).Collection(e => e.Monkeys);
@@ -384,7 +348,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Detached, EntityState.Added)]
         [InlineData(EntityState.Added, EntityState.Added)]
         [InlineData(EntityState.Modified, EntityState.Added)]
@@ -401,22 +365,10 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             using (var context = new FreezerContext())
             {
                 var cherry = new Cherry();
-                var chunky1 = new Chunky
-                {
-                    Id = 1,
-                    Garcia = cherry
-                };
-                var chunky2 = new Chunky
-                {
-                    Id = 2,
-                    Garcia = cherry
-                };
+                var chunky1 = new Chunky { Id = 1, Garcia = cherry };
+                var chunky2 = new Chunky { Id = 2, Garcia = cherry };
 
-                cherry.Monkeys = new List<Chunky>
-                {
-                    chunky1,
-                    chunky2
-                };
+                cherry.Monkeys = new List<Chunky> { chunky1, chunky2 };
 
                 context.Entry(cherry).State = principalState;
                 context.Entry(chunky1).State = dependentState;
@@ -457,7 +409,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Detached, EntityState.Unchanged)]
         [InlineData(EntityState.Added, EntityState.Unchanged)]
         [InlineData(EntityState.Modified, EntityState.Unchanged)]
@@ -469,21 +421,9 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             using (var context = new FreezerContext())
             {
                 var cherry = new Cherry();
-                var chunky1 = new Chunky
-                {
-                    Id = 1,
-                    Garcia = cherry
-                };
-                var chunky2 = new Chunky
-                {
-                    Id = 2,
-                    Garcia = cherry
-                };
-                cherry.Monkeys = new List<Chunky>
-                {
-                    chunky1,
-                    chunky2
-                };
+                var chunky1 = new Chunky { Id = 1, Garcia = cherry };
+                var chunky2 = new Chunky { Id = 2, Garcia = cherry };
+                cherry.Monkeys = new List<Chunky> { chunky1, chunky2 };
 
                 context.Entry(cherry).State = principalState;
                 context.Entry(chunky1).State = dependentState;
@@ -509,7 +449,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Detached, EntityState.Modified)]
         [InlineData(EntityState.Added, EntityState.Modified)]
         [InlineData(EntityState.Modified, EntityState.Modified)]
@@ -521,21 +461,9 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             using (var context = new FreezerContext())
             {
                 var cherry = new Cherry();
-                var chunky1 = new Chunky
-                {
-                    Id = 1,
-                    Garcia = cherry
-                };
-                var chunky2 = new Chunky
-                {
-                    Id = 2,
-                    Garcia = cherry
-                };
-                cherry.Monkeys = new List<Chunky>
-                {
-                    chunky1,
-                    chunky2
-                };
+                var chunky1 = new Chunky { Id = 1, Garcia = cherry };
+                var chunky2 = new Chunky { Id = 2, Garcia = cherry };
+                cherry.Monkeys = new List<Chunky> { chunky1, chunky2 };
 
                 context.Entry(cherry).State = principalState;
                 context.Entry(chunky1).State = dependentState;

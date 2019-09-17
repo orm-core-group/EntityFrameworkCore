@@ -11,13 +11,11 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Storage.Internal;
 using Microsoft.EntityFrameworkCore.Utilities;
 using Microsoft.Extensions.DependencyInjection;
-using Remotion.Linq.Parsing.ExpressionVisitors;
 
 namespace Microsoft.EntityFrameworkCore.Storage
 {
@@ -36,9 +34,9 @@ namespace Microsoft.EntityFrameworkCore.Storage
     ///         not used in application code.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Singleton"/>. This means a single instance
-    ///         is used by many <see cref="DbContext"/> instances. The implementation must be thread-safe.
-    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped"/>.
+    ///         The service lifetime is <see cref="ServiceLifetime.Singleton" />. This means a single instance
+    ///         is used by many <see cref="DbContext" /> instances. The implementation must be thread-safe.
+    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped" />.
     ///     </para>
     /// </summary>
     public class TypedRelationalValueBufferFactoryFactory : IRelationalValueBufferFactoryFactory
@@ -88,7 +86,16 @@ namespace Microsoft.EntityFrameworkCore.Storage
                 => TypeMaterializationInfo.SequenceEqual(other.TypeMaterializationInfo);
 
             public override int GetHashCode()
-                => TypeMaterializationInfo.Aggregate(0, (t, v) => (t * 397) ^ v.GetHashCode());
+            {
+                var hash = new HashCode();
+                // ReSharper disable once ForCanBeConvertedToForeach
+                for (var i = 0; i < TypeMaterializationInfo.Count; i++)
+                {
+                    hash.Add(TypeMaterializationInfo[i]);
+                }
+
+                return hash.ToHashCode();
+            }
         }
 
         private readonly ConcurrentDictionary<CacheKey, TypedRelationalValueBufferFactory> _cache
@@ -111,15 +118,12 @@ namespace Microsoft.EntityFrameworkCore.Storage
         }
 
         /// <summary>
-        ///     Creates value buffer assignment expressions for the the given type information.
+        ///     Creates value buffer assignment expressions for the given type information.
         /// </summary>
         /// <param name="types"> Types and mapping for the values to be read. </param>
         /// <returns> The value buffer assignment expressions. </returns>
-        public virtual IReadOnlyList<Expression> CreateAssignmentExpressions(IReadOnlyList<TypeMaterializationInfo> types)
-        {
-            Check.NotNull(types, nameof(types));
-
-            return types
+        public virtual IReadOnlyList<Expression> CreateAssignmentExpressions([NotNull] IReadOnlyList<TypeMaterializationInfo> types)
+            => Check.NotNull(types, nameof(types))
                 .Select(
                     (mi, i) =>
                         CreateGetValueExpression(
@@ -128,7 +132,6 @@ namespace Microsoft.EntityFrameworkCore.Storage
                             mi,
                             Dependencies.CoreOptions.AreDetailedErrorsEnabled,
                             box: false)).ToArray();
-        }
 
         private static Func<DbDataReader, object[]> CreateArrayInitializer(CacheKey cacheKey, bool detailedErrorsEnabled)
             => Expression.Lambda<Func<DbDataReader, object[]>>(

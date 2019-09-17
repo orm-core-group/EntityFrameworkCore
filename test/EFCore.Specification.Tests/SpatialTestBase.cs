@@ -3,12 +3,10 @@
 
 using System;
 using System.Linq;
-using GeoAPI.Geometries;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.TestModels.SpatialModel;
 using Microsoft.EntityFrameworkCore.TestUtilities;
-using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
 using NetTopologySuite.Geometries;
 using Xunit;
 
@@ -27,11 +25,7 @@ namespace Microsoft.EntityFrameworkCore
         {
             using (var db = Fixture.CreateContext())
             {
-                var entity = new PointEntity
-                {
-                    Id = Guid.NewGuid(),
-                    Point = new Point(0, 0)
-                };
+                var entity = new PointEntity { Id = Guid.NewGuid(), Point = new Point(0, 0) };
                 db.Attach(entity);
 
                 entity.Point.X = 1;
@@ -45,11 +39,7 @@ namespace Microsoft.EntityFrameworkCore
         {
             using (var db = Fixture.CreateContext())
             {
-                var entity = new PointEntity
-                {
-                    Id = Guid.NewGuid(),
-                    Point = new Point(0, 0)
-                };
+                var entity = new PointEntity { Id = Guid.NewGuid(), Point = new Point(0, 0) };
                 db.Attach(entity);
 
                 entity.Point = new Point(0, 0);
@@ -58,7 +48,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [ConditionalFact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Mutation_of_tracked_values_does_not_mutate_values_in_store()
         {
             Point CreatePoint(double y = 2.2)
@@ -78,16 +68,8 @@ namespace Microsoft.EntityFrameworkCore
                 context =>
                 {
                     context.AddRange(
-                        new PointEntity
-                        {
-                            Id = id1,
-                            Point = point
-                        },
-                        new PolygonEntity
-                        {
-                            Id = id2,
-                            Polygon = polygon
-                        });
+                        new PointEntity { Id = id1, Point = point },
+                        new PolygonEntity { Id = id2, Polygon = polygon });
 
                     context.SaveChanges();
                 },
@@ -119,21 +101,20 @@ namespace Microsoft.EntityFrameworkCore
                 });
         }
 
-        [ConditionalFact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Translators_handle_static_members()
         {
             using (var db = Fixture.CreateContext())
             {
-                Enumerable.FirstOrDefault(
-                    from e in db.Set<PointEntity>()
-                    select new
-                    {
-                        e.Id,
-                        e.Point,
-                        Point.Empty,
-                        DateTime.UtcNow,
-                        Guid = Guid.NewGuid()
-                    });
+                (from e in db.Set<PointEntity>()
+                 select new
+                 {
+                     e.Id,
+                     e.Point,
+                     Point.Empty,
+                     DateTime.UtcNow,
+                     Guid = Guid.NewGuid()
+                 }).FirstOrDefault();
             }
         }
 

@@ -10,7 +10,7 @@ using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Remotion.Linq.Parsing.ExpressionVisitors;
+using Microsoft.EntityFrameworkCore.Query;
 
 namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
 {
@@ -134,29 +134,9 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
                     continue;
                 }
 
-                if (propertyBase.IsIndexedProperty())
-                {
-                    var indexerAccessExpression = (Expression)Expression.MakeIndex(
-                        entityVariable,
-                        propertyBase.PropertyInfo,
-                        new List<Expression>
-                        {
-                            Expression.Constant(propertyBase.Name)
-                        });
-                    if (propertyBase.PropertyInfo.PropertyType != propertyBase.ClrType)
-                    {
-                        indexerAccessExpression =
-                            Expression.Convert(indexerAccessExpression, propertyBase.ClrType);
-                    }
-
-                    arguments[i] =
-                        CreateSnapshotValueExpression(indexerAccessExpression, propertyBase);
-                    continue;
-                }
-
                 var memberAccess = (Expression)Expression.MakeMemberAccess(
                     entityVariable,
-                    propertyBase.GetMemberInfo(forConstruction: false, forSet: false));
+                    propertyBase.GetMemberInfo(forMaterialization: false, forSet: false));
 
                 if (memberAccess.Type != propertyBase.ClrType)
                 {
@@ -180,10 +160,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             return UseEntityVariable
                    && entityVariable != null
                 ? (Expression)Expression.Block(
-                    new List<ParameterExpression>
-                    {
-                        entityVariable
-                    },
+                    new List<ParameterExpression> { entityVariable },
                     new List<Expression>
                     {
                         Expression.Assign(

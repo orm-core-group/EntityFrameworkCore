@@ -9,47 +9,48 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Extensions.Internal;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 using Microsoft.EntityFrameworkCore.TestModels.Northwind;
 using Xunit;
 
+// ReSharper disable InconsistentNaming
 // ReSharper disable RedundantArgumentDefaultValue
-namespace Microsoft.EntityFrameworkCore.Extensions
+// ReSharper disable once CheckNamespace
+namespace Microsoft.EntityFrameworkCore
 {
     public class QueryableExtensionsTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Include_on_non_ef_queryable_is_no_op()
         {
             var q = new List<Customer>().AsQueryable();
             var q2 = q.Include(c => c.Orders).ThenInclude(o => o.OrderDetails).ToList();
 
-            Assert.Equal(0, q2.Count);
+            Assert.Empty(q2);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void AsTracking_on_non_ef_queryable_is_no_op()
         {
             var q = new List<Customer>().AsQueryable();
             var q2 = q.AsTracking().ToList();
 
-            Assert.Equal(0, q2.Count);
+            Assert.Empty(q2);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void AsNoTracking_on_non_ef_queryable_is_no_op()
         {
             var q = new List<Customer>().AsQueryable();
             var q2 = q.AsNoTracking().ToList();
 
-            Assert.Equal(0, q2.Count);
+            Assert.Empty(q2);
         }
 
         // ReSharper disable MethodSupportsCancellation
 
-        [Fact]
+        [ConditionalFact]
         public void Extension_methods_call_provider_ExecuteAsync()
         {
             var cancellationTokenSource = new CancellationTokenSource();
@@ -199,7 +200,7 @@ namespace Microsoft.EntityFrameworkCore.Extensions
             IEnumerator IEnumerable.GetEnumerator() => throw new NotImplementedException();
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Extension_methods_throw_on_non_async_source()
         {
             await SourceNonAsyncQueryableTest(() => Source().AllAsync(e => true));
@@ -305,13 +306,6 @@ namespace Microsoft.EntityFrameworkCore.Extensions
             await SourceNonAsyncEnumerableTest<int>(() => Source().ToDictionaryAsync(e => e, e => e, ReferenceEqualityComparer.Instance));
             await SourceNonAsyncEnumerableTest<int>(
                 () => Source().ToDictionaryAsync(e => e, e => e, ReferenceEqualityComparer.Instance, new CancellationToken()));
-            await SourceNonAsyncEnumerableTest<int>(() => Source().ToLookupAsync(e => e));
-            await SourceNonAsyncEnumerableTest<int>(() => Source().ToLookupAsync(e => e, e => e));
-            await SourceNonAsyncEnumerableTest<int>(() => Source().ToLookupAsync(e => e, ReferenceEqualityComparer.Instance));
-            await SourceNonAsyncEnumerableTest<int>(() => Source().ToLookupAsync(e => e, ReferenceEqualityComparer.Instance));
-            await SourceNonAsyncEnumerableTest<int>(() => Source().ToLookupAsync(e => e, e => e, ReferenceEqualityComparer.Instance));
-            await SourceNonAsyncEnumerableTest<int>(
-                () => Source().ToLookupAsync(e => e, e => e, ReferenceEqualityComparer.Instance, new CancellationToken()));
             await SourceNonAsyncEnumerableTest<int>(() => Source().ToListAsync());
 
             Assert.Equal(
@@ -333,7 +327,7 @@ namespace Microsoft.EntityFrameworkCore.Extensions
                 CoreStrings.IQueryableNotAsync(typeof(T)),
                 (await Assert.ThrowsAsync<InvalidOperationException>(test)).Message);
 
-        [Fact]
+        [ConditionalFact]
         public async Task Extension_methods_validate_arguments()
         {
             // ReSharper disable AssignNullToNotNullAttribute

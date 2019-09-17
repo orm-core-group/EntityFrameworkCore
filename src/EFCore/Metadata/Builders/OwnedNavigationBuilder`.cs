@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -8,7 +8,6 @@ using System.Reflection;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Utilities;
 
@@ -63,7 +62,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         public virtual KeyBuilder HasKey([NotNull] Expression<Func<TDependentEntity, object>> keyExpression)
             => new KeyBuilder(
                 DependentEntityType.Builder.PrimaryKey(
-                    Check.NotNull(keyExpression, nameof(keyExpression)).GetPropertyAccessList(), ConfigurationSource.Explicit));
+                    Check.NotNull(keyExpression, nameof(keyExpression)).GetPropertyAccessList(), ConfigurationSource.Explicit).Metadata);
 
         /// <summary>
         ///     <para>
@@ -86,10 +85,11 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         /// <returns> An object that can be used to configure the property. </returns>
         public virtual PropertyBuilder<TProperty> Property<TProperty>(
             [NotNull] Expression<Func<TDependentEntity, TProperty>> propertyExpression)
-            => new PropertyBuilder<TProperty>(
-                DependentEntityType.Builder.Property(
-                    Check.NotNull(propertyExpression, nameof(propertyExpression)).GetPropertyAccess(),
-                    ConfigurationSource.Explicit));
+            => UpdateBuilder(
+                () => new PropertyBuilder<TProperty>(
+                    DependentEntityType.Builder.Property(
+                        Check.NotNull(propertyExpression, nameof(propertyExpression)).GetPropertyAccess(),
+                        ConfigurationSource.Explicit).Metadata));
 
         /// <summary>
         ///     Excludes the given property from the entity type. This method is typically used to remove properties
@@ -110,7 +110,9 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         public virtual OwnedNavigationBuilder<TEntity, TDependentEntity> Ignore(
             [NotNull] Expression<Func<TDependentEntity, object>> propertyExpression)
             => (OwnedNavigationBuilder<TEntity, TDependentEntity>)
-                base.Ignore(Check.NotNull(propertyExpression, nameof(propertyExpression)).GetPropertyAccess().GetSimpleMemberName());
+                base.Ignore(
+                    Check.NotNull(propertyExpression, nameof(propertyExpression))
+                        .GetPropertyAccess().GetSimpleMemberName());
 
         /// <summary>
         ///     Configures an index on the specified properties. If there is an existing index on the given
@@ -130,7 +132,8 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         public virtual IndexBuilder HasIndex([NotNull] Expression<Func<TDependentEntity, object>> indexExpression)
             => new IndexBuilder(
                 DependentEntityType.Builder.HasIndex(
-                    Check.NotNull(indexExpression, nameof(indexExpression)).GetPropertyAccessList(), ConfigurationSource.Explicit));
+                        Check.NotNull(indexExpression, nameof(indexExpression)).GetPropertyAccessList(), ConfigurationSource.Explicit)
+                    .Metadata);
 
         /// <summary>
         ///     <para>
@@ -158,7 +161,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
                 Builder.HasNavigation(
                     ownerReference,
                     pointsToPrincipal: true,
-                    ConfigurationSource.Explicit));
+                    ConfigurationSource.Explicit).Metadata);
         }
 
         /// <summary>
@@ -185,7 +188,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
                 Builder.HasNavigation(
                     referenceExpression?.GetPropertyAccess(),
                     pointsToPrincipal: true,
-                    ConfigurationSource.Explicit));
+                    ConfigurationSource.Explicit).Metadata);
 
         /// <summary>
         ///     <para>
@@ -213,7 +216,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         public virtual OwnedNavigationBuilder<TDependentEntity, TNewDependentEntity> OwnsOne<TNewDependentEntity>(
             [NotNull] string navigationName)
             where TNewDependentEntity : class
-            => OwnsOneBuilder<TNewDependentEntity>(new PropertyIdentity(Check.NotNull(navigationName, nameof(navigationName))));
+            => OwnsOneBuilder<TNewDependentEntity>(new MemberIdentity(Check.NotNull(navigationName, nameof(navigationName))));
 
         /// <summary>
         ///     <para>
@@ -243,7 +246,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
             [NotNull] Expression<Func<TDependentEntity, TNewDependentEntity>> navigationExpression)
             where TNewDependentEntity : class
             => OwnsOneBuilder<TNewDependentEntity>(
-                new PropertyIdentity(
+                new MemberIdentity(
                     Check.NotNull(navigationExpression, nameof(navigationExpression)).GetPropertyAccess()));
 
         /// <summary>
@@ -278,7 +281,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
             Check.NotNull(navigationName, nameof(navigationName));
             Check.NotNull(buildAction, nameof(buildAction));
 
-            buildAction.Invoke(OwnsOneBuilder<TNewDependentEntity>(new PropertyIdentity(navigationName)));
+            buildAction.Invoke(OwnsOneBuilder<TNewDependentEntity>(new MemberIdentity(navigationName)));
             return this;
         }
 
@@ -315,23 +318,23 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
             Check.NotNull(navigationExpression, nameof(navigationExpression));
             Check.NotNull(buildAction, nameof(buildAction));
 
-            buildAction.Invoke(OwnsOneBuilder<TNewDependentEntity>(new PropertyIdentity(navigationExpression.GetPropertyAccess())));
+            buildAction.Invoke(OwnsOneBuilder<TNewDependentEntity>(new MemberIdentity(navigationExpression.GetPropertyAccess())));
             return this;
         }
 
         private OwnedNavigationBuilder<TDependentEntity, TNewDependentEntity> OwnsOneBuilder<TNewDependentEntity>(
-            PropertyIdentity navigation)
+            MemberIdentity navigation)
             where TNewDependentEntity : class
         {
             InternalRelationshipBuilder relationship;
-            using (var batch = DependentEntityType.Model.ConventionDispatcher.StartBatch())
+            using (var batch = DependentEntityType.Model.ConventionDispatcher.DelayConventions())
             {
                 relationship = navigation.MemberInfo == null
                     ? DependentEntityType.Builder.HasOwnership(typeof(TNewDependentEntity), navigation.Name, ConfigurationSource.Explicit)
                     : DependentEntityType.Builder.HasOwnership(
                         typeof(TNewDependentEntity), (PropertyInfo)navigation.MemberInfo, ConfigurationSource.Explicit);
                 relationship.IsUnique(true, ConfigurationSource.Explicit);
-                relationship = batch.Run(relationship.Metadata).Builder;
+                relationship = (InternalRelationshipBuilder)batch.Run(relationship.Metadata).Builder;
             }
 
             return new OwnedNavigationBuilder<TDependentEntity, TNewDependentEntity>(
@@ -365,7 +368,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         public virtual OwnedNavigationBuilder<TDependentEntity, TNewDependentEntity> OwnsMany<TNewDependentEntity>(
             [NotNull] string navigationName)
             where TNewDependentEntity : class
-            => OwnsManyBuilder<TNewDependentEntity>(new PropertyIdentity(Check.NotNull(navigationName, nameof(navigationName))));
+            => OwnsManyBuilder<TNewDependentEntity>(new MemberIdentity(Check.NotNull(navigationName, nameof(navigationName))));
 
         /// <summary>
         ///     <para>
@@ -394,7 +397,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
             [NotNull] Expression<Func<TDependentEntity, IEnumerable<TNewDependentEntity>>> navigationExpression)
             where TNewDependentEntity : class
             => OwnsManyBuilder<TNewDependentEntity>(
-                new PropertyIdentity(Check.NotNull(navigationExpression, nameof(navigationExpression)).GetPropertyAccess()));
+                new MemberIdentity(Check.NotNull(navigationExpression, nameof(navigationExpression)).GetPropertyAccess()));
 
         /// <summary>
         ///     <para>
@@ -427,9 +430,9 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
             Check.NotNull(navigationName, nameof(navigationName));
             Check.NotNull(buildAction, nameof(buildAction));
 
-            using (DependentEntityType.Model.ConventionDispatcher.StartBatch())
+            using (DependentEntityType.Model.ConventionDispatcher.DelayConventions())
             {
-                buildAction.Invoke(OwnsManyBuilder<TNewDependentEntity>(new PropertyIdentity(navigationName)));
+                buildAction.Invoke(OwnsManyBuilder<TNewDependentEntity>(new MemberIdentity(navigationName)));
                 return this;
             }
         }
@@ -466,25 +469,25 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
             Check.NotNull(navigationExpression, nameof(navigationExpression));
             Check.NotNull(buildAction, nameof(buildAction));
 
-            using (DependentEntityType.Model.ConventionDispatcher.StartBatch())
+            using (DependentEntityType.Model.ConventionDispatcher.DelayConventions())
             {
-                buildAction.Invoke(OwnsManyBuilder<TNewDependentEntity>(new PropertyIdentity(navigationExpression.GetPropertyAccess())));
+                buildAction.Invoke(OwnsManyBuilder<TNewDependentEntity>(new MemberIdentity(navigationExpression.GetPropertyAccess())));
                 return this;
             }
         }
 
-        private OwnedNavigationBuilder<TDependentEntity, TNewRelatedEntity> OwnsManyBuilder<TNewRelatedEntity>(PropertyIdentity navigation)
+        private OwnedNavigationBuilder<TDependentEntity, TNewRelatedEntity> OwnsManyBuilder<TNewRelatedEntity>(MemberIdentity navigation)
             where TNewRelatedEntity : class
         {
             InternalRelationshipBuilder relationship;
-            using (var batch = DependentEntityType.Model.ConventionDispatcher.StartBatch())
+            using (var batch = DependentEntityType.Model.ConventionDispatcher.DelayConventions())
             {
                 relationship = navigation.MemberInfo == null
                     ? DependentEntityType.Builder.HasOwnership(typeof(TNewRelatedEntity), navigation.Name, ConfigurationSource.Explicit)
                     : DependentEntityType.Builder.HasOwnership(
                         typeof(TNewRelatedEntity), (PropertyInfo)navigation.MemberInfo, ConfigurationSource.Explicit);
                 relationship.IsUnique(false, ConfigurationSource.Explicit);
-                relationship = batch.Run(relationship.Metadata).Builder;
+                relationship = (InternalRelationshipBuilder)batch.Run(relationship.Metadata).Builder;
             }
 
             return new OwnedNavigationBuilder<TDependentEntity, TNewRelatedEntity>(
@@ -531,7 +534,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
                 navigationName,
                 DependentEntityType.Builder.HasRelationship(
                     relatedEntityType, navigationName, ConfigurationSource.Explicit,
-                    setTargetAsPrincipal: DependentEntityType == relatedEntityType));
+                    setTargetAsPrincipal: DependentEntityType == relatedEntityType).Metadata);
         }
 
         /// <summary>
@@ -575,7 +578,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
                 navigation,
                 DependentEntityType.Builder.HasRelationship(
                     relatedEntityType, navigation, ConfigurationSource.Explicit,
-                    setTargetAsPrincipal: DependentEntityType == relatedEntityType));
+                    setTargetAsPrincipal: DependentEntityType == relatedEntityType).Metadata);
         }
 
         /// <summary>

@@ -2,9 +2,8 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.SqlServer.ValueGeneration.Internal;
 using Microsoft.EntityFrameworkCore.TestUtilities;
@@ -19,7 +18,7 @@ namespace Microsoft.EntityFrameworkCore
 {
     public class SqlServerValueGeneratorCacheTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Uses_single_generator_per_property()
         {
             var model = CreateModel();
@@ -38,7 +37,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.NotSame(generator1, generator2);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Uses_single_sequence_generator_per_sequence()
         {
             var model = CreateModel();
@@ -63,7 +62,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.NotSame(generator1, generator3);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Uses_single_sequence_generator_per_database()
         {
             var model = CreateModel();
@@ -82,7 +81,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.NotSame(generator1, generator2);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Uses_single_sequence_generator_per_server()
         {
             var model = CreateModel();
@@ -113,88 +112,112 @@ namespace Microsoft.EntityFrameworkCore
             return connection;
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Block_size_is_obtained_from_default_sequence()
         {
-            var property = CreateConventionModelBuilder()
+            var modelBuilder = CreateConventionModelBuilder();
+
+            var property = modelBuilder
                 .Entity<Robot>()
                 .Property(e => e.Id)
-                .ForSqlServerUseSequenceHiLo()
+                .UseHiLo()
                 .Metadata;
+
+            modelBuilder.FinalizeModel();
 
             var cache = new SqlServerValueGeneratorCache(new ValueGeneratorCacheDependencies());
 
             Assert.Equal(10, cache.GetOrAddSequenceState(property, CreateConnection()).Sequence.IncrementBy);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Block_size_is_obtained_from_named_sequence()
         {
-            var property = CreateConventionModelBuilder()
+            var modelBuilder = CreateConventionModelBuilder();
+
+            var property = modelBuilder
                 .Entity<Robot>()
                 .Property(e => e.Id)
-                .ForSqlServerUseSequenceHiLo("DaneelOlivaw")
+                .UseHiLo("DaneelOlivaw")
                 .Metadata;
+
+            modelBuilder.FinalizeModel();
 
             var cache = new SqlServerValueGeneratorCache(new ValueGeneratorCacheDependencies());
 
             Assert.Equal(10, cache.GetOrAddSequenceState(property, CreateConnection()).Sequence.IncrementBy);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Block_size_is_obtained_from_model_default_sequence()
         {
-            var property = CreateConventionModelBuilder()
-                .ForSqlServerUseSequenceHiLo()
+            var modelBuilder = CreateConventionModelBuilder();
+
+            var property = modelBuilder
+                .UseHiLo()
                 .Entity<Robot>()
                 .Property(e => e.Id)
                 .Metadata;
+
+            modelBuilder.FinalizeModel();
 
             var cache = new SqlServerValueGeneratorCache(new ValueGeneratorCacheDependencies());
 
             Assert.Equal(10, cache.GetOrAddSequenceState(property, CreateConnection()).Sequence.IncrementBy);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Block_size_is_obtained_from_named_model_default_sequence()
         {
-            var property = CreateConventionModelBuilder()
-                .ForSqlServerUseSequenceHiLo("DaneelOlivaw")
+            var modelBuilder = CreateConventionModelBuilder();
+
+            var property = modelBuilder
+                .UseHiLo("DaneelOlivaw")
                 .Entity<Robot>()
                 .Property(e => e.Id)
                 .Metadata;
+
+            modelBuilder.FinalizeModel();
 
             var cache = new SqlServerValueGeneratorCache(new ValueGeneratorCacheDependencies());
 
             Assert.Equal(10, cache.GetOrAddSequenceState(property, CreateConnection()).Sequence.IncrementBy);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Block_size_is_obtained_from_specified_sequence()
         {
-            var property = CreateConventionModelBuilder()
+            var modelBuilder = CreateConventionModelBuilder();
+
+            var property = modelBuilder
                 .HasSequence("DaneelOlivaw", b => b.IncrementsBy(11))
                 .Entity<Robot>()
                 .Property(e => e.Id)
-                .ForSqlServerUseSequenceHiLo("DaneelOlivaw")
+                .UseHiLo("DaneelOlivaw")
                 .Metadata;
+
+            modelBuilder.FinalizeModel();
 
             var cache = new SqlServerValueGeneratorCache(new ValueGeneratorCacheDependencies());
 
             Assert.Equal(11, cache.GetOrAddSequenceState(property, CreateConnection()).Sequence.IncrementBy);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Non_positive_block_sizes_are_not_allowed()
         {
-            var property = CreateConventionModelBuilder()
+            var modelBuilder = CreateConventionModelBuilder();
+
+            var property = modelBuilder
                 .HasSequence("DaneelOlivaw", b => b.IncrementsBy(-1))
                 .Entity<Robot>()
                 .Property(e => e.Id)
-                .ForSqlServerUseSequenceHiLo("DaneelOlivaw")
+                .UseHiLo("DaneelOlivaw")
                 .Metadata;
 
             var cache = new SqlServerValueGeneratorCache(new ValueGeneratorCacheDependencies());
+
+            modelBuilder.FinalizeModel();
 
             Assert.StartsWith(
                 CoreStrings.HiLoBadBlockSize,
@@ -202,115 +225,147 @@ namespace Microsoft.EntityFrameworkCore
                     () => cache.GetOrAddSequenceState(property, CreateConnection()).Sequence.IncrementBy).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Block_size_is_obtained_from_specified_model_default_sequence()
         {
-            var property = CreateConventionModelBuilder()
-                .ForSqlServerUseSequenceHiLo("DaneelOlivaw")
+            var modelBuilder = CreateConventionModelBuilder();
+
+            var property = modelBuilder
+                .UseHiLo("DaneelOlivaw")
                 .HasSequence("DaneelOlivaw", b => b.IncrementsBy(11))
                 .Entity<Robot>()
                 .Property(e => e.Id)
                 .Metadata;
+
+            modelBuilder.FinalizeModel();
 
             var cache = new SqlServerValueGeneratorCache(new ValueGeneratorCacheDependencies());
 
             Assert.Equal(11, cache.GetOrAddSequenceState(property, CreateConnection()).Sequence.IncrementBy);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Sequence_name_is_obtained_from_default_sequence()
         {
-            var property = CreateConventionModelBuilder()
+            var modelBuilder = CreateConventionModelBuilder();
+
+            var property = modelBuilder
                 .Entity<Robot>()
                 .Property(e => e.Id)
-                .ForSqlServerUseSequenceHiLo()
+                .UseHiLo()
                 .Metadata;
+
+            modelBuilder.FinalizeModel();
 
             var cache = new SqlServerValueGeneratorCache(new ValueGeneratorCacheDependencies());
 
             Assert.Equal("EntityFrameworkHiLoSequence", cache.GetOrAddSequenceState(property, CreateConnection()).Sequence.Name);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Sequence_name_is_obtained_from_named_sequence()
         {
-            var property = CreateConventionModelBuilder()
+            var modelBuilder = CreateConventionModelBuilder();
+
+            var property = modelBuilder
                 .Entity<Robot>()
                 .Property(e => e.Id)
-                .ForSqlServerUseSequenceHiLo("DaneelOlivaw")
+                .UseHiLo("DaneelOlivaw")
                 .Metadata;
+
+            modelBuilder.FinalizeModel();
 
             var cache = new SqlServerValueGeneratorCache(new ValueGeneratorCacheDependencies());
 
             Assert.Equal("DaneelOlivaw", cache.GetOrAddSequenceState(property, CreateConnection()).Sequence.Name);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Sequence_name_is_obtained_from_model_default_sequence()
         {
-            var property = CreateConventionModelBuilder()
-                .ForSqlServerUseSequenceHiLo()
+            var modelBuilder = CreateConventionModelBuilder();
+
+            var property = modelBuilder
+                .UseHiLo()
                 .Entity<Robot>()
                 .Property(e => e.Id)
                 .Metadata;
+
+            modelBuilder.FinalizeModel();
 
             var cache = new SqlServerValueGeneratorCache(new ValueGeneratorCacheDependencies());
 
             Assert.Equal("EntityFrameworkHiLoSequence", cache.GetOrAddSequenceState(property, CreateConnection()).Sequence.Name);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Sequence_name_is_obtained_from_named_model_default_sequence()
         {
-            var property = CreateConventionModelBuilder()
-                .ForSqlServerUseSequenceHiLo("DaneelOlivaw")
+            var modelBuilder = CreateConventionModelBuilder();
+
+            var property = modelBuilder
+                .UseHiLo("DaneelOlivaw")
                 .Entity<Robot>()
                 .Property(e => e.Id)
                 .Metadata;
+
+            modelBuilder.FinalizeModel();
 
             var cache = new SqlServerValueGeneratorCache(new ValueGeneratorCacheDependencies());
 
             Assert.Equal("DaneelOlivaw", cache.GetOrAddSequenceState(property, CreateConnection()).Sequence.Name);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Sequence_name_is_obtained_from_specified_sequence()
         {
-            var property = CreateConventionModelBuilder()
+            var modelBuilder = CreateConventionModelBuilder();
+
+            var property = modelBuilder
                 .HasSequence("DaneelOlivaw", b => b.IncrementsBy(11))
                 .Entity<Robot>()
                 .Property(e => e.Id)
-                .ForSqlServerUseSequenceHiLo("DaneelOlivaw")
+                .UseHiLo("DaneelOlivaw")
                 .Metadata;
+
+            modelBuilder.FinalizeModel();
 
             var cache = new SqlServerValueGeneratorCache(new ValueGeneratorCacheDependencies());
 
             Assert.Equal("DaneelOlivaw", cache.GetOrAddSequenceState(property, CreateConnection()).Sequence.Name);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Sequence_name_is_obtained_from_specified_model_default_sequence()
         {
-            var property = CreateConventionModelBuilder()
-                .ForSqlServerUseSequenceHiLo("DaneelOlivaw")
+            var modelBuilder = CreateConventionModelBuilder();
+
+            var property = modelBuilder
+                .UseHiLo("DaneelOlivaw")
                 .HasSequence("DaneelOlivaw", b => b.IncrementsBy(11))
                 .Entity<Robot>()
                 .Property(e => e.Id)
                 .Metadata;
 
+            modelBuilder.FinalizeModel();
+
             var cache = new SqlServerValueGeneratorCache(new ValueGeneratorCacheDependencies());
 
             Assert.Equal("DaneelOlivaw", cache.GetOrAddSequenceState(property, CreateConnection()).Sequence.Name);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Schema_qualified_sequence_name_is_obtained_from_named_sequence()
         {
-            var property = CreateConventionModelBuilder()
+            var modelBuilder = CreateConventionModelBuilder();
+
+            var property = modelBuilder
                 .Entity<Robot>()
                 .Property(e => e.Id)
-                .ForSqlServerUseSequenceHiLo("DaneelOlivaw", "R")
+                .UseHiLo("DaneelOlivaw", "R")
                 .Metadata;
+
+            modelBuilder.FinalizeModel();
 
             var cache = new SqlServerValueGeneratorCache(new ValueGeneratorCacheDependencies());
 
@@ -318,14 +373,18 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Equal("R", cache.GetOrAddSequenceState(property, CreateConnection()).Sequence.Schema);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Schema_qualified_sequence_name_is_obtained_from_named_model_default_sequence()
         {
-            var property = CreateConventionModelBuilder()
-                .ForSqlServerUseSequenceHiLo("DaneelOlivaw", "R")
+            var modelBuilder = CreateConventionModelBuilder();
+
+            var property = modelBuilder
+                .UseHiLo("DaneelOlivaw", "R")
                 .Entity<Robot>()
                 .Property(e => e.Id)
                 .Metadata;
+
+            modelBuilder.FinalizeModel();
 
             var cache = new SqlServerValueGeneratorCache(new ValueGeneratorCacheDependencies());
 
@@ -333,15 +392,19 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Equal("R", cache.GetOrAddSequenceState(property, CreateConnection()).Sequence.Schema);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Schema_qualified_sequence_name_is_obtained_from_specified_sequence()
         {
-            var property = CreateConventionModelBuilder()
+            var modelBuilder = CreateConventionModelBuilder();
+
+            var property = modelBuilder
                 .HasSequence("DaneelOlivaw", "R", b => b.IncrementsBy(11))
                 .Entity<Robot>()
                 .Property(e => e.Id)
-                .ForSqlServerUseSequenceHiLo("DaneelOlivaw", "R")
+                .UseHiLo("DaneelOlivaw", "R")
                 .Metadata;
+
+            modelBuilder.FinalizeModel();
 
             var cache = new SqlServerValueGeneratorCache(new ValueGeneratorCacheDependencies());
 
@@ -349,15 +412,19 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Equal("R", cache.GetOrAddSequenceState(property, CreateConnection()).Sequence.Schema);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Schema_qualified_sequence_name_is_obtained_from_specified_model_default_sequence()
         {
-            var property = CreateConventionModelBuilder()
-                .ForSqlServerUseSequenceHiLo("DaneelOlivaw", "R")
+            var modelBuilder = CreateConventionModelBuilder();
+
+            var property = modelBuilder
+                .UseHiLo("DaneelOlivaw", "R")
                 .HasSequence("DaneelOlivaw", "R", b => b.IncrementsBy(11))
                 .Entity<Robot>()
                 .Property(e => e.Id)
                 .Metadata;
+
+            modelBuilder.FinalizeModel();
 
             var cache = new SqlServerValueGeneratorCache(new ValueGeneratorCacheDependencies());
 
@@ -388,9 +455,9 @@ namespace Microsoft.EntityFrameworkCore
             modelBuilder.Entity<Led>(
                 b =>
                 {
-                    b.Property(e => e.Zeppelin).ForSqlServerUseSequenceHiLo("Heaven");
-                    b.Property(e => e.Stairway).ForSqlServerUseSequenceHiLo("Heaven");
-                    b.Property(e => e.WholeLotta).ForSqlServerUseSequenceHiLo("Rosie");
+                    b.Property(e => e.Zeppelin).UseHiLo("Heaven");
+                    b.Property(e => e.Stairway).UseHiLo("Heaven");
+                    b.Property(e => e.WholeLotta).UseHiLo("Rosie");
                 });
 
             return modelBuilder.Model;

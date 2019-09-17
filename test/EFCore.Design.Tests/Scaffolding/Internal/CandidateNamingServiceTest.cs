@@ -9,7 +9,7 @@ namespace Microsoft.EntityFrameworkCore
 {
     public class CandidateNamingServiceTest
     {
-        [Theory]
+        [ConditionalTheory]
         [InlineData("PascalCase", "PascalCase")]
         [InlineData("camelCase", "CamelCase")]
         [InlineData("snake-case", "SnakeCase")]
@@ -24,10 +24,7 @@ namespace Microsoft.EntityFrameworkCore
         {
             Assert.Equal(
                 output, new CandidateNamingService().GenerateCandidateIdentifier(
-                    new DatabaseTable
-                    {
-                        Name = input
-                    }));
+                    new DatabaseTable { Name = input }));
         }
     }
 }

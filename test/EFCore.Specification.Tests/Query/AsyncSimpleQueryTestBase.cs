@@ -7,10 +7,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.TestModels.Northwind;
 using Microsoft.EntityFrameworkCore.TestUtilities;
-using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
 using Xunit;
 
 // ReSharper disable InconsistentNaming
@@ -31,7 +29,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
         protected NorthwindContext CreateContext() => Fixture.CreateContext();
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'Microsoft.EntityFrameworkCore.Query.QueryClientEvaluationWarning: The LINQ expression 'GroupBy([o].CustomerID, [o])' could not be translated and will be evaluated locally.'")]
+        [ConditionalFact(Skip = "Issue#17068")]
         public virtual async Task GroupBy_tracking_after_dispose()
         {
             List<IGrouping<string, Order>> groups;
@@ -44,7 +42,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             var _ = groups[0].First();
         }
 
-        [ConditionalFact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task Query_backed_by_database_view()
         {
             using (var context = CreateContext())
@@ -57,7 +55,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task ToList_context_subquery_deadlock_issue()
         {
             using (var context = CreateContext())
@@ -69,34 +67,28 @@ namespace Microsoft.EntityFrameworkCore.Query
                             c.CustomerID,
                             Posts = context.Orders.Where(o => o.CustomerID == c.CustomerID)
                                 .Select(
-                                    m => new
-                                    {
-                                        m.CustomerID
-                                    })
+                                    m => new { m.CustomerID })
                                 .ToList()
                         })
                     .ToListAsync();
             }
         }
 
-        [ConditionalFact(Skip = "issue #15043")]
+        [ConditionalFact]
         public virtual async Task ToArray_on_nav_subquery_in_projection()
         {
             using (var context = CreateContext())
             {
                 var results
                     = await context.Customers.Select(
-                            c => new
-                            {
-                                Orders = c.Orders.ToArray()
-                            })
+                            c => new { Orders = c.Orders.ToArray() })
                         .ToListAsync();
 
                 Assert.Equal(830, results.SelectMany(a => a.Orders).ToList().Count);
             }
         }
 
-        [ConditionalFact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task ToArray_on_nav_subquery_in_projection_nested()
         {
             using (var context = CreateContext())
@@ -106,10 +98,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                             c => new
                             {
                                 Orders = c.Orders.Select(
-                                        o => new
-                                        {
-                                            OrderDetails = o.OrderDetails.ToArray()
-                                        })
+                                        o => new { OrderDetails = o.OrderDetails.ToArray() })
                                     .ToArray()
                             })
                         .ToListAsync();
@@ -118,51 +107,42 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task ToList_on_nav_subquery_in_projection()
         {
             using (var context = CreateContext())
             {
                 var results
                     = await context.Customers.Select(
-                            c => new
-                            {
-                                Orders = c.Orders.ToList()
-                            })
+                            c => new { Orders = c.Orders.ToList() })
                         .ToListAsync();
 
                 Assert.Equal(830, results.SelectMany(a => a.Orders).ToList().Count);
             }
         }
 
-        [ConditionalFact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task ToList_on_nav_subquery_with_predicate_in_projection()
         {
             using (var context = CreateContext())
             {
                 var results
                     = await context.Customers.Select(
-                            c => new
-                            {
-                                Orders = c.Orders.Where(o => o.OrderID > 10).ToList()
-                            })
+                            c => new { Orders = c.Orders.Where(o => o.OrderID > 10).ToList() })
                         .ToListAsync();
 
                 Assert.Equal(830, results.SelectMany(a => a.Orders).ToList().Count);
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'Average'")]
+        [ConditionalFact(Skip = "Issue #17775")]
         public virtual async Task Average_on_nav_subquery_in_projection()
         {
             using (var context = CreateContext())
             {
                 var results
                     = await context.Customers.Select(
-                            c => new
-                            {
-                                Ave = c.Orders.Average(o => o.Freight)
-                            })
+                            c => new { Ave = c.Orders.Average(o => o.OrderID) })
                         .ToListAsync();
 
                 Assert.Equal(91, results.ToList().Count);
@@ -204,7 +184,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'join Customer y.Customer in value(Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryable`1[Microsoft.EntityFrameworkCore.TestModels.Northwind.Customer]) on Property([y], \"CustomerID\") equals Property([y.Customer], \"CustomerID\")'")]
+        [ConditionalFact(Skip = "Issue #17019")]
         public virtual async Task Mixed_sync_async_query()
         {
             using (var context = CreateContext())
@@ -212,20 +192,14 @@ namespace Microsoft.EntityFrameworkCore.Query
                 var results
                     = (await context.Customers
                         .Select(
-                            c => new
-                            {
-                                c.CustomerID,
-                                Orders = context.Orders.Where(o => o.Customer.CustomerID == c.CustomerID)
-                            }).ToListAsync())
+                            c => new { c.CustomerID, Orders = context.Orders.Where(o => o.Customer.CustomerID == c.CustomerID) })
+                        .ToListAsync())
                     .Select(
                         x => new
                         {
                             Orders = x.Orders
                                 .GroupJoin(
-                                    new[] { "ALFKI" }, y => x.CustomerID, y => y, (h, id) => new
-                                    {
-                                        h.Customer
-                                    })
+                                    new[] { "ALFKI" }, y => x.CustomerID, y => y, (h, id) => new { h.Customer })
                         })
                     .ToList();
 
@@ -264,7 +238,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "#12138")]
+        [ConditionalFact]
         public virtual async Task Throws_on_concurrent_query_list()
         {
             using (var context = CreateContext())
@@ -275,13 +249,22 @@ namespace Microsoft.EntityFrameworkCore.Query
                     {
                         var blockingTask = Task.Run(
                             () =>
-                                context.Customers.Select(
-                                    c => Process(c, synchronizationEvent, blockingSemaphore)).ToList());
+                            {
+                                try
+                                {
+                                    context.Customers.Select(
+                                        c => Process(c, synchronizationEvent, blockingSemaphore)).ToList();
+                                }
+                                finally
+                                {
+                                    synchronizationEvent.Set();
+                                }
+                            });
 
                         var throwingTask = Task.Run(
                             async () =>
                             {
-                                synchronizationEvent.Wait();
+                                synchronizationEvent.Wait(TimeSpan.FromMinutes(5));
 
                                 Assert.Equal(
                                     CoreStrings.ConcurrentMethodInvocation,
@@ -299,7 +282,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "#12138")]
+        [ConditionalFact]
         public virtual async Task Throws_on_concurrent_query_first()
         {
             using (var context = CreateContext())
@@ -310,13 +293,23 @@ namespace Microsoft.EntityFrameworkCore.Query
                     {
                         var blockingTask = Task.Run(
                             () =>
-                                context.Customers.Select(
-                                    c => Process(c, synchronizationEvent, blockingSemaphore)).ToList());
+                            {
+                                try
+                                {
+                                    context.Customers.Select(
+                                        c => Process(c, synchronizationEvent, blockingSemaphore)).ToList();
+                                }
+                                finally
+                                {
+                                    synchronizationEvent.Set();
+                                }
+                            });
 
                         var throwingTask = Task.Run(
                             async () =>
                             {
-                                synchronizationEvent.Wait();
+                                synchronizationEvent.Wait(TimeSpan.FromMinutes(5));
+
                                 Assert.Equal(
                                     CoreStrings.ConcurrentMethodInvocation,
                                     (await Assert.ThrowsAsync<InvalidOperationException>(
@@ -336,14 +329,14 @@ namespace Microsoft.EntityFrameworkCore.Query
         private static Customer Process(Customer c, ManualResetEventSlim e, SemaphoreSlim s)
         {
             e.Set();
-            s.Wait();
+            s.Wait(TimeSpan.FromMinutes(5));
             s.Release(1);
             return c;
         }
 
         // Set Operations
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'Concat({value(Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryable`1[Microsoft.EntityFrameworkCore.TestModels.Northwind.Customer])})'")]
+        [ConditionalFact]
         public virtual async Task Concat_dbset()
         {
             using (var context = CreateContext())
@@ -358,7 +351,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'Concat({from Customer s in value(Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryable`1[Microsoft.EntityFrameworkCore.TestModels.Northwind.Customer]) where ([s].ContactTitle == \"Owner\") select [s]})'")]
+        [ConditionalFact]
         public virtual async Task Concat_simple()
         {
             using (var context = CreateContext())
@@ -374,7 +367,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'Concat({from Customer s in value(Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryable`1[Microsoft.EntityFrameworkCore.TestModels.Northwind.Customer]) where ([s].ContactTitle == \"Owner\") select [s].CustomerID})'")]
+        [ConditionalFact]
         public virtual async Task Concat_non_entity()
         {
             using (var context = CreateContext())
@@ -392,7 +385,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'Microsoft.EntityFrameworkCore.Query.QueryClientEvaluationWarning: The LINQ expression 'Except({from Customer c in value(Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryable`1[Microsoft.EntityFrameworkCore.TestModels.Northwind.Customer]) where ([c].City == \"México D.F.\") select [c].CustomerID})'")]
+        [ConditionalFact]
         public virtual async Task Except_non_entity()
         {
             using (var context = CreateContext())
@@ -410,7 +403,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'Intersect({from Customer s in value(Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryable`1[Microsoft.EntityFrameworkCore.TestModels.Northwind.Customer]) where ([s].ContactTitle == \"Owner\") select [s].CustomerID})'")]
+        [ConditionalFact]
         public virtual async Task Intersect_non_entity()
         {
             using (var context = CreateContext())
@@ -428,7 +421,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'Union({from Customer c in value(Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryable`1[Microsoft.EntityFrameworkCore.TestModels.Northwind.Customer]) where ([c].City == \"México D.F.\") select [c].CustomerID})'")]
+        [ConditionalFact]
         public virtual async Task Union_non_entity()
         {
             using (var context = CreateContext())
@@ -452,11 +445,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             using (var context = CreateContext())
             {
                 var query = await context.Customers.OrderBy(c => c.CustomerID).Select(
-                    c => new
-                    {
-                        c.CustomerID,
-                        Value = c.CustomerID == "ALFKI" | c.CustomerID == "ANATR"
-                    }).ToListAsync();
+                    c => new { c.CustomerID, Value = c.CustomerID == "ALFKI" | c.CustomerID == "ANATR" }).ToListAsync();
 
                 Assert.All(query.Take(2), t => Assert.True(t.Value));
                 Assert.All(query.Skip(2), t => Assert.False(t.Value));
@@ -470,11 +459,8 @@ namespace Microsoft.EntityFrameworkCore.Query
             {
                 var query = await context.Customers.OrderBy(c => c.CustomerID)
                     .Select(
-                        c => new
-                        {
-                            c.CustomerID,
-                            Value = c.CustomerID == "ALFKI" | c.CustomerID == "ANATR" | c.CustomerID == "ANTON"
-                        }).ToListAsync();
+                        c => new { c.CustomerID, Value = c.CustomerID == "ALFKI" | c.CustomerID == "ANATR" | c.CustomerID == "ANTON" })
+                    .ToListAsync();
 
                 Assert.All(query.Take(3), t => Assert.True(t.Value));
                 Assert.All(query.Skip(3), t => Assert.False(t.Value));
@@ -487,11 +473,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             using (var context = CreateContext())
             {
                 var query = await context.Customers.OrderBy(c => c.CustomerID).Select(
-                    c => new
-                    {
-                        c.CustomerID,
-                        Value = c.CustomerID == "ALFKI" & c.CustomerID == "ANATR"
-                    }).ToListAsync();
+                    c => new { c.CustomerID, Value = c.CustomerID == "ALFKI" & c.CustomerID == "ANATR" }).ToListAsync();
 
                 Assert.All(query, t => Assert.False(t.Value));
             }
@@ -504,11 +486,8 @@ namespace Microsoft.EntityFrameworkCore.Query
             {
                 var query = await context.Customers.OrderBy(c => c.CustomerID)
                     .Select(
-                        c => new
-                        {
-                            c.CustomerID,
-                            Value = c.CustomerID == "ALFKI" & c.CustomerID == "ANATR" | c.CustomerID == "ANTON"
-                        }).ToListAsync();
+                        c => new { c.CustomerID, Value = c.CustomerID == "ALFKI" & c.CustomerID == "ANATR" | c.CustomerID == "ANTON" })
+                    .ToListAsync();
 
                 Assert.All(query.Where(c => c.CustomerID != "ANTON"), t => Assert.False(t.Value));
             }
@@ -520,11 +499,8 @@ namespace Microsoft.EntityFrameworkCore.Query
             using (var context = CreateContext())
             {
                 var query = await context.Customers.OrderBy(c => c.CustomerID).Select(
-                    c => new
-                    {
-                        c.CustomerID,
-                        Value = c.CustomerID == "ALFKI" | c.CustomerID == "ANATR" || c.CustomerID == "ANTON"
-                    }).ToListAsync();
+                        c => new { c.CustomerID, Value = c.CustomerID == "ALFKI" | c.CustomerID == "ANATR" || c.CustomerID == "ANTON" })
+                    .ToListAsync();
 
                 Assert.All(query.Take(3), t => Assert.True(t.Value));
                 Assert.All(query.Skip(3), t => Assert.False(t.Value));
@@ -537,11 +513,8 @@ namespace Microsoft.EntityFrameworkCore.Query
             using (var context = CreateContext())
             {
                 var query = await context.Customers.OrderBy(c => c.CustomerID).Select(
-                    c => new
-                    {
-                        c.CustomerID,
-                        Value = c.CustomerID == "ALFKI" & c.CustomerID == "ANATR" && c.CustomerID == "ANTON"
-                    }).ToListAsync();
+                        c => new { c.CustomerID, Value = c.CustomerID == "ALFKI" & c.CustomerID == "ANATR" && c.CustomerID == "ANTON" })
+                    .ToListAsync();
 
                 Assert.All(query, t => Assert.False(t.Value));
             }

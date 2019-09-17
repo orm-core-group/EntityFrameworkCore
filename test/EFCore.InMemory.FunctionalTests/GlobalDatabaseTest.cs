@@ -4,7 +4,6 @@
 using System;
 using System.Linq;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -18,7 +17,7 @@ namespace Microsoft.EntityFrameworkCore
     {
         private static readonly InMemoryDatabaseRoot _databaseRoot = new InMemoryDatabaseRoot();
 
-        [Fact]
+        [ConditionalFact]
         public void Different_stores_are_used_when_options_force_different_internal_service_provider()
         {
             using (var context = new BooFooContext(
@@ -40,7 +39,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void AddDbContext_does_not_force_different_internal_service_provider()
         {
             using (var context = new BooFooContext(
@@ -64,7 +63,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Global_store_can_be_used_when_options_force_different_internal_service_provider()
         {
             using (var context = new BooFooContext(
@@ -88,7 +87,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Global_store_can_be_used_when_AddDbContext_force_different_internal_service_provider()
         {
             using (var context = new BooFooContext(
@@ -102,9 +101,10 @@ namespace Microsoft.EntityFrameworkCore
             }
 
             var serviceProvider = new ServiceCollection()
-                .AddDbContext<BooFooContext>(b =>
-                    b.UseInMemoryDatabase(nameof(BooFooContext), _databaseRoot)
-                        .EnableServiceProviderCaching(false))
+                .AddDbContext<BooFooContext>(
+                    b =>
+                        b.UseInMemoryDatabase(nameof(BooFooContext), _databaseRoot)
+                            .EnableServiceProviderCaching(false))
                 .BuildServiceProvider();
 
             using (var scope = serviceProvider.CreateScope())
@@ -114,7 +114,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_changing_global_store_in_OnConfiguring_when_UseInternalServiceProvider()
         {
             using (var context = new ChangeSdlCacheContext(false))

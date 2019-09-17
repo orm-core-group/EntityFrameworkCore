@@ -13,7 +13,7 @@ namespace Microsoft.EntityFrameworkCore.Update
 {
     public class SqlServerModificationCommandBatchTest
     {
-        [Fact]
+        [ConditionalFact]
         public void AddCommand_returns_false_when_max_batch_size_is_reached()
         {
             var typeMapper = new SqlServerTypeMappingSource(
@@ -37,6 +37,7 @@ namespace Microsoft.EntityFrameworkCore.Update
                     new TypedRelationalValueBufferFactoryFactory(
                         new RelationalValueBufferFactoryDependencies(
                             typeMapper, new CoreSingletonOptions())),
+                    new CurrentDbContext(new FakeDbContext()),
                     logger),
                 1);
 
@@ -46,6 +47,10 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.False(
                 batch.AddCommand(
                     new ModificationCommand("T1", null, new ParameterNameGenerator().GenerateNext, false, null)));
+        }
+
+        private class FakeDbContext : DbContext
+        {
         }
     }
 }

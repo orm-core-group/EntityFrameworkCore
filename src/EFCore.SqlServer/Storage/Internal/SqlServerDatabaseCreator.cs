@@ -3,11 +3,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using JetBrains.Annotations;
+using Microsoft.Data.SqlClient; // Note: Hard reference to SqlClient here.
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.EntityFrameworkCore.SqlServer.Internal;
@@ -24,8 +24,8 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal
     ///         doing so can result in application failures when updating to a new Entity Framework Core release.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Scoped"/>. This means that each
-    ///         <see cref="DbContext"/> instance will use its own instance of this service.
+    ///         The service lifetime is <see cref="ServiceLifetime.Scoped" />. This means that each
+    ///         <see cref="DbContext" /> instance will use its own instance of this service.
     ///         The implementation may depend on other services registered with any lifetime.
     ///         The implementation does not need to be thread-safe.
     ///     </para>
@@ -111,16 +111,18 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal
         ///     any release. You should only use it directly in your code with extreme caution and knowing that
         ///     doing so can result in application failures when updating to a new Entity Framework Core release.
         /// </summary>
-        protected override bool HasTables()
+        public override bool HasTables()
             => Dependencies.ExecutionStrategyFactory
                 .Create()
                 .Execute(
                     _connection,
                     connection => (int)CreateHasTablesCommand()
                                       .ExecuteScalar(
-                                          connection,
-                                          null,
-                                          Dependencies.CommandLogger) != 0);
+                                          new RelationalCommandParameterObject(
+                                              connection,
+                                              null,
+                                              Dependencies.CurrentContext.Context,
+                                              Dependencies.CommandLogger)) != 0);
 
         /// <summary>
         ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -128,32 +130,42 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal
         ///     any release. You should only use it directly in your code with extreme caution and knowing that
         ///     doing so can result in application failures when updating to a new Entity Framework Core release.
         /// </summary>
-        protected override Task<bool> HasTablesAsync(CancellationToken cancellationToken = default)
+        public override Task<bool> HasTablesAsync(CancellationToken cancellationToken = default)
             => Dependencies.ExecutionStrategyFactory.Create().ExecuteAsync(
                 _connection,
                 async (connection, ct) => (int)await CreateHasTablesCommand()
                                               .ExecuteScalarAsync(
-                                                  connection,
-                                                  null,
-                                                  Dependencies.CommandLogger,
+                                                  new RelationalCommandParameterObject(
+                                                      connection,
+                                                      null,
+                                                      Dependencies.CurrentContext.Context,
+                                                      Dependencies.CommandLogger),
                                                   cancellationToken: ct) != 0, cancellationToken);
 
         private IRelationalCommand CreateHasTablesCommand()
             => _rawSqlCommandBuilder
-                .Build("IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE') SELECT 1 ELSE SELECT 0");
+                .Build(
+                    @"
+IF EXISTS
+    (SELECT *
+     FROM [sys].[objects] o
+     WHERE [o].[type] = 'U'
+     AND [o].[is_ms_shipped] = 0
+     AND NOT EXISTS (SELECT *
+         FROM [sys].[extended_properties] AS [ep]
+         WHERE [ep].[major_id] = [o].[object_id]
+             AND [ep].[minor_id] = 0
+             AND [ep].[class] = 1
+             AND [ep].[name] = N'microsoft_database_tools_support'
+    )
+)
+SELECT 1 ELSE SELECT 0");
 
         private IReadOnlyList<MigrationCommand> CreateCreateOperations()
         {
             var builder = new SqlConnectionStringBuilder(_connection.DbConnection.ConnectionString);
             return Dependencies.MigrationsSqlGenerator.Generate(
-                new[]
-                {
-                    new SqlServerCreateDatabaseOperation
-                    {
-                        Name = builder.InitialCatalog,
-                        FileName = builder.AttachDBFilename
-                    }
-                });
+                new[] { new SqlServerCreateDatabaseOperation { Name = builder.InitialCatalog, FileName = builder.AttachDBFilename } });
         }
 
         /// <summary>
@@ -221,7 +233,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal
                             {
                                 await _connection.OpenAsync(ct, errorsExpected: true);
 
-                                _connection.Close();
+                                await _connection.CloseAsync();
                             }
 
                             return true;
@@ -255,23 +267,23 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal
         private bool RetryOnExistsFailure(SqlException exception)
         {
             // This is to handle the case where Open throws (Number 233):
-            //   System.Data.SqlClient.SqlException: A connection was successfully established with the
+            //   Microsoft.Data.SqlClient.SqlException: A connection was successfully established with the
             //   server, but then an error occurred during the login process. (provider: Named Pipes
             //   Provider, error: 0 - No process is on the other end of the pipe.)
             // It appears that this happens when the database has just been created but has not yet finished
             // opening or is auto-closing when using the AUTO_CLOSE option. The workaround is to flush the pool
             // for the connection and then retry the Open call.
             // Also handling (Number -2):
-            //   System.Data.SqlClient.SqlException: Connection Timeout Expired.  The timeout period elapsed while
+            //   Microsoft.Data.SqlClient.SqlException: Connection Timeout Expired.  The timeout period elapsed while
             //   attempting to consume the pre-login handshake acknowledgment.  This could be because the pre-login
             //   handshake failed or the server was unable to respond back in time.
             // And (Number 4060):
-            //   System.Data.SqlClient.SqlException: Cannot open database "X" requested by the login. The
+            //   Microsoft.Data.SqlClient.SqlException: Cannot open database "X" requested by the login. The
             //   login failed.
             // And (Number 1832)
-            //   System.Data.SqlClient.SqlException: Unable to Attach database file as database xxxxxxx.
+            //   Microsoft.Data.SqlClient.SqlException: Unable to Attach database file as database xxxxxxx.
             // And (Number 5120)
-            //   System.Data.SqlClient.SqlException: Unable to open the physical file xxxxxxx.
+            //   Microsoft.Data.SqlClient.SqlException: Unable to open the physical file xxxxxxx.
             if (exception.Number == 233
                 || exception.Number == -2
                 || exception.Number == 4060
@@ -327,16 +339,9 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal
                 throw new InvalidOperationException(SqlServerStrings.NoInitialCatalog);
             }
 
-            var operations = new MigrationOperation[]
-            {
-                new SqlServerDropDatabaseOperation
-                {
-                    Name = databaseName
-                }
-            };
+            var operations = new MigrationOperation[] { new SqlServerDropDatabaseOperation { Name = databaseName } };
 
-            var masterCommands = Dependencies.MigrationsSqlGenerator.Generate(operations);
-            return masterCommands;
+            return Dependencies.MigrationsSqlGenerator.Generate(operations);
         }
 
         // Clear connection pools in case there are active connections that are pooled

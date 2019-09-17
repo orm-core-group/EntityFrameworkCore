@@ -9,7 +9,6 @@ using System.Transactions;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Utilities;
 
 namespace Microsoft.EntityFrameworkCore.Storage
@@ -152,7 +151,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
 
             if (Suspended)
             {
-                return operation(Dependencies.CurrentDbContext.Context, state);
+                return operation(Dependencies.CurrentContext.Context, state);
             }
 
             OnFirstExecution();
@@ -171,7 +170,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
                 try
                 {
                     Suspended = true;
-                    var result = operation(Dependencies.CurrentDbContext.Context, state);
+                    var result = operation(Dependencies.CurrentContext.Context, state);
                     Suspended = false;
                     return result;
                 }
@@ -245,7 +244,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
 
             if (Suspended)
             {
-                return operation(Dependencies.CurrentDbContext.Context, state, cancellationToken);
+                return operation(Dependencies.CurrentContext.Context, state, cancellationToken);
             }
 
             OnFirstExecution();
@@ -266,7 +265,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
                 try
                 {
                     Suspended = true;
-                    var result = await operation(Dependencies.CurrentDbContext.Context, state, cancellationToken);
+                    var result = await operation(Dependencies.CurrentContext.Context, state, cancellationToken);
                     Suspended = false;
                     return result;
                 }
@@ -310,14 +309,15 @@ namespace Microsoft.EntityFrameworkCore.Storage
         /// </summary>
         protected virtual void OnFirstExecution()
         {
-            if (Dependencies.CurrentDbContext.Context.Database.CurrentTransaction != null
-                || Dependencies.CurrentDbContext.Context.Database.GetEnlistedTransaction() != null
+            if (Dependencies.CurrentContext.Context.Database.CurrentTransaction != null
+                || Dependencies.CurrentContext.Context.Database.GetEnlistedTransaction() != null
                 || Transaction.Current != null)
             {
                 throw new InvalidOperationException(
                     CoreStrings.ExecutionStrategyExistingTransaction(
                         GetType().Name,
-                        nameof(DbContext) + "." + nameof(DbContext.Database) + "." + nameof(DatabaseFacade.CreateExecutionStrategy) + "()"));
+                        nameof(DbContext) + "." + nameof(DbContext.Database) + "." + nameof(DatabaseFacade.CreateExecutionStrategy)
+                        + "()"));
             }
 
             ExceptionsEncountered.Clear();

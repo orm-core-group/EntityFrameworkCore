@@ -3,14 +3,12 @@
 
 using System;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Internal;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace Microsoft.EntityFrameworkCore.Query
 {
-    // TODO: Issue#14630#21
-    internal class InheritanceInMemoryTest : InheritanceTestBase<InheritanceInMemoryFixture>
+    public class InheritanceInMemoryTest : InheritanceTestBase<InheritanceInMemoryFixture>
     {
         public InheritanceInMemoryTest(InheritanceInMemoryFixture fixture, ITestOutputHelper testOutputHelper)
             : base(fixture)
@@ -18,26 +16,13 @@ namespace Microsoft.EntityFrameworkCore.Query
             //TestLoggerFactory.TestOutputHelper = testOutputHelper;
         }
 
-        public override void Discriminator_used_when_projection_over_derived_type2()
-        {
-            Assert.Equal(
-                CoreStrings.PropertyNotFound(property: "Discriminator", entityType: "Bird"),
-                Assert.Throws<InvalidOperationException>(
-                    () => base.Discriminator_used_when_projection_over_derived_type2()).Message);
-        }
-
-        public override void Discriminator_with_cast_in_shadow_property()
-        {
-            Assert.Equal(
-                CoreStrings.PropertyNotFound(property: "Discriminator", entityType: "Animal"),
-                Assert.Throws<InvalidOperationException>(
-                    () => base.Discriminator_with_cast_in_shadow_property()).Message);
-        }
-
-        [Fact(Skip = "See issue#13857")]
+        [ConditionalFact]
         public override void Can_query_all_animal_views()
         {
-            base.Can_query_all_animal_views();
+            Assert.Equal(
+                CoreStrings.TranslationFailed("OrderBy<AnimalQuery, int>(    source: Select<Bird, AnimalQuery>(        source: DbSet<Bird>,         selector: (b) => MaterializeView(b)),     keySelector: (a) => a.CountryId)"),
+                Assert.Throws<InvalidOperationException>(() => base.Can_query_all_animal_views())
+                    .Message.Replace("\r", "").Replace("\n", ""));
         }
 
         protected override bool EnforcesFkConstraints => false;

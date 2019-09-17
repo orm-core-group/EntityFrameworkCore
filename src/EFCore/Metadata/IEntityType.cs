@@ -27,7 +27,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata
         IEntityType DefiningEntityType { get; }
 
         /// <summary>
-        ///     Gets primary key for this entity. Returns <c>null</c> if no primary key is defined.
+        ///     Gets primary key for this entity type. Returns <c>null</c> if no primary key is defined.
         /// </summary>
         /// <returns> The primary key, or <c>null</c> if none is defined. </returns>
         IKey FindPrimaryKey();
@@ -37,11 +37,11 @@ namespace Microsoft.EntityFrameworkCore.Metadata
         ///     Returns <c>null</c> if no key is defined for the given properties.
         /// </summary>
         /// <param name="properties"> The properties that make up the key. </param>
-        /// <returns> The key, or null if none is defined. </returns>
+        /// <returns> The key, or <c>null</c> if none is defined. </returns>
         IKey FindKey([NotNull] IReadOnlyList<IProperty> properties);
 
         /// <summary>
-        ///     Gets the primary and alternate keys for this entity.
+        ///     Gets the primary and alternate keys for this entity type.
         /// </summary>
         /// <returns> The primary and alternate keys. </returns>
         IEnumerable<IKey> GetKeys();
@@ -57,16 +57,16 @@ namespace Microsoft.EntityFrameworkCore.Metadata
         ///     is defined on when the relationship targets a derived type in an inheritance hierarchy (since the key is defined on the
         ///     base type of the hierarchy).
         /// </param>
-        /// <returns> The foreign key, or null if none is defined. </returns>
+        /// <returns> The foreign key, or <c>null</c> if none is defined. </returns>
         IForeignKey FindForeignKey(
             [NotNull] IReadOnlyList<IProperty> properties,
             [NotNull] IKey principalKey,
             [NotNull] IEntityType principalEntityType);
 
         /// <summary>
-        ///     Gets the foreign keys defined on this entity.
+        ///     Gets the foreign keys defined on this entity type.
         /// </summary>
-        /// <returns> The foreign keys defined on this entity. </returns>
+        /// <returns> The foreign keys defined on this entity type. </returns>
         IEnumerable<IForeignKey> GetForeignKeys();
 
         /// <summary>
@@ -77,9 +77,9 @@ namespace Microsoft.EntityFrameworkCore.Metadata
         IIndex FindIndex([NotNull] IReadOnlyList<IProperty> properties);
 
         /// <summary>
-        ///     Gets the indexes defined on this entity.
+        ///     Gets the indexes defined on this entity type.
         /// </summary>
-        /// <returns> The indexes defined on this entity. </returns>
+        /// <returns> The indexes defined on this entity type. </returns>
         IEnumerable<IIndex> GetIndexes();
 
         /// <summary>
@@ -97,14 +97,14 @@ namespace Microsoft.EntityFrameworkCore.Metadata
 
         /// <summary>
         ///     <para>
-        ///         Gets the properties defined on this entity.
+        ///         Gets the properties defined on this entity type.
         ///     </para>
         ///     <para>
         ///         This API only returns scalar properties and does not return navigation properties. Use
         ///         <see cref="EntityTypeExtensions.GetNavigations(IEntityType)" /> to get navigation properties.
         ///     </para>
         /// </summary>
-        /// <returns> The properties defined on this entity. </returns>
+        /// <returns> The properties defined on this entity type. </returns>
         IEnumerable<IProperty> GetProperties();
 
         /// <summary>
@@ -122,13 +122,13 @@ namespace Microsoft.EntityFrameworkCore.Metadata
 
         /// <summary>
         ///     <para>
-        ///         Gets all the <see cref="IServiceProperty" /> defined on this entity.
+        ///         Gets all the <see cref="IServiceProperty" /> defined on this entity type.
         ///     </para>
         ///     <para>
         ///         This API only returns service properties and does not return scalar or navigation properties.
         ///     </para>
         /// </summary>
-        /// <returns> The service properties defined on this entity. </returns>
+        /// <returns> The service properties defined on this entity type. </returns>
         IEnumerable<IServiceProperty> GetServiceProperties();
     }
 }

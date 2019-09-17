@@ -28,8 +28,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        // issue #15318
-        internal class LazyLoading : ProxyGraphUpdatesSqlServerTestBase<LazyLoading.ProxyGraphUpdatesWithLazyLoadingSqlServerFixture>
+        public class LazyLoading : ProxyGraphUpdatesSqlServerTestBase<LazyLoading.ProxyGraphUpdatesWithLazyLoadingSqlServerFixture>
         {
             public LazyLoading(ProxyGraphUpdatesWithLazyLoadingSqlServerFixture fixture)
                 : base(fixture)
@@ -48,7 +47,7 @@ namespace Microsoft.EntityFrameworkCore
 
                 protected override void OnModelCreating(ModelBuilder modelBuilder, DbContext context)
                 {
-                    modelBuilder.ForSqlServerUseIdentityColumns();
+                    modelBuilder.UseIdentityColumns();
 
                     base.OnModelCreating(modelBuilder, context);
                 }

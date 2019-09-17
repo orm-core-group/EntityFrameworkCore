@@ -18,9 +18,11 @@ using Xunit;
 // ReSharper disable InconsistentNaming
 namespace Microsoft.EntityFrameworkCore.Query
 {
+#pragma warning disable xUnit1000 // Test classes must be public
     internal class WarningsTest
+#pragma warning restore xUnit1000 // Test classes must be public
     {
-        [Fact]
+        [ConditionalFact]
         public void Should_throw_by_default_when_transaction()
         {
             var optionsBuilder
@@ -40,7 +42,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Should_throw_by_default_when_transaction_enlisted()
         {
             var optionsBuilder
@@ -60,7 +62,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Should_not_throw_by_default_when_transaction_and_ignored()
         {
             var optionsBuilder
@@ -75,7 +77,8 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+#pragma warning disable CS0612 // Type or member is obsolete
+        [ConditionalFact]
         public void Throws_when_warning_as_error_all()
         {
             var serviceProvider = new ServiceCollection()
@@ -95,7 +98,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_when_warning_as_error_specific()
         {
             var serviceProvider = new ServiceCollection()
@@ -115,7 +118,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact(Skip = "issue #15312")]
+        [ConditionalFact(Skip = "issue #15312")]
         public void Logs_by_default_for_ignored_includes()
         {
             var loggerFactory = new ListLoggerFactory();
@@ -129,11 +132,13 @@ namespace Microsoft.EntityFrameworkCore.Query
             {
                 var _ = context.WarningAsErrorEntities.Include(e => e.Nav).OrderBy(e => e.Id).Select(e => e.Id).ToList();
 
-                Assert.Contains(CoreResources.LogIgnoredInclude(new TestLogger<InMemoryLoggingDefinitions>()).GenerateMessage("[e].Nav"), loggerFactory.Log.Select(l => l.Message));
+                Assert.Contains(
+                    CoreResources.LogIgnoredInclude(new TestLogger<InMemoryLoggingDefinitions>()).GenerateMessage("[e].Nav"),
+                    loggerFactory.Log.Select(l => l.Message));
             }
         }
 
-        [Fact(Skip = "issue #15312")]
+        [ConditionalFact(Skip = "issue #15312")]
         public void Ignored_includes_can_be_configured_to_throw()
         {
             var serviceProvider = new ServiceCollection()
@@ -152,8 +157,9 @@ namespace Microsoft.EntityFrameworkCore.Query
                             => context.WarningAsErrorEntities.Include(e => e.Nav).OrderBy(e => e.Id).Select(e => e.Id).ToList()).Message);
             }
         }
+#pragma warning restore CS0612 // Type or member is obsolete
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_by_default_for_lazy_load_with_disposed_context()
         {
             var loggerFactory = new ListLoggerFactory();
@@ -166,10 +172,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             using (var context = new WarningAsErrorContext(serviceProvider, defaultThrow: false))
             {
                 context.Add(
-                    new WarningAsErrorEntity
-                    {
-                        Nav = new IncludedEntity()
-                    });
+                    new WarningAsErrorEntity { Nav = new IncludedEntity() });
                 context.SaveChanges();
             }
 
@@ -183,13 +186,14 @@ namespace Microsoft.EntityFrameworkCore.Query
             Assert.Equal(
                 CoreStrings.WarningAsErrorTemplate(
                     CoreEventId.LazyLoadOnDisposedContextWarning.ToString(),
-                    CoreResources.LogLazyLoadOnDisposedContext(new TestLogger<InMemoryLoggingDefinitions>()).GenerateMessage("Nav", "WarningAsErrorEntity"),
+                    CoreResources.LogLazyLoadOnDisposedContext(new TestLogger<InMemoryLoggingDefinitions>())
+                        .GenerateMessage("Nav", "WarningAsErrorEntity"),
                     "CoreEventId.LazyLoadOnDisposedContextWarning"),
                 Assert.Throws<InvalidOperationException>(
                     () => entity.Nav).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Lazy_load_with_disposed_context_can_be_configured_to_log()
         {
             var loggerFactory = new ListLoggerFactory();
@@ -205,10 +209,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 CoreEventId.LazyLoadOnDisposedContextWarning))
             {
                 context.Add(
-                    new WarningAsErrorEntity
-                    {
-                        Nav = new IncludedEntity()
-                    });
+                    new WarningAsErrorEntity { Nav = new IncludedEntity() });
                 context.SaveChanges();
             }
 
@@ -232,7 +233,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             Assert.Equal(LogLevel.Warning, log.Level);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Lazy_load_with_disposed_context_can_be_configured_to_log_at_debug_level()
         {
             var loggerFactory = new ListLoggerFactory();
@@ -248,10 +249,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 toChangeLevel: (CoreEventId.LazyLoadOnDisposedContextWarning, LogLevel.Debug)))
             {
                 context.Add(
-                    new WarningAsErrorEntity
-                    {
-                        Nav = new IncludedEntity()
-                    });
+                    new WarningAsErrorEntity { Nav = new IncludedEntity() });
                 context.SaveChanges();
             }
 
@@ -275,7 +273,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             Assert.Equal(LogLevel.Debug, log.Level);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Lazy_loading_is_logged_only_when_actually_loading()
         {
             var loggerFactory = new ListLoggerFactory();
@@ -288,10 +286,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             using (var context = new WarningAsErrorContext(serviceProvider, defaultThrow: false))
             {
                 context.Add(
-                    new WarningAsErrorEntity
-                    {
-                        Nav = new IncludedEntity()
-                    });
+                    new WarningAsErrorEntity { Nav = new IncludedEntity() });
                 context.SaveChanges();
             }
 
@@ -303,18 +298,20 @@ namespace Microsoft.EntityFrameworkCore.Query
                 Assert.NotNull(entity.Nav);
 
                 Assert.Contains(
-                    CoreResources.LogNavigationLazyLoading(new TestLogger<InMemoryLoggingDefinitions>()).GenerateMessage("Nav", "WarningAsErrorEntity"),
+                    CoreResources.LogNavigationLazyLoading(new TestLogger<InMemoryLoggingDefinitions>())
+                        .GenerateMessage("Nav", "WarningAsErrorEntity"),
                     loggerFactory.Log.Select(l => l.Message));
 
                 loggerFactory.Clear();
                 Assert.NotNull(entity.Nav);
                 Assert.DoesNotContain(
-                    CoreResources.LogNavigationLazyLoading(new TestLogger<InMemoryLoggingDefinitions>()).GenerateMessage("Nav", "WarningAsErrorEntity"),
+                    CoreResources.LogNavigationLazyLoading(new TestLogger<InMemoryLoggingDefinitions>())
+                        .GenerateMessage("Nav", "WarningAsErrorEntity"),
                     loggerFactory.Log.Select(l => l.Message));
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void No_throw_when_event_id_not_registered()
         {
             var serviceProvider = new ServiceCollection()

@@ -66,7 +66,7 @@ namespace System
                || type == typeof(sbyte);
 
         public static bool IsAnonymousType(this Type type)
-            => type.Name.StartsWith("<>")
+            => type.Name.StartsWith("<>", StringComparison.Ordinal)
                && type.GetCustomAttributes(typeof(CompilerGeneratedAttribute), inherit: false).Length > 0
                && type.Name.Contains("AnonymousType");
 
@@ -115,13 +115,6 @@ namespace System
                && !type.IsInterface
                && (!type.IsGenericType || !type.IsGenericTypeDefinition);
 
-        public static bool IsGrouping(this Type type) => IsGrouping(type.GetTypeInfo());
-
-        private static bool IsGrouping(TypeInfo type)
-            => type.IsGenericType
-               && (type.GetGenericTypeDefinition() == typeof(IGrouping<,>)
-                   || type.GetGenericTypeDefinition() == typeof(IAsyncGrouping<,>));
-
         public static Type UnwrapEnumType(this Type type)
         {
             var isNullable = type.IsNullableType();
@@ -161,11 +154,11 @@ namespace System
             var types = GetGenericTypeImplementations(type, interfaceOrBaseType);
 
             Type singleImplementation = null;
-            foreach (var impelementation in types)
+            foreach (var implementation in types)
             {
                 if (singleImplementation == null)
                 {
-                    singleImplementation = impelementation;
+                    singleImplementation = implementation;
                 }
                 else
                 {
@@ -226,7 +219,7 @@ namespace System
 
         public static ConstructorInfo GetDeclaredConstructor(this Type type, Type[] types)
         {
-            types = types ?? Array.Empty<Type>();
+            types ??= Array.Empty<Type>();
 
             return type.GetTypeInfo().DeclaredConstructors
                 .SingleOrDefault(
@@ -253,6 +246,7 @@ namespace System
             while (type != null);
         }
 
+        // Looking up the members through the whole hierarchy allows to find inherited private members.
         public static IEnumerable<MemberInfo> GetMembersInHierarchy(this Type type)
         {
             do

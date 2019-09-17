@@ -22,7 +22,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
 {
     public class SqlServerModelDifferTest : MigrationsModelDifferTestBase
     {
-        [Fact]
+        [ConditionalFact]
         public void Alter_table_to_MemoryOptimized()
         {
             Execute(
@@ -31,15 +31,15 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                     x =>
                     {
                         x.Property<int>("Id");
-                        x.HasKey("Id").ForSqlServerIsClustered(false);
+                        x.HasKey("Id").IsClustered(false);
                     }),
                 target => target.Entity(
                     "Person",
                     x =>
                     {
                         x.Property<int>("Id");
-                        x.HasKey("Id").ForSqlServerIsClustered(false);
-                        x.ForSqlServerIsMemoryOptimized();
+                        x.HasKey("Id").IsClustered(false);
+                        x.IsMemoryOptimized();
                     }),
                 operations =>
                 {
@@ -56,7 +56,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Alter_table_from_MemoryOptimized()
         {
             Execute(
@@ -65,15 +65,15 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                     x =>
                     {
                         x.Property<int>("Id");
-                        x.HasKey("Id").ForSqlServerIsClustered(false);
-                        x.ForSqlServerIsMemoryOptimized();
+                        x.HasKey("Id").IsClustered(false);
+                        x.IsMemoryOptimized();
                     }),
                 target => target.Entity(
                     "Person",
                     x =>
                     {
                         x.Property<int>("Id");
-                        x.HasKey("Id").ForSqlServerIsClustered(false);
+                        x.HasKey("Id").IsClustered(false);
                     }),
                 operations =>
                 {
@@ -90,7 +90,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Add_column_with_dependencies()
         {
             Execute(
@@ -122,7 +122,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Alter_column_identity()
         {
             Execute(
@@ -136,11 +136,11 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                     Assert.Equal("bah", operation.Schema);
                     Assert.Equal("Lamb", operation.Table);
                     Assert.Equal("Id", operation.Name);
-                    Assert.Equal(SqlServerValueGenerationStrategy.IdentityColumn, operation["SqlServer:ValueGenerationStrategy"]);
+                    Assert.Equal("1, 1", operation["SqlServer:Identity"]);
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Alter_column_non_key_identity()
         {
             Execute(
@@ -168,11 +168,11 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                     Assert.Equal("bah", operation.Schema);
                     Assert.Equal("Lamb", operation.Table);
                     Assert.Equal("Num", operation.Name);
-                    Assert.Equal(SqlServerValueGenerationStrategy.IdentityColumn, operation["SqlServer:ValueGenerationStrategy"]);
+                    Assert.Equal("1, 1", operation["SqlServer:Identity"]);
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Alter_column_computation()
         {
             Execute(
@@ -204,7 +204,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Alter_primary_key_clustering()
         {
             Execute(
@@ -214,7 +214,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                     {
                         x.ToTable("Ram", "bah");
                         x.Property<int>("Id");
-                        x.HasKey("Id").ForSqlServerIsClustered(false);
+                        x.HasKey("Id").IsClustered(false);
                     }),
                 target => target.Entity(
                     "Ram",
@@ -222,7 +222,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                     {
                         x.ToTable("Ram", "bah");
                         x.Property<int>("Id");
-                        x.HasKey("Id").ForSqlServerIsClustered();
+                        x.HasKey("Id").IsClustered();
                     }),
                 operations =>
                 {
@@ -241,7 +241,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Add_non_clustered_primary_key_with_owned()
         {
             Execute(
@@ -251,7 +251,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                     x =>
                     {
                         x.Property<int>("Id");
-                        x.HasKey("Id").ForSqlServerIsClustered(false);
+                        x.HasKey("Id").IsClustered(false);
                         x.OwnsOne("Address", "Address");
                     }),
                 operations =>
@@ -265,7 +265,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Alter_unique_constraint_clustering()
         {
             Execute(
@@ -276,7 +276,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                         x.ToTable("Ewe", "bah");
                         x.Property<int>("Id");
                         x.Property<int>("AlternateId");
-                        x.HasAlternateKey("AlternateId").ForSqlServerIsClustered(false);
+                        x.HasAlternateKey("AlternateId").IsClustered(false);
                     }),
                 target => target.Entity(
                     "Ewe",
@@ -285,7 +285,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                         x.ToTable("Ewe", "bah");
                         x.Property<int>("Id");
                         x.Property<int>("AlternateId");
-                        x.HasAlternateKey("AlternateId").ForSqlServerIsClustered();
+                        x.HasAlternateKey("AlternateId").IsClustered();
                     }),
                 operations =>
                 {
@@ -304,7 +304,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Create_shared_table_with_two_entity_types()
         {
             Execute(
@@ -334,14 +334,14 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                     Assert.Equal(2, createTableOperation.Columns.Count);
                     var idColumn = createTableOperation.Columns[0];
                     Assert.Equal("Id", idColumn.Name);
-                    Assert.Equal(SqlServerValueGenerationStrategy.IdentityColumn, idColumn["SqlServer:ValueGenerationStrategy"]);
+                    Assert.Equal("1, 1", idColumn["SqlServer:Identity"]);
                     var timeColumn = createTableOperation.Columns[1];
                     Assert.Equal("Time", timeColumn.Name);
                     Assert.True(timeColumn.IsNullable);
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Add_SequenceHiLo_with_seed_data()
         {
             Execute(
@@ -353,10 +353,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                         x.Property<int>("Id");
                         x.Property<int>("SequenceId");
                         x.HasData(
-                            new
-                            {
-                                Id = 42
-                            });
+                            new { Id = 42 });
                     }),
                 _ => { },
                 target => target.Entity(
@@ -364,12 +361,9 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                     x =>
                     {
                         x.ToTable("Firefly", "dbo");
-                        x.Property<int>("SequenceId").ForSqlServerUseSequenceHiLo(schema: "dbo");
+                        x.Property<int>("SequenceId").UseHiLo(schema: "dbo");
                         x.HasData(
-                            new
-                            {
-                                Id = 43
-                            });
+                            new { Id = 43 });
                     }),
                 upOps => Assert.Collection(
                     upOps,
@@ -403,7 +397,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                     }));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Alter_index_clustering()
         {
             Execute(
@@ -414,7 +408,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                         x.ToTable("Mutton", "bah");
                         x.Property<int>("Id");
                         x.Property<int>("Value");
-                        x.HasIndex("Value").ForSqlServerIsClustered(false);
+                        x.HasIndex("Value").IsClustered(false);
                     }),
                 target => target.Entity(
                     "Mutton",
@@ -423,7 +417,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                         x.ToTable("Mutton", "bah");
                         x.Property<int>("Id");
                         x.Property<int>("Value");
-                        x.HasIndex("Value").ForSqlServerIsClustered();
+                        x.HasIndex("Value").IsClustered();
                     }),
                 operations =>
                 {
@@ -447,7 +441,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             return default;
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Add_dbfunction_ignore()
         {
             var mi = typeof(SqlServerModelDifferTest).GetRuntimeMethod(nameof(Function), Array.Empty<Type>());
@@ -458,7 +452,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                 operations => Assert.Equal(0, operations.Count));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Alter_column_rowversion()
         {
             Execute(
@@ -490,7 +484,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public void SeedData_all_operations()
         {
             Execute(
@@ -503,31 +497,10 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                         x.Property<int>("Value1");
                         x.Property<string>("Value2");
                         x.HasData(
-                            new
-                            {
-                                Id = 99999,
-                                Value1 = 0,
-                                Value2 = ""
-                            }, // deleted
-                            new
-                            {
-                                Id = 42,
-                                Value1 = 32,
-                                Value2 = "equal",
-                                InvalidProperty = "is ignored"
-                            }, // modified
-                            new
-                            {
-                                Id = 8,
-                                Value1 = 100,
-                                Value2 = "equal"
-                            }, // unchanged
-                            new
-                            {
-                                Id = 24,
-                                Value1 = 72,
-                                Value2 = "not equal1"
-                            }); // modified
+                            new { Id = 99999, Value1 = 0, Value2 = "" }, // deleted
+                            new { Id = 42, Value1 = 32, Value2 = "equal", InvalidProperty = "is ignored" }, // modified
+                            new { Id = 8, Value1 = 100, Value2 = "equal" }, // unchanged
+                            new { Id = 24, Value1 = 72, Value2 = "not equal1" }); // modified
                     }),
                 target => target.Entity(
                     "EntityWithTwoProperties",
@@ -537,37 +510,11 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                         x.Property<int>("Value1");
                         x.Property<string>("Value2");
                         x.HasData(
-                            new
-                            {
-                                Id = 11111,
-                                Value1 = 0,
-                                Value2 = ""
-                            }, // added
-                            new
-                            {
-                                Id = 11112,
-                                Value1 = 1,
-                                Value2 = "new"
-                            }, // added
-                            new
-                            {
-                                Id = 42,
-                                Value1 = 27,
-                                Value2 = "equal",
-                                InvalidProperty = "is ignored here too"
-                            }, // modified
-                            new
-                            {
-                                Id = 8,
-                                Value1 = 100,
-                                Value2 = "equal"
-                            }, // unchanged
-                            new
-                            {
-                                Id = 24,
-                                Value1 = 99,
-                                Value2 = "not equal2"
-                            }); // modified
+                            new { Id = 11111, Value1 = 0, Value2 = "" }, // added
+                            new { Id = 11112, Value1 = 1, Value2 = "new" }, // added
+                            new { Id = 42, Value1 = 27, Value2 = "equal", InvalidProperty = "is ignored here too" }, // modified
+                            new { Id = 8, Value1 = 100, Value2 = "equal" }, // unchanged
+                            new { Id = 24, Value1 = 99, Value2 = "not equal2" }); // modified
                     }),
                 upOps => Assert.Collection(
                     upOps,
@@ -664,7 +611,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                     }));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Dont_rebuild_index_with_equal_include()
         {
             Execute(
@@ -677,7 +624,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                             x.Property<string>("Zip");
                             x.Property<string>("City");
                             x.HasIndex("Zip")
-                                .ForSqlServerInclude("City");
+                                .IncludeProperties("City");
                         }),
                 target => target
                     .Entity(
@@ -688,12 +635,12 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                             x.Property<string>("Zip");
                             x.Property<string>("City");
                             x.HasIndex("Zip")
-                                .ForSqlServerInclude("City");
+                                .IncludeProperties("City");
                         }),
                 operations => Assert.Equal(0, operations.Count));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Rebuild_index_with_different_include()
         {
             Execute(
@@ -707,7 +654,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                             x.Property<string>("City");
                             x.Property<string>("Street");
                             x.HasIndex("Zip")
-                                .ForSqlServerInclude("City");
+                                .IncludeProperties("City");
                         }),
                 target => target
                     .Entity(
@@ -719,7 +666,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                             x.Property<string>("City");
                             x.Property<string>("Street");
                             x.HasIndex("Zip")
-                                .ForSqlServerInclude("Street");
+                                .IncludeProperties("Street");
                         }),
                 operations =>
                 {
@@ -737,12 +684,12 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                     Assert.NotNull(annotation);
 
                     var annotationValue = Assert.IsType<string[]>(annotation.Value);
-                    Assert.Equal(1, annotationValue.Length);
+                    Assert.Single(annotationValue);
                     Assert.Equal("Street", annotationValue[0]);
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Dont_rebuild_index_with_unchanged_online_option()
         {
             Execute(
@@ -755,7 +702,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                             x.Property<string>("Zip");
                             x.Property<string>("City");
                             x.HasIndex("Zip")
-                                .ForSqlServerIsOnline();
+                                .IsCreatedOnline();
                         }),
                 target => target
                     .Entity(
@@ -766,12 +713,12 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                             x.Property<string>("Zip");
                             x.Property<string>("City");
                             x.HasIndex("Zip")
-                                .ForSqlServerIsOnline();
+                                .IsCreatedOnline();
                         }),
                 operations => Assert.Equal(0, operations.Count));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Rebuild_index_when_changing_online_option()
         {
             Execute(
@@ -796,7 +743,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                             x.Property<string>("City");
                             x.Property<string>("Street");
                             x.HasIndex("Zip")
-                                .ForSqlServerIsOnline();
+                                .IsCreatedOnline();
                         }),
                 operations =>
                 {
@@ -810,7 +757,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                     Assert.Equal("Address", operation1.Table);
                     Assert.Equal("IX_Address_Zip", operation1.Name);
 
-                    var annotation = operation2.GetAnnotation(SqlServerAnnotationNames.Online);
+                    var annotation = operation2.GetAnnotation(SqlServerAnnotationNames.CreatedOnline);
                     Assert.NotNull(annotation);
 
                     var annotationValue = Assert.IsType<bool>(annotation.Value);

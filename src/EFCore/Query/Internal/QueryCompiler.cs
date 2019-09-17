@@ -2,25 +2,15 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
-using System.Runtime.ExceptionServices;
 using System.Threading;
-using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Query.ExpressionVisitors.Internal;
-using Microsoft.EntityFrameworkCore.Query.NavigationExpansion;
-using Microsoft.EntityFrameworkCore.Query.NavigationExpansion.Visitors;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.Utilities;
 using Microsoft.Extensions.DependencyInjection;
-using Remotion.Linq.Clauses.StreamedData;
 
 namespace Microsoft.EntityFrameworkCore.Query.Internal
 {
@@ -32,8 +22,8 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
     ///         doing so can result in application failures when updating to a new Entity Framework Core release.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Scoped"/>. This means that each
-    ///         <see cref="DbContext"/> instance will use its own instance of this service.
+    ///         The service lifetime is <see cref="ServiceLifetime.Scoped" />. This means that each
+    ///         <see cref="DbContext" /> instance will use its own instance of this service.
     ///         The implementation may depend on other services registered with any lifetime.
     ///         The implementation does not need to be thread-safe.
     ///     </para>
@@ -63,7 +53,6 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
             [NotNull] IDatabase database,
             [NotNull] IDiagnosticsLogger<DbLoggerCategory.Query> logger,
             [NotNull] ICurrentDbContext currentContext,
-            [NotNull] IQueryModelGenerator queryModelGenerator,
             [NotNull] IEvaluatableExpressionFilter evaluatableExpressionFilter,
             [NotNull] IModel model)
         {
@@ -114,11 +103,7 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
             Expression query,
             IModel model,
             bool async)
-        {
-            query = ExpandNavigations(query, model);
-
-            return database.CompileQuery2<TResult>(query, async);
-        }
+            => database.CompileQuery<TResult>(query, async);
 
         /// <summary>
         ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -132,18 +117,8 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
 
             query = ExtractParameters(query, _queryContextFactory.Create(), _logger, parameterize: false);
 
-            //return CompileQueryCore<TResult>(query, _model, _queryModelGenerator, _database, _logger, _contextType);
-            throw new NotImplementedException();
+            return CompileQueryCore<TResult>(_database, query, _model, false);
         }
-
-        private static Expression ExpandNavigations(Expression query, IModel model)
-        {
-            var navigationExpander = new NavigationExpander(model);
-            var newQuery = navigationExpander.ExpandNavigations(query);
-
-            return newQuery;
-        }
-
 
         public virtual TResult ExecuteAsync<TResult>(Expression query, CancellationToken cancellationToken = default)
         {
@@ -176,8 +151,7 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
 
             query = ExtractParameters(query, _queryContextFactory.Create(), _logger, parameterize: false);
 
-            //return CompileAsyncQueryCore<TResult>(query, _queryModelGenerator, _database);
-            throw new NotImplementedException();
+            return CompileQueryCore<TResult>(_database, query, _model, true);
         }
 
         /// <summary>
@@ -197,6 +171,7 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                 _evaluatableExpressionFilter,
                 parameterValues,
                 _contextType,
+                _model,
                 logger,
                 parameterize,
                 generateContextAccessors);

@@ -5,7 +5,6 @@ using System;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 using Xunit;
 
@@ -25,22 +24,19 @@ namespace Microsoft.EntityFrameworkCore
         protected abstract ValueTask<TEntity> FindAsync<TEntity>(DbContext context, params object[] keyValues)
             where TEntity : class;
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Find_int_key_tracked()
         {
             using (var context = CreateContext())
             {
                 var entity = context.Attach(
-                    new IntKey
-                    {
-                        Id = 88
-                    }).Entity;
+                    new IntKey { Id = 88 }).Entity;
 
                 Assert.Same(entity, Find<IntKey>(context, 88));
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Find_int_key_from_store()
         {
             using (var context = CreateContext())
@@ -49,7 +45,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Returns_null_for_int_key_not_in_store()
         {
             using (var context = CreateContext())
@@ -58,22 +54,19 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Find_nullable_int_key_tracked()
         {
             using (var context = CreateContext())
             {
                 var entity = context.Attach(
-                    new NullableIntKey
-                    {
-                        Id = 88
-                    }).Entity;
+                    new NullableIntKey { Id = 88 }).Entity;
 
                 Assert.Same(entity, Find<NullableIntKey>(context, 88));
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Find_nullable_int_key_from_store()
         {
             using (var context = CreateContext())
@@ -82,7 +75,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Returns_null_for_nullable_int_key_not_in_store()
         {
             using (var context = CreateContext())
@@ -91,22 +84,19 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Find_string_key_tracked()
         {
             using (var context = CreateContext())
             {
                 var entity = context.Attach(
-                    new StringKey
-                    {
-                        Id = "Rabbit"
-                    }).Entity;
+                    new StringKey { Id = "Rabbit" }).Entity;
 
                 Assert.Same(entity, Find<StringKey>(context, "Rabbit"));
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Find_string_key_from_store()
         {
             using (var context = CreateContext())
@@ -115,7 +105,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Returns_null_for_string_key_not_in_store()
         {
             using (var context = CreateContext())
@@ -124,23 +114,19 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Find_composite_key_tracked()
         {
             using (var context = CreateContext())
             {
                 var entity = context.Attach(
-                    new CompositeKey
-                    {
-                        Id1 = 88,
-                        Id2 = "Rabbit"
-                    }).Entity;
+                    new CompositeKey { Id1 = 88, Id2 = "Rabbit" }).Entity;
 
                 Assert.Same(entity, Find<CompositeKey>(context, 88, "Rabbit"));
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Find_composite_key_from_store()
         {
             using (var context = CreateContext())
@@ -149,7 +135,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Returns_null_for_composite_key_not_in_store()
         {
             using (var context = CreateContext())
@@ -158,22 +144,19 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Find_base_type_tracked()
         {
             using (var context = CreateContext())
             {
                 var entity = context.Attach(
-                    new BaseType
-                    {
-                        Id = 88
-                    }).Entity;
+                    new BaseType { Id = 88 }).Entity;
 
                 Assert.Same(entity, Find<BaseType>(context, 88));
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Find_base_type_from_store()
         {
             using (var context = CreateContext())
@@ -182,7 +165,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Returns_null_for_base_type_not_in_store()
         {
             using (var context = CreateContext())
@@ -191,22 +174,19 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Find_derived_type_tracked()
         {
             using (var context = CreateContext())
             {
                 var entity = context.Attach(
-                    new DerivedType
-                    {
-                        Id = 88
-                    }).Entity;
+                    new DerivedType { Id = 88 }).Entity;
 
                 Assert.Same(entity, Find<DerivedType>(context, 88));
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Find_derived_type_from_store()
         {
             using (var context = CreateContext())
@@ -217,7 +197,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Returns_null_for_derived_type_not_in_store()
         {
             using (var context = CreateContext())
@@ -226,22 +206,19 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Find_base_type_using_derived_set_tracked()
         {
             using (var context = CreateContext())
             {
                 context.Attach(
-                    new BaseType
-                    {
-                        Id = 88
-                    });
+                    new BaseType { Id = 88 });
 
                 Assert.Null(Find<DerivedType>(context, 88));
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Find_base_type_using_derived_set_from_store()
         {
             using (var context = CreateContext())
@@ -250,22 +227,19 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Find_derived_type_using_base_set_tracked()
         {
             using (var context = CreateContext())
             {
                 var entity = context.Attach(
-                    new DerivedType
-                    {
-                        Id = 88
-                    }).Entity;
+                    new DerivedType { Id = 88 }).Entity;
 
                 Assert.Same(entity, Find<BaseType>(context, 88));
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Find_derived_using_base_set_type_from_store()
         {
             using (var context = CreateContext())
@@ -276,7 +250,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Find_shadow_key_tracked()
         {
             using (var context = CreateContext())
@@ -289,7 +263,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Find_shadow_key_from_store()
         {
             using (var context = CreateContext())
@@ -298,7 +272,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Returns_null_for_shadow_key_not_in_store()
         {
             using (var context = CreateContext())
@@ -307,7 +281,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Returns_null_for_null_key_values_array()
         {
             using (var context = CreateContext())
@@ -316,7 +290,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Returns_null_for_null_key()
         {
             using (var context = CreateContext())
@@ -325,7 +299,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Returns_null_for_null_nullable_key()
         {
             using (var context = CreateContext())
@@ -334,7 +308,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Returns_null_for_null_in_composite_key()
         {
             using (var context = CreateContext())
@@ -343,7 +317,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Throws_for_multiple_values_passed_for_simple_key()
         {
             using (var context = CreateContext())
@@ -354,7 +328,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Throws_for_wrong_number_of_values_for_composite_key()
         {
             using (var context = CreateContext())
@@ -365,7 +339,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Throws_for_bad_type_for_simple_key()
         {
             using (var context = CreateContext())
@@ -376,7 +350,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Throws_for_bad_type_for_composite_key()
         {
             using (var context = CreateContext())
@@ -387,7 +361,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Throws_for_bad_entity_type()
         {
             using (var context = CreateContext())
@@ -398,16 +372,13 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Find_int_key_tracked_async()
         {
             using (var context = CreateContext())
             {
                 var entity = context.Attach(
-                    new IntKey
-                    {
-                        Id = 88
-                    }).Entity;
+                    new IntKey { Id = 88 }).Entity;
 
                 var valueTask = FindAsync<IntKey>(context, 88);
                 Assert.True(valueTask.IsCompleted);
@@ -415,7 +386,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task Find_int_key_from_store_async()
         {
             using (var context = CreateContext())
@@ -424,7 +395,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "Issue#15535")]
+        [ConditionalFact]
         public virtual async Task Returns_null_for_int_key_not_in_store_async()
         {
             using (var context = CreateContext())
@@ -433,22 +404,19 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Find_nullable_int_key_tracked_async()
         {
             using (var context = CreateContext())
             {
                 var entity = context.Attach(
-                    new NullableIntKey
-                    {
-                        Id = 88
-                    }).Entity;
+                    new NullableIntKey { Id = 88 }).Entity;
 
                 Assert.Same(entity, await FindAsync<NullableIntKey>(context, 88));
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task Find_nullable_int_key_from_store_async()
         {
             using (var context = CreateContext())
@@ -457,7 +425,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "Issue#15535")]
+        [ConditionalFact]
         public virtual async Task Returns_null_for_nullable_int_key_not_in_store_async()
         {
             using (var context = CreateContext())
@@ -466,22 +434,19 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Find_string_key_tracked_async()
         {
             using (var context = CreateContext())
             {
                 var entity = context.Attach(
-                    new StringKey
-                    {
-                        Id = "Rabbit"
-                    }).Entity;
+                    new StringKey { Id = "Rabbit" }).Entity;
 
                 Assert.Same(entity, await FindAsync<StringKey>(context, "Rabbit"));
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task Find_string_key_from_store_async()
         {
             using (var context = CreateContext())
@@ -490,7 +455,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "Issue#15535")]
+        [ConditionalFact]
         public virtual async Task Returns_null_for_string_key_not_in_store_async()
         {
             using (var context = CreateContext())
@@ -499,23 +464,19 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Find_composite_key_tracked_async()
         {
             using (var context = CreateContext())
             {
                 var entity = context.Attach(
-                    new CompositeKey
-                    {
-                        Id1 = 88,
-                        Id2 = "Rabbit"
-                    }).Entity;
+                    new CompositeKey { Id1 = 88, Id2 = "Rabbit" }).Entity;
 
                 Assert.Same(entity, await FindAsync<CompositeKey>(context, 88, "Rabbit"));
             }
         }
 
-        [Fact(Skip = "Issue#15535")]
+        [ConditionalFact]
         public virtual async Task Find_composite_key_from_store_async()
         {
             using (var context = CreateContext())
@@ -524,7 +485,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "Issue#15535")]
+        [ConditionalFact]
         public virtual async Task Returns_null_for_composite_key_not_in_store_async()
         {
             using (var context = CreateContext())
@@ -533,22 +494,19 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Find_base_type_tracked_async()
         {
             using (var context = CreateContext())
             {
                 var entity = context.Attach(
-                    new BaseType
-                    {
-                        Id = 88
-                    }).Entity;
+                    new BaseType { Id = 88 }).Entity;
 
                 Assert.Same(entity, await FindAsync<BaseType>(context, 88));
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task Find_base_type_from_store_async()
         {
             using (var context = CreateContext())
@@ -557,7 +515,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "Issue#15535")]
+        [ConditionalFact]
         public virtual async Task Returns_null_for_base_type_not_in_store_async()
         {
             using (var context = CreateContext())
@@ -566,22 +524,19 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Find_derived_type_tracked_async()
         {
             using (var context = CreateContext())
             {
                 var entity = context.Attach(
-                    new DerivedType
-                    {
-                        Id = 88
-                    }).Entity;
+                    new DerivedType { Id = 88 }).Entity;
 
                 Assert.Same(entity, await FindAsync<DerivedType>(context, 88));
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task Find_derived_type_from_store_async()
         {
             using (var context = CreateContext())
@@ -592,7 +547,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "Issue#15535")]
+        [ConditionalFact]
         public virtual async Task Returns_null_for_derived_type_not_in_store_async()
         {
             using (var context = CreateContext())
@@ -601,22 +556,19 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "Issue#15535")]
+        [ConditionalFact]
         public virtual async Task Find_base_type_using_derived_set_tracked_async()
         {
             using (var context = CreateContext())
             {
                 context.Attach(
-                    new BaseType
-                    {
-                        Id = 88
-                    });
+                    new BaseType { Id = 88 });
 
                 Assert.Null(await FindAsync<DerivedType>(context, 88));
             }
         }
 
-        [Fact(Skip = "TaskList#21")]
+        [ConditionalFact]
         public virtual async Task Find_base_type_using_derived_set_from_store_async()
         {
             using (var context = CreateContext())
@@ -625,22 +577,19 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Find_derived_type_using_base_set_tracked_async()
         {
             using (var context = CreateContext())
             {
                 var entity = context.Attach(
-                    new DerivedType
-                    {
-                        Id = 88
-                    }).Entity;
+                    new DerivedType { Id = 88 }).Entity;
 
                 Assert.Same(entity, await FindAsync<BaseType>(context, 88));
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task Find_derived_using_base_set_type_from_store_async()
         {
             using (var context = CreateContext())
@@ -651,7 +600,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Find_shadow_key_tracked_async()
         {
             using (var context = CreateContext())
@@ -664,7 +613,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task Find_shadow_key_from_store_async()
         {
             using (var context = CreateContext())
@@ -673,7 +622,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "Issue#15535")]
+        [ConditionalFact]
         public virtual async Task Returns_null_for_shadow_key_not_in_store_async()
         {
             using (var context = CreateContext())
@@ -682,7 +631,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Returns_null_for_null_key_values_array_async()
         {
             using (var context = CreateContext())
@@ -691,7 +640,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Returns_null_for_null_key_async()
         {
             using (var context = CreateContext())
@@ -700,7 +649,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Returns_null_for_null_in_composite_key_async()
         {
             using (var context = CreateContext())
@@ -709,7 +658,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Throws_for_multiple_values_passed_for_simple_key_async()
         {
             using (var context = CreateContext())
@@ -720,7 +669,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Throws_for_wrong_number_of_values_for_composite_key_async()
         {
             using (var context = CreateContext())
@@ -731,7 +680,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Throws_for_bad_type_for_simple_key_async()
         {
             using (var context = CreateContext())
@@ -742,7 +691,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Throws_for_bad_type_for_composite_key_async()
         {
             using (var context = CreateContext())
@@ -753,7 +702,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Throws_for_bad_entity_type_async()
         {
             using (var context = CreateContext())
@@ -824,11 +773,7 @@ namespace Microsoft.EntityFrameworkCore
                 modelBuilder.Entity<NullableIntKey>();
                 modelBuilder.Entity<StringKey>();
                 modelBuilder.Entity<CompositeKey>().HasKey(
-                    e => new
-                    {
-                        e.Id1,
-                        e.Id2
-                    });
+                    e => new { e.Id1, e.Id2 });
                 modelBuilder.Entity<BaseType>();
                 modelBuilder.Entity<DerivedType>();
                 modelBuilder.Entity<ShadowKey>().Property(typeof(int), "Id").ValueGeneratedNever();
@@ -837,44 +782,15 @@ namespace Microsoft.EntityFrameworkCore
             protected override void Seed(PoolableDbContext context)
             {
                 context.AddRange(
-                    new IntKey
-                    {
-                        Id = 77,
-                        Foo = "Smokey"
-                    },
-                    new NullableIntKey
-                    {
-                        Id = 77,
-                        Foo = "Smokey"
-                    },
-                    new StringKey
-                    {
-                        Id = "Cat",
-                        Foo = "Alice"
-                    },
-                    new CompositeKey
-                    {
-                        Id1 = 77,
-                        Id2 = "Dog",
-                        Foo = "Olive"
-                    },
-                    new BaseType
-                    {
-                        Id = 77,
-                        Foo = "Baxter"
-                    },
-                    new DerivedType
-                    {
-                        Id = 78,
-                        Foo = "Strawberry",
-                        Boo = "Cheesecake"
-                    });
+                    new IntKey { Id = 77, Foo = "Smokey" },
+                    new NullableIntKey { Id = 77, Foo = "Smokey" },
+                    new StringKey { Id = "Cat", Foo = "Alice" },
+                    new CompositeKey { Id1 = 77, Id2 = "Dog", Foo = "Olive" },
+                    new BaseType { Id = 77, Foo = "Baxter" },
+                    new DerivedType { Id = 78, Foo = "Strawberry", Boo = "Cheesecake" });
 
                 var entry = context.Entry(
-                    new ShadowKey
-                    {
-                        Foo = "Clippy"
-                    });
+                    new ShadowKey { Foo = "Clippy" });
                 entry.Property("Id").CurrentValue = 77;
                 entry.State = EntityState.Added;
 

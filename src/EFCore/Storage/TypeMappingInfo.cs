@@ -30,12 +30,24 @@ namespace Microsoft.EntityFrameworkCore.Storage
         ///     Creates a new instance of <see cref="TypeMappingInfo" />.
         /// </summary>
         /// <param name="principals"> The principal property chain for the property for which mapping is needed. </param>
-        /// <param name="fallbackUnicode"> Specifies a fallback Specifies Unicode or ANSI mapping for the mapping, in case one isn't found at the core level, or <c>null</c> for default. </param>
-        /// <param name="fallbackSize"> Specifies a fallback size for the mapping, in case one isn't found at the core level, or <c>null</c> for default. </param>
-        /// <param name="fallbackPrecision"> Specifies a fallback precision for the mapping, in case one isn't found at the core level, or <c>null</c> for default. </param>
-        /// <param name="fallbackScale"> Specifies a fallback scale for the mapping, in case one isn't found at the core level, or <c>null</c> for default. </param>
+        /// <param name="fallbackUnicode">
+        ///     Specifies a fallback Specifies Unicode or ANSI mapping for the mapping, in case one isn't found at the core
+        ///     level, or <c>null</c> for default.
+        /// </param>
+        /// <param name="fallbackSize">
+        ///     Specifies a fallback size for the mapping, in case one isn't found at the core level, or <c>null</c> for
+        ///     default.
+        /// </param>
+        /// <param name="fallbackPrecision">
+        ///     Specifies a fallback precision for the mapping, in case one isn't found at the core level, or <c>null</c>
+        ///     for default.
+        /// </param>
+        /// <param name="fallbackScale">
+        ///     Specifies a fallback scale for the mapping, in case one isn't found at the core level, or <c>null</c> for
+        ///     default.
+        /// </param>
         public TypeMappingInfo(
-            IReadOnlyList<IProperty> principals,
+            [NotNull] IReadOnlyList<IProperty> principals,
             bool? fallbackUnicode = null,
             int? fallbackSize = null,
             int? fallbackPrecision = null,
@@ -245,15 +257,6 @@ namespace Microsoft.EntityFrameworkCore.Storage
         /// </summary>
         /// <returns> The hash code. </returns>
         public override int GetHashCode()
-        {
-            var hashCode = ClrType?.GetHashCode() ?? 0;
-            hashCode = (hashCode * 397) ^ IsKeyOrIndex.GetHashCode();
-            hashCode = (hashCode * 397) ^ (Size?.GetHashCode() ?? 0);
-            hashCode = (hashCode * 397) ^ (IsUnicode?.GetHashCode() ?? 0);
-            hashCode = (hashCode * 397) ^ (IsRowVersion?.GetHashCode() ?? 0);
-            hashCode = (hashCode * 397) ^ (Scale?.GetHashCode() ?? 0);
-            hashCode = (hashCode * 397) ^ (Precision?.GetHashCode() ?? 0);
-            return hashCode;
-        }
+            => HashCode.Combine(ClrType, IsKeyOrIndex, Size, IsUnicode, IsRowVersion, Scale, Precision);
     }
 }

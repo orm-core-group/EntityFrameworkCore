@@ -3,10 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.InMemory.Metadata.Conventions;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Xunit;
 
 // ReSharper disable InconsistentNaming
@@ -18,7 +15,7 @@ namespace Microsoft.EntityFrameworkCore
 
         protected InMemoryFixture Fixture { get; }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_use_different_entity_types_end_to_end()
         {
             Can_add_update_delete_end_to_end<Private>();
@@ -34,16 +31,16 @@ namespace Microsoft.EntityFrameworkCore
         private void Can_add_update_delete_end_to_end<T>()
             where T : class, new()
         {
-            var type = typeof(T);
             var modelBuilder = new ModelBuilder(InMemoryConventionSetBuilder.Build());
-            modelBuilder.Entity<T>(eb =>
-            {
-                eb.Property<int>("Id");
-                eb.Property<string>("Name");
-            });
+            modelBuilder.Entity<T>(
+                eb =>
+                {
+                    eb.Property<int>("Id");
+                    eb.Property<string>("Name");
+                });
 
             var optionsBuilder = new DbContextOptionsBuilder()
-                .UseModel(modelBuilder.Model)
+                .UseModel(modelBuilder.FinalizeModel())
                 .UseInMemoryDatabase(nameof(EndToEndInMemoryTest))
                 .UseInternalServiceProvider(Fixture.ServiceProvider);
 

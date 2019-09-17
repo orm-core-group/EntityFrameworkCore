@@ -7,7 +7,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore.Internal;
-using Microsoft.EntityFrameworkCore.Query.Expressions.Internal;
 
 // ReSharper disable SwitchStatementMissingSomeCases
 // ReSharper disable ForCanBeConvertedToForeach
@@ -52,9 +51,9 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
 
             unchecked
             {
-                var hashCode = (int)obj.NodeType;
-
-                hashCode += (hashCode * 397) ^ obj.Type.GetHashCode();
+                var hash = new HashCode();
+                hash.Add(obj.NodeType);
+                hash.Add(obj.Type);
 
                 switch (obj.NodeType)
                 {
@@ -72,10 +71,10 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
 
                         if (unaryExpression.Method != null)
                         {
-                            hashCode += hashCode * 397 ^ unaryExpression.Method.GetHashCode();
+                            hash.Add(unaryExpression.Method);
                         }
 
-                        hashCode += (hashCode * 397) ^ GetHashCode(unaryExpression.Operand);
+                        hash.Add(unaryExpression.Operand, this);
 
                         break;
                     }
@@ -106,8 +105,8 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                     {
                         var binaryExpression = (BinaryExpression)obj;
 
-                        hashCode += (hashCode * 397) ^ GetHashCode(binaryExpression.Left);
-                        hashCode += (hashCode * 397) ^ GetHashCode(binaryExpression.Right);
+                        hash.Add(binaryExpression.Left, this);
+                        hash.Add(binaryExpression.Right, this);
 
                         break;
                     }
@@ -115,8 +114,8 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                     {
                         var typeBinaryExpression = (TypeBinaryExpression)obj;
 
-                        hashCode += (hashCode * 397) ^ GetHashCode(typeBinaryExpression.Expression);
-                        hashCode += (hashCode * 397) ^ typeBinaryExpression.TypeOperand.GetHashCode();
+                        hash.Add(typeBinaryExpression.Expression, this);
+                        hash.Add(typeBinaryExpression.TypeOperand);
 
                         break;
                     }
@@ -127,7 +126,7 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                         if (constantExpression.Value != null
                             && !(constantExpression.Value is IQueryable))
                         {
-                            hashCode += (hashCode * 397) ^ constantExpression.Value.GetHashCode();
+                            hash.Add(constantExpression.Value);
                         }
 
                         break;
@@ -136,11 +135,10 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                     {
                         var parameterExpression = (ParameterExpression)obj;
 
-                        hashCode += hashCode * 397;
                         // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                         if (parameterExpression.Name != null)
                         {
-                            hashCode ^= parameterExpression.Name.GetHashCode();
+                            hash.Add(parameterExpression.Name);
                         }
 
                         break;
@@ -149,8 +147,8 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                     {
                         var memberExpression = (MemberExpression)obj;
 
-                        hashCode += (hashCode * 397) ^ memberExpression.Member.GetHashCode();
-                        hashCode += (hashCode * 397) ^ GetHashCode(memberExpression.Expression);
+                        hash.Add(memberExpression.Member);
+                        hash.Add(memberExpression.Expression, this);
 
                         break;
                     }
@@ -158,9 +156,9 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                     {
                         var methodCallExpression = (MethodCallExpression)obj;
 
-                        hashCode += (hashCode * 397) ^ methodCallExpression.Method.GetHashCode();
-                        hashCode += (hashCode * 397) ^ GetHashCode(methodCallExpression.Object);
-                        hashCode += (hashCode * 397) ^ GetHashCode(methodCallExpression.Arguments);
+                        hash.Add(methodCallExpression.Method);
+                        hash.Add(methodCallExpression.Object, this);
+                        AddListToHash(ref hash, methodCallExpression.Arguments);
 
                         break;
                     }
@@ -168,9 +166,9 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                     {
                         var lambdaExpression = (LambdaExpression)obj;
 
-                        hashCode += (hashCode * 397) ^ lambdaExpression.ReturnType.GetHashCode();
-                        hashCode += (hashCode * 397) ^ GetHashCode(lambdaExpression.Body);
-                        hashCode += (hashCode * 397) ^ GetHashCode(lambdaExpression.Parameters);
+                        hash.Add(lambdaExpression.ReturnType);
+                        hash.Add(lambdaExpression.Body, this);
+                        AddListToHash(ref hash, lambdaExpression.Parameters);
 
                         break;
                     }
@@ -178,17 +176,17 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                     {
                         var newExpression = (NewExpression)obj;
 
-                        hashCode += (hashCode * 397) ^ (newExpression.Constructor?.GetHashCode() ?? 0);
+                        hash.Add(newExpression.Constructor);
 
                         if (newExpression.Members != null)
                         {
                             for (var i = 0; i < newExpression.Members.Count; i++)
                             {
-                                hashCode += (hashCode * 397) ^ newExpression.Members[i].GetHashCode();
+                                hash.Add(newExpression.Members[i]);
                             }
                         }
 
-                        hashCode += (hashCode * 397) ^ GetHashCode(newExpression.Arguments);
+                        AddListToHash(ref hash, newExpression.Arguments);
 
                         break;
                     }
@@ -196,8 +194,7 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                     case ExpressionType.NewArrayBounds:
                     {
                         var newArrayExpression = (NewArrayExpression)obj;
-
-                        hashCode += (hashCode * 397) ^ GetHashCode(newArrayExpression.Expressions);
+                        AddListToHash(ref hash, newArrayExpression.Expressions);
 
                         break;
                     }
@@ -205,8 +202,8 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                     {
                         var invocationExpression = (InvocationExpression)obj;
 
-                        hashCode += (hashCode * 397) ^ GetHashCode(invocationExpression.Expression);
-                        hashCode += (hashCode * 397) ^ GetHashCode(invocationExpression.Arguments);
+                        hash.Add(invocationExpression.Expression, this);
+                        AddListToHash(ref hash, invocationExpression.Arguments);
 
                         break;
                     }
@@ -214,31 +211,31 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                     {
                         var memberInitExpression = (MemberInitExpression)obj;
 
-                        hashCode += (hashCode * 397) ^ GetHashCode(memberInitExpression.NewExpression);
+                        hash.Add(memberInitExpression.NewExpression, this);
 
                         for (var i = 0; i < memberInitExpression.Bindings.Count; i++)
                         {
                             var memberBinding = memberInitExpression.Bindings[i];
 
-                            hashCode += (hashCode * 397) ^ memberBinding.Member.GetHashCode();
-                            hashCode += (hashCode * 397) ^ (int)memberBinding.BindingType;
+                            hash.Add(memberBinding.Member);
+                            hash.Add(memberBinding.BindingType);
 
                             switch (memberBinding.BindingType)
                             {
                                 case MemberBindingType.Assignment:
                                     var memberAssignment = (MemberAssignment)memberBinding;
-                                    hashCode += (hashCode * 397) ^ GetHashCode(memberAssignment.Expression);
+                                    hash.Add(memberAssignment.Expression, this);
                                     break;
                                 case MemberBindingType.ListBinding:
                                     var memberListBinding = (MemberListBinding)memberBinding;
                                     for (var j = 0; j < memberListBinding.Initializers.Count; j++)
                                     {
-                                        hashCode += (hashCode * 397) ^ GetHashCode(memberListBinding.Initializers[j].Arguments);
+                                        AddListToHash(ref hash, memberListBinding.Initializers[j].Arguments);
                                     }
 
                                     break;
                                 default:
-                                    throw new NotImplementedException();
+                                    throw new NotImplementedException($"Unhandled binding type: {memberBinding}");
                             }
                         }
 
@@ -248,11 +245,11 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                     {
                         var listInitExpression = (ListInitExpression)obj;
 
-                        hashCode += (hashCode * 397) ^ GetHashCode(listInitExpression.NewExpression);
+                        hash.Add(listInitExpression.NewExpression, this);
 
                         for (var i = 0; i < listInitExpression.Initializers.Count; i++)
                         {
-                            hashCode += (hashCode * 397) ^ GetHashCode(listInitExpression.Initializers[i].Arguments);
+                            AddListToHash(ref hash, listInitExpression.Initializers[i].Arguments);
                         }
 
                         break;
@@ -261,64 +258,47 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                     {
                         var conditionalExpression = (ConditionalExpression)obj;
 
-                        hashCode += (hashCode * 397) ^ GetHashCode(conditionalExpression.Test);
-                        hashCode += (hashCode * 397) ^ GetHashCode(conditionalExpression.IfTrue);
-                        hashCode += (hashCode * 397) ^ GetHashCode(conditionalExpression.IfFalse);
+                        hash.Add(conditionalExpression.Test, this);
+                        hash.Add(conditionalExpression.IfTrue, this);
+                        hash.Add(conditionalExpression.IfFalse, this);
 
                         break;
                     }
                     case ExpressionType.Default:
                     {
-                        hashCode += (hashCode * 397) ^ obj.Type.GetHashCode();
+                        hash.Add(obj.Type);
                         break;
                     }
                     case ExpressionType.Extension:
                     {
-                        if (obj is NullConditionalExpression nullConditionalExpression)
-                        {
-                            hashCode += (hashCode * 397) ^ GetHashCode(nullConditionalExpression.AccessOperation);
-                        }
-                        else if (obj is NullSafeEqualExpression nullConditionalEqualExpression)
-                        {
-                            hashCode += (hashCode * 397) ^ GetHashCode(nullConditionalEqualExpression.OuterKeyNullCheck);
-                            hashCode += (hashCode * 397) ^ GetHashCode(nullConditionalEqualExpression.EqualExpression);
-                        }
-                        else
-                        {
-                            hashCode += (hashCode * 397) ^ obj.GetHashCode();
-                        }
-
+                        hash.Add(obj);
                         break;
                     }
                     case ExpressionType.Index:
                     {
                         var indexExpression = (IndexExpression)obj;
 
-                        hashCode += (hashCode * 397) ^ (indexExpression.Indexer?.GetHashCode() ?? 0);
-                        hashCode += (hashCode * 397) ^ GetHashCode(indexExpression.Object);
-                        hashCode += (hashCode * 397) ^ GetHashCode(indexExpression.Arguments);
+                        hash.Add(indexExpression.Indexer);
+                        hash.Add(indexExpression.Object, this);
+                        AddListToHash(ref hash, indexExpression.Arguments);
 
                         break;
                     }
                     default:
-                        throw new NotImplementedException();
+                        throw new NotImplementedException($"Unhandled expression node type: {obj.NodeType}");
                 }
 
-                return hashCode;
+                return hash.ToHashCode();
             }
         }
 
-        private int GetHashCode<T>(IList<T> expressions)
+        private void AddListToHash<T>(ref HashCode hash, IReadOnlyList<T> expressions)
             where T : Expression
         {
-            var hashCode = 0;
-
             for (var i = 0; i < expressions.Count; i++)
             {
-                hashCode += (hashCode * 397) ^ GetHashCode(expressions[i]);
+                hash.Add(expressions[i], this);
             }
-
-            return hashCode;
         }
 
         /// <summary>
@@ -335,6 +315,7 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
         ///     any release. You should only use it directly in your code with extreme caution and knowing that
         ///     doing so can result in application failures when updating to a new Entity Framework Core release.
         /// </summary>
+        [Obsolete("Use Equals instead")]
         public virtual bool SequenceEquals(IEnumerable<Expression> x, IEnumerable<Expression> y)
         {
             if (x == null
@@ -348,12 +329,10 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                 return false;
             }
 
-            var comparer = new ExpressionComparer();
-
-            return x.Zip(y, (l, r) => comparer.Compare(l, r)).All(r => r);
+            return x.Zip(y, (l, r) => new ExpressionComparer().Compare(l, r)).All(r => r);
         }
 
-        private sealed class ExpressionComparer
+        private struct ExpressionComparer
         {
             private ScopedDictionary<ParameterExpression, ParameterExpression> _parameterScope;
 
@@ -449,7 +428,7 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                     case ExpressionType.Index:
                         return CompareIndex((IndexExpression)a, (IndexExpression)b);
                     default:
-                        throw new NotImplementedException();
+                        throw new NotImplementedException($"Unhandled expression node type: {a.NodeType}");
                 }
             }
 
@@ -626,28 +605,7 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                 => CompareExpressionList(a.Expressions, b.Expressions);
 
             private bool CompareExtension(Expression a, Expression b)
-            {
-                if (a is NullConditionalExpression nullConditionalExpressionA
-                    && b is NullConditionalExpression nullConditionalExpressionB)
-                {
-                    return Compare(
-                        nullConditionalExpressionA.AccessOperation,
-                        nullConditionalExpressionB.AccessOperation);
-                }
-
-                if (a is NullSafeEqualExpression nullConditionalEqualExpressionA
-                    && b is NullSafeEqualExpression nullConditionalEqualExpressionB)
-                {
-                    return Compare(
-                               nullConditionalEqualExpressionA.OuterKeyNullCheck,
-                               nullConditionalEqualExpressionB.OuterKeyNullCheck)
-                           && Compare(
-                               nullConditionalEqualExpressionA.EqualExpression,
-                               nullConditionalEqualExpressionB.EqualExpression);
-                }
-
-                return a.Equals(b);
-            }
+                => a.Equals(b);
 
             private bool CompareInvocation(InvocationExpression a, InvocationExpression b)
                 => Compare(a.Expression, b.Expression)
@@ -718,7 +676,7 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
                     case MemberBindingType.MemberBinding:
                         return CompareMemberMemberBinding((MemberMemberBinding)a, (MemberMemberBinding)b);
                     default:
-                        throw new NotImplementedException();
+                        throw new InvalidOperationException("Unhandled member binding type: " + a.BindingType);
                 }
             }
 

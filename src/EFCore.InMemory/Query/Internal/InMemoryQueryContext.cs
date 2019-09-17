@@ -1,11 +1,9 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.InMemory.Storage.Internal;
 using Microsoft.EntityFrameworkCore.Query;
-using Microsoft.EntityFrameworkCore.Query.Internal;
 
 namespace Microsoft.EntityFrameworkCore.InMemory.Query.Internal
 {
@@ -25,10 +23,8 @@ namespace Microsoft.EntityFrameworkCore.InMemory.Query.Internal
         /// </summary>
         public InMemoryQueryContext(
             [NotNull] QueryContextDependencies dependencies,
-            // Internal code: see #15096
-            [NotNull] Func<IQueryBuffer> queryBufferFactory,
             [NotNull] IInMemoryStore store)
-            : base(dependencies, queryBufferFactory)
+            : base(dependencies)
             => Store = store;
 
         /// <summary>

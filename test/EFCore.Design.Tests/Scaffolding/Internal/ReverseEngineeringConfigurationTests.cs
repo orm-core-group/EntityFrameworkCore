@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Linq;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Internal;
@@ -15,7 +14,7 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding.Internal
 {
     public class ReverseEngineeringConfigurationTests
     {
-        [Fact]
+        [ConditionalFact]
         public void Throws_exceptions_for_invalid_context_name()
         {
             ValidateContextNameInReverseEngineerGenerator("Invalid!CSharp*Class&Name");
@@ -41,17 +40,9 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding.Internal
                 Assert.Throws<ArgumentException>(
                         () => reverseEngineer.ScaffoldModel(
                             "connectionstring",
-                            new DatabaseModelFactoryOptions(
-                                /* tables: */ Enumerable.Empty<string>(),
-                                /* schemas: */ Enumerable.Empty<string>()),
-                            "FakeNamespace",
-                            "FakeNamespace",
-                            "FakeNamespace",
-                            /* language: */ "",
-                            /* contextDir: */ null,
-                            contextName,
+                            new DatabaseModelFactoryOptions(),
                             new ModelReverseEngineerOptions(),
-                            new ModelCodeGenerationOptions()))
+                            new ModelCodeGenerationOptions { ModelNamespace = "FakeNamespace", ContextName = contextName }))
                     .Message);
         }
     }

@@ -1,12 +1,13 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.TestModels.Northwind;
 using Microsoft.EntityFrameworkCore.TestUtilities;
-using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
 using Xunit;
 
 // ReSharper disable AccessToModifiedClosure
@@ -79,7 +80,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual void Query_ending_with_include()
         {
             var query = EF.CompileQuery(
@@ -203,7 +204,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'where ([c].CustomerID == __args[0])'")]
+        [ConditionalFact]
         public virtual void Query_with_array_parameter()
         {
             var query = EF.CompileQuery(
@@ -212,12 +213,18 @@ namespace Microsoft.EntityFrameworkCore.Query
 
             using (var context = CreateContext())
             {
-                Assert.Equal("ALFKI", query(context, new[] { "ALFKI" }).First().CustomerID);
+                Assert.Equal(
+                    "Unsupported Binary operator type specified.",
+                    Assert.Throws<InvalidOperationException>(
+                        () => query(context, new[] { "ALFKI" }).First().CustomerID).Message);
             }
 
             using (var context = CreateContext())
             {
-                Assert.Equal("ANATR", query(context, new[] { "ANATR" }).First().CustomerID);
+                Assert.Equal(
+                    "Unsupported Binary operator type specified.",
+                    Assert.Throws<InvalidOperationException>(
+                        () => query(context, new[] { "ANATR" }).First().CustomerID).Message);
             }
         }
 
@@ -463,7 +470,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'where ([c].CustomerID == __args[0])'")]
+        [ConditionalFact]
         public virtual async Task Query_with_array_parameter_async()
         {
             var query = EF.CompileAsyncQuery(
@@ -472,12 +479,18 @@ namespace Microsoft.EntityFrameworkCore.Query
 
             using (var context = CreateContext())
             {
-                Assert.Equal("ALFKI", (await query(context, new[] { "ALFKI" }).ToListAsync()).First().CustomerID);
+                Assert.Equal(
+                    "Unsupported Binary operator type specified.",
+                    (await Assert.ThrowsAsync<InvalidOperationException>(
+                        () => query(context, new[] { "ALFKI" }).ToListAsync())).Message);
             }
 
             using (var context = CreateContext())
             {
-                Assert.Equal("ANATR", (await query(context, new[] { "ANATR" }).ToListAsync()).First().CustomerID);
+                Assert.Equal(
+                    "Unsupported Binary operator type specified.",
+                    (await Assert.ThrowsAsync<InvalidOperationException>(
+                        () => query(context, new[] { "ANATR" }).ToListAsync())).Message);
             }
         }
 

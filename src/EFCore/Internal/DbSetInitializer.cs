@@ -15,9 +15,9 @@ namespace Microsoft.EntityFrameworkCore.Internal
     ///         doing so can result in application failures when updating to a new Entity Framework Core release.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Singleton"/>. This means a single instance
-    ///         is used by many <see cref="DbContext"/> instances. The implementation must be thread-safe.
-    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped"/>.
+    ///         The service lifetime is <see cref="ServiceLifetime.Singleton" />. This means a single instance
+    ///         is used by many <see cref="DbContext" /> instances. The implementation must be thread-safe.
+    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped" />.
     ///     </para>
     /// </summary>
     public class DbSetInitializer : IDbSetInitializer
@@ -47,7 +47,7 @@ namespace Microsoft.EntityFrameworkCore.Internal
         /// </summary>
         public virtual void InitializeSets(DbContext context)
         {
-            foreach (var setInfo in _setFinder.FindSets(context).Where(p => p.Setter != null))
+            foreach (var setInfo in _setFinder.FindSets(context.GetType()).Where(p => p.Setter != null))
             {
                 setInfo.Setter.SetClrValue(
                     context,

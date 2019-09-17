@@ -2,7 +2,9 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.TestUtilities;
+using Xunit;
 
 namespace Microsoft.EntityFrameworkCore
 {
@@ -18,6 +20,12 @@ namespace Microsoft.EntityFrameworkCore
         {
         }
 
+        [ConditionalTheory(Skip = "Issue#14042")]
+        public override Task Can_query_custom_type_not_mapped_by_default_equality(bool isAsync)
+        {
+            return base.Can_query_custom_type_not_mapped_by_default_equality(isAsync);
+        }
+
         public class CustomConvertersInMemoryFixture : CustomConvertersFixtureBase
         {
             public override bool StrictEquality => true;
@@ -31,6 +39,8 @@ namespace Microsoft.EntityFrameworkCore
             protected override ITestStoreFactory TestStoreFactory => InMemoryTestStoreFactory.Instance;
 
             public override bool SupportsBinaryKeys => false;
+
+            public override bool SupportsDecimalComparisons => true;
 
             public override DateTime DefaultDateTime => new DateTime();
         }

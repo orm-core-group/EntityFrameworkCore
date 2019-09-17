@@ -4,7 +4,6 @@
 using System.Linq;
 using Microsoft.EntityFrameworkCore.TestModels.Northwind;
 using Microsoft.EntityFrameworkCore.TestUtilities;
-using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
 using Xunit;
 
 // ReSharper disable InconsistentNaming
@@ -17,7 +16,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
         protected TFixture Fixture { get; }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Entity_reverts_when_state_set_to_unchanged()
         {
             using (var context = CreateContext())
@@ -45,7 +44,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Multiple_entities_can_revert()
         {
             using (var context = CreateContext())
@@ -76,7 +75,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Entity_does_not_revert_when_attached_on_DbContext()
         {
             using (var context = CreateContext())
@@ -102,7 +101,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Entity_does_not_revert_when_attached_on_DbSet()
         {
             using (var context = CreateContext())
@@ -129,7 +128,7 @@ namespace Microsoft.EntityFrameworkCore.Query
         }
 
         // ReSharper disable PossibleMultipleEnumeration
-        [Fact]
+        [ConditionalFact]
         public virtual void Entity_range_does_not_revert_when_attached_dbContext()
         {
             using (var context = CreateContext())
@@ -169,7 +168,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Entity_range_does_not_revert_when_attached_dbSet()
         {
             using (var context = CreateContext())
@@ -210,7 +209,7 @@ namespace Microsoft.EntityFrameworkCore.Query
         }
         // ReSharper restore PossibleMultipleEnumeration
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_disable_and_reenable_query_result_tracking()
         {
             using (var context = CreateContext())
@@ -221,15 +220,15 @@ namespace Microsoft.EntityFrameworkCore.Query
 
                 var results = query.Take(1).ToList();
 
-                Assert.Equal(1, results.Count);
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(results);
+                Assert.Single(context.ChangeTracker.Entries());
 
                 context.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
 
                 results = query.Skip(1).Take(1).ToList();
 
-                Assert.Equal(1, results.Count);
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(results);
+                Assert.Single(context.ChangeTracker.Entries());
 
                 context.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.TrackAll;
 
@@ -240,7 +239,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_disable_and_reenable_query_result_tracking_starting_with_NoTracking()
         {
             using (var context = CreateNoTrackingContext())
@@ -251,19 +250,19 @@ namespace Microsoft.EntityFrameworkCore.Query
 
                 var results = query.Take(1).ToList();
 
-                Assert.Equal(1, results.Count);
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Single(results);
+                Assert.Empty(context.ChangeTracker.Entries());
 
                 context.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.TrackAll;
 
                 results = query.Skip(1).Take(1).ToList();
 
-                Assert.Equal(1, results.Count);
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(results);
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_disable_and_reenable_query_result_tracking_query_caching()
         {
             using (var context = CreateContext())
@@ -283,13 +282,13 @@ namespace Microsoft.EntityFrameworkCore.Query
                 var results = context.Employees.ToList();
 
                 Assert.Equal(9, results.Count);
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Empty(context.ChangeTracker.Entries());
 
                 context.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.TrackAll;
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_disable_and_reenable_query_result_tracking_query_caching_using_options()
         {
             using (var context = CreateContext())
@@ -309,11 +308,11 @@ namespace Microsoft.EntityFrameworkCore.Query
                 var results = context.Employees.ToList();
 
                 Assert.Equal(9, results.Count);
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Empty(context.ChangeTracker.Entries());
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_disable_and_reenable_query_result_tracking_query_caching_single_context()
         {
             using (var context = CreateContext())
@@ -325,7 +324,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 var results = context.Employees.ToList();
 
                 Assert.Equal(9, results.Count);
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Empty(context.ChangeTracker.Entries());
 
                 context.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.TrackAll;
 
@@ -336,7 +335,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void AsTracking_switches_tracking_on_when_off_in_options()
         {
             using (var context = CreateNoTrackingContext())
@@ -348,8 +347,8 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
-        public virtual void Precendence_of_tracking_modifiers()
+        [ConditionalFact]
+        public virtual void Precedence_of_tracking_modifiers()
         {
             using (var context = CreateContext())
             {
@@ -360,20 +359,20 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
-        public virtual void Precendence_of_tracking_modifiers2()
+        [ConditionalFact]
+        public virtual void Precedence_of_tracking_modifiers2()
         {
             using (var context = CreateContext())
             {
                 var results = context.Employees.AsTracking().AsNoTracking().ToList();
 
                 Assert.Equal(9, results.Count);
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Empty(context.ChangeTracker.Entries());
             }
         }
 
-        [ConditionalFact(Skip = "QueryIssue")]
-        public virtual void Precendence_of_tracking_modifiers3()
+        [ConditionalFact]
+        public virtual void Precedence_of_tracking_modifiers3()
         {
             using (var context = CreateContext())
             {
@@ -390,8 +389,8 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "QueryIssue")]
-        public virtual void Precendence_of_tracking_modifiers4()
+        [ConditionalFact]
+        public virtual void Precedence_of_tracking_modifiers4()
         {
             using (var context = CreateContext())
             {
@@ -404,12 +403,12 @@ namespace Microsoft.EntityFrameworkCore.Query
                     .ToList();
 
                 Assert.Equal(6, customers.Count);
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Empty(context.ChangeTracker.Entries());
             }
         }
 
-        [ConditionalFact(Skip = "QueryIssue")]
-        public virtual void Precendence_of_tracking_modifiers5()
+        [ConditionalFact]
+        public virtual void Precedence_of_tracking_modifiers5()
         {
             using (var context = CreateContext())
             {
@@ -423,7 +422,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                     .ToList();
 
                 Assert.Equal(6, customers.Count);
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Empty(context.ChangeTracker.Entries());
             }
         }
 

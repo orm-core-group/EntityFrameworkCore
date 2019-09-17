@@ -11,31 +11,27 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
-using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Migrations;
-using Microsoft.EntityFrameworkCore.Query.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 using Microsoft.EntityFrameworkCore.Update;
 using Microsoft.Extensions.DependencyInjection;
-using Remotion.Linq;
-using Remotion.Linq.Clauses;
 using Xunit;
+using IsolationLevel = System.Data.IsolationLevel;
 
 // ReSharper disable InconsistentNaming
 namespace Microsoft.EntityFrameworkCore
 {
     public class RelationalEventIdTest : EventIdTestBase
     {
-        [Fact]
+        [ConditionalFact]
         public void Every_eventId_has_a_logger_method_and_logs_when_level_enabled()
         {
             var constantExpression = Expression.Constant("A");
@@ -43,21 +39,12 @@ namespace Microsoft.EntityFrameworkCore
             var entityType = new EntityType(typeof(object), model, ConfigurationSource.Convention);
             var property = new Property(
                 "A", typeof(int), null, null, entityType, ConfigurationSource.Convention, ConfigurationSource.Convention);
-            var contextServices = RelationalTestHelpers.Instance.CreateContextServices(model);
-
-            var queryModel = new QueryModel(
-                new MainFromClause("A", typeof(object), constantExpression), new SelectClause(constantExpression));
+            var contextServices = RelationalTestHelpers.Instance.CreateContextServices(model.FinalizeModel());
 
             var fakeFactories = new Dictionary<Type, Func<object>>
             {
                 { typeof(string), () => "Fake" },
-                {
-                    typeof(IList<string>), () => new List<string>
-                    {
-                        "Fake1",
-                        "Fake2"
-                    }
-                },
+                { typeof(IList<string>), () => new List<string> { "Fake1", "Fake2" } },
                 {
                     typeof(IEnumerable<IUpdateEntry>), () => new List<IUpdateEntry>
                     {
@@ -76,20 +63,51 @@ namespace Microsoft.EntityFrameworkCore
                 { typeof(IMigrator), () => new FakeMigrator() },
                 { typeof(Migration), () => new FakeMigration() },
                 { typeof(IMigrationsAssembly), () => new FakeMigrationsAssembly() },
-                { typeof(QueryModel), () => queryModel },
                 { typeof(MethodCallExpression), () => Expression.Call(constantExpression, typeof(object).GetMethod("ToString")) },
                 { typeof(Expression), () => constantExpression },
                 { typeof(IProperty), () => property },
                 { typeof(TypeInfo), () => typeof(object).GetTypeInfo() },
                 { typeof(Type), () => typeof(object) },
-                { typeof(ValueConverter), () => new BoolToZeroOneConverter<int>() }
+                { typeof(ValueConverter), () => new BoolToZeroOneConverter<int>() },
+                { typeof(DbContext), () => new FakeDbContext() }
             };
 
             TestEventLogging(
                 typeof(RelationalEventId),
                 typeof(RelationalLoggerExtensions),
                 typeof(TestRelationalLoggingDefinitions),
-                fakeFactories);
+                fakeFactories,
+                new Dictionary<string, IList<string>>
+                {
+                    {
+                        nameof(RelationalEventId.CommandExecuting),
+                        new List<string>
+                        {
+                            nameof(RelationalLoggerExtensions.CommandReaderExecuting),
+                            nameof(RelationalLoggerExtensions.CommandScalarExecuting),
+                            nameof(RelationalLoggerExtensions.CommandNonQueryExecuting),
+                            nameof(RelationalLoggerExtensions.CommandReaderExecutingAsync),
+                            nameof(RelationalLoggerExtensions.CommandScalarExecutingAsync),
+                            nameof(RelationalLoggerExtensions.CommandNonQueryExecutingAsync)
+                        }
+                    },
+                    {
+                        nameof(RelationalEventId.CommandExecuted),
+                        new List<string>
+                        {
+                            nameof(RelationalLoggerExtensions.CommandReaderExecutedAsync),
+                            nameof(RelationalLoggerExtensions.CommandScalarExecutedAsync),
+                            nameof(RelationalLoggerExtensions.CommandNonQueryExecutedAsync),
+                            nameof(RelationalLoggerExtensions.CommandReaderExecuted),
+                            nameof(RelationalLoggerExtensions.CommandScalarExecuted),
+                            nameof(RelationalLoggerExtensions.CommandNonQueryExecuted)
+                        }
+                    }
+                });
+        }
+
+        private class FakeDbContext : DbContext
+        {
         }
 
         private class FakeMigration : Migration
@@ -121,25 +139,18 @@ namespace Microsoft.EntityFrameworkCore
         {
             public string ConnectionString => throw new NotImplementedException();
             public DbConnection DbConnection => new FakeDbConnection();
+            public DbContext Context => null;
             public Guid ConnectionId => Guid.NewGuid();
             public int? CommandTimeout { get; set; }
+            public Task<bool> CloseAsync() => throw new NotImplementedException();
             public bool IsMultipleActiveResultSetsEnabled => throw new NotImplementedException();
             public IDbContextTransaction CurrentTransaction => throw new NotImplementedException();
-            public Transaction EnlistedTransaction { get; }
-            public void EnlistTransaction(Transaction transaction) => throw new NotImplementedException();
-
             public SemaphoreSlim Semaphore => throw new NotImplementedException();
-            public void RegisterBufferable(IBufferable bufferable) => throw new NotImplementedException();
-
-            public Task RegisterBufferableAsync(IBufferable bufferable, CancellationToken cancellationToken) =>
-                throw new NotImplementedException();
-
-            public void UnregisterBufferable([NotNull] IBufferable bufferable) => throw new NotImplementedException();
-            public IDbContextTransaction BeginTransaction(System.Data.IsolationLevel isolationLevel) => throw new NotImplementedException();
+            public IDbContextTransaction BeginTransaction(IsolationLevel isolationLevel) => throw new NotImplementedException();
             public IDbContextTransaction BeginTransaction() => throw new NotImplementedException();
 
             public Task<IDbContextTransaction> BeginTransactionAsync(
-                System.Data.IsolationLevel isolationLevel, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+                IsolationLevel isolationLevel, CancellationToken cancellationToken = default) => throw new NotImplementedException();
 
             public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) =>
                 throw new NotImplementedException();
@@ -153,8 +164,15 @@ namespace Microsoft.EntityFrameworkCore
                 throw new NotImplementedException();
 
             public void ResetState() => throw new NotImplementedException();
+            public Task ResetStateAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
             public void RollbackTransaction() => throw new NotImplementedException();
             public IDbContextTransaction UseTransaction(DbTransaction transaction) => throw new NotImplementedException();
+
+            public Task<IDbContextTransaction> UseTransactionAsync(
+                DbTransaction transaction, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+            public ValueTask DisposeAsync() => throw new NotImplementedException();
         }
 
         private class FakeDbConnection : DbConnection
@@ -167,7 +185,7 @@ namespace Microsoft.EntityFrameworkCore
             public override void ChangeDatabase(string databaseName) => throw new NotImplementedException();
             public override void Close() => throw new NotImplementedException();
             public override void Open() => throw new NotImplementedException();
-            protected override DbTransaction BeginDbTransaction(System.Data.IsolationLevel isolationLevel) => throw new NotImplementedException();
+            protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel) => throw new NotImplementedException();
             protected override DbCommand CreateDbCommand() => throw new NotImplementedException();
         }
 
@@ -219,7 +237,7 @@ namespace Microsoft.EntityFrameworkCore
 
         private class FakeDbTransaction : DbTransaction
         {
-            public override System.Data.IsolationLevel IsolationLevel => System.Data.IsolationLevel.Chaos;
+            public override IsolationLevel IsolationLevel => IsolationLevel.Chaos;
             protected override DbConnection DbConnection => throw new NotImplementedException();
             public override void Commit() => throw new NotImplementedException();
             public override void Rollback() => throw new NotImplementedException();

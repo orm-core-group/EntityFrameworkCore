@@ -9,7 +9,7 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.ValueGenerator.Internal
 {
     public class IdValueGeneratorTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Generated_ids_do_not_clash()
         {
             var modelBuilder = CosmosTestHelpers.Instance.CreateConventionBuilder();
@@ -22,17 +22,19 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.ValueGenerator.Internal
             var blogIdProperty = model.FindEntityType(typeof(Blog)).FindProperty("id");
             var postIdProperty = model.FindEntityType(typeof(Post)).FindProperty("id");
 
-            var ids = new HashSet<string>();
-            ids.Add((string)CosmosTestHelpers.Instance.CreateInternalEntry(model, EntityState.Added, new Blog { Id = 1, OtherId = 1 })
-                [blogIdProperty]);
-            ids.Add((string)CosmosTestHelpers.Instance.CreateInternalEntry(model, EntityState.Added, new Blog { Id = 1, OtherId = 1 })
-                [blogIdProperty]);
-            ids.Add((string)CosmosTestHelpers.Instance.CreateInternalEntry(model, EntityState.Added, new Post { Id = "1", OtherId = "1" })
-                [postIdProperty]);
-            ids.Add((string)CosmosTestHelpers.Instance.CreateInternalEntry(model, EntityState.Added, new Post { Id = "1", OtherId = "1|" })
-                [postIdProperty]);
-            ids.Add((string)CosmosTestHelpers.Instance.CreateInternalEntry(model, EntityState.Added, new Post { Id = "|1", OtherId = "1" })
-                [postIdProperty]);
+            var ids = new HashSet<string>
+            {
+                (string)CosmosTestHelpers.Instance.CreateInternalEntry(model, EntityState.Added, new Blog { Id = 1, OtherId = 1 })
+                    [blogIdProperty],
+                (string)CosmosTestHelpers.Instance.CreateInternalEntry(model, EntityState.Added, new Blog { Id = 1, OtherId = 1 })
+                    [blogIdProperty],
+                (string)CosmosTestHelpers.Instance.CreateInternalEntry(model, EntityState.Added, new Post { Id = "1", OtherId = "1" })
+                    [postIdProperty],
+                (string)CosmosTestHelpers.Instance.CreateInternalEntry(model, EntityState.Added, new Post { Id = "1", OtherId = "1|" })
+                    [postIdProperty],
+                (string)CosmosTestHelpers.Instance.CreateInternalEntry(model, EntityState.Added, new Post { Id = "|1", OtherId = "1" })
+                    [postIdProperty]
+            };
 
             Assert.Equal(4, ids.Count);
         }

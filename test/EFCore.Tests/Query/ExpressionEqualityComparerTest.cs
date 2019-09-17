@@ -1,7 +1,6 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -15,7 +14,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 {
     public class ExpressionEqualityComparerTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Member_init_expressions_are_compared_correctly()
         {
             var expressionComparer = ExpressionEqualityComparer.Instance;
@@ -34,19 +33,12 @@ namespace Microsoft.EntityFrameworkCore.Query
 
             Expression e1 = Expression.MemberInit(
                 Expression.New(typeof(Node)),
-                new List<MemberBinding>
-                {
-                    bindingMessages
-                }
+                new List<MemberBinding> { bindingMessages }
             );
 
             Expression e2 = Expression.MemberInit(
                 Expression.New(typeof(Node)),
-                new List<MemberBinding>
-                {
-                    bindingMessages,
-                    bindingDescriptions
-                }
+                new List<MemberBinding> { bindingMessages, bindingDescriptions }
             );
 
             Assert.NotEqual(expressionComparer.GetHashCode(e1), expressionComparer.GetHashCode(e2));
@@ -55,7 +47,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             Assert.True(expressionComparer.Equals(e1, e1));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Default_expressions_are_compared_correctly()
         {
             var expressionComparer = ExpressionEqualityComparer.Instance;
@@ -72,7 +64,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             Assert.True(expressionComparer.Equals(e1, e1));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Index_expressions_are_compared_correctly()
         {
             var expressionComparer = ExpressionEqualityComparer.Instance;

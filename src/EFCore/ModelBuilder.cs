@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -7,7 +7,6 @@ using System.Linq;
 using System.Reflection;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions;
@@ -43,6 +42,20 @@ namespace Microsoft.EntityFrameworkCore
             _builder = new InternalModelBuilder(new Model(conventions));
 
             _builder.Metadata.SetProductVersion(ProductInfo.GetVersion());
+        }
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        [EntityFrameworkInternal]
+        public ModelBuilder([NotNull] IMutableModel model)
+        {
+            Check.NotNull(model, nameof(model));
+
+            _builder = ((Model)model).Builder;
         }
 
         /// <summary>
@@ -86,7 +99,7 @@ namespace Microsoft.EntityFrameworkCore
         /// <returns> An object that can be used to configure the entity type. </returns>
         public virtual EntityTypeBuilder<TEntity> Entity<TEntity>()
             where TEntity : class
-            => new EntityTypeBuilder<TEntity>(Builder.Entity(typeof(TEntity), ConfigurationSource.Explicit));
+            => new EntityTypeBuilder<TEntity>(Builder.Entity(typeof(TEntity), ConfigurationSource.Explicit).Metadata);
 
         /// <summary>
         ///     Returns an object that can be used to configure a given entity type in the model.
@@ -98,7 +111,7 @@ namespace Microsoft.EntityFrameworkCore
         {
             Check.NotNull(type, nameof(type));
 
-            return new EntityTypeBuilder(Builder.Entity(type, ConfigurationSource.Explicit));
+            return new EntityTypeBuilder(Builder.Entity(type, ConfigurationSource.Explicit).Metadata);
         }
 
         /// <summary>
@@ -112,7 +125,7 @@ namespace Microsoft.EntityFrameworkCore
         {
             Check.NotEmpty(name, nameof(name));
 
-            return new EntityTypeBuilder(Builder.Entity(name, ConfigurationSource.Explicit));
+            return new EntityTypeBuilder(Builder.Entity(name, ConfigurationSource.Explicit).Metadata);
         }
 
         /// <summary>
@@ -210,7 +223,7 @@ namespace Microsoft.EntityFrameworkCore
                 builder.HasNoKey(ConfigurationSource.Explicit);
             }
 
-            return new QueryTypeBuilder<TQuery>(builder);
+            return new QueryTypeBuilder<TQuery>(builder.Metadata);
         }
 
         /// <summary>
@@ -228,7 +241,7 @@ namespace Microsoft.EntityFrameworkCore
                 builder.HasNoKey(ConfigurationSource.Explicit);
             }
 
-            return new EntityTypeBuilder(builder);
+            return new EntityTypeBuilder(builder.Metadata);
         }
 
         /// <summary>
@@ -359,14 +372,16 @@ namespace Microsoft.EntityFrameworkCore
         /// <returns>
         ///     The same <see cref="ModelBuilder" /> instance so that additional configuration calls can be chained.
         /// </returns>
-        public virtual ModelBuilder ApplyConfigurationsFromAssembly(Assembly assembly, Func<Type, bool> predicate = null)
+        public virtual ModelBuilder ApplyConfigurationsFromAssembly(
+            [NotNull] Assembly assembly, [CanBeNull] Func<Type, bool> predicate = null)
         {
             var applyEntityConfigurationMethod = typeof(ModelBuilder)
                 .GetMethods()
                 .Single(
                     e => e.Name == nameof(ApplyConfiguration)
                          && e.ContainsGenericParameters
-                         && e.GetParameters().SingleOrDefault()?.ParameterType.GetGenericTypeDefinition() == typeof(IEntityTypeConfiguration<>));
+                         && e.GetParameters().SingleOrDefault()?.ParameterType.GetGenericTypeDefinition()
+                         == typeof(IEntityTypeConfiguration<>));
             var applyQueryConfigurationMethod = typeof(ModelBuilder).GetMethods().Single(
                 e => e.Name == nameof(ApplyConfiguration)
                      && e.ContainsGenericParameters
@@ -473,12 +488,10 @@ namespace Microsoft.EntityFrameworkCore
 
         /// <summary>
         ///     Forces post-processing on the model such that it is ready for use by the runtime. This post
-        ///     processing happens automatically when using <see cref="DbContext.OnModelCreating"/>; this method allows it to be run
+        ///     processing happens automatically when using <see cref="DbContext.OnModelCreating" />; this method allows it to be run
         ///     explicitly in cases where the automatic execution is not possible.
         /// </summary>
-        /// <returns>
-        ///     The finalized <see cref="IModel" />.
-        /// </returns>
+        /// <returns> The finalized <see cref="IModel" />. </returns>
         public virtual IModel FinalizeModel() => Builder.Metadata.FinalizeModel();
 
         private InternalModelBuilder Builder => this.GetInfrastructure();

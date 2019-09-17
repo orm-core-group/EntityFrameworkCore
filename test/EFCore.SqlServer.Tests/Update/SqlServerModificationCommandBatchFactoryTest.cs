@@ -13,7 +13,7 @@ namespace Microsoft.EntityFrameworkCore.Update
 {
     public class SqlServerModificationCommandBatchFactoryTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Uses_MaxBatchSize_specified_in_SqlServerOptionsExtension()
         {
             var optionsBuilder = new DbContextOptionsBuilder();
@@ -40,6 +40,7 @@ namespace Microsoft.EntityFrameworkCore.Update
                     new TypedRelationalValueBufferFactoryFactory(
                         new RelationalValueBufferFactoryDependencies(
                             typeMapper, new CoreSingletonOptions())),
+                    new CurrentDbContext(new FakeDbContext()),
                     logger),
                 optionsBuilder.Options);
 
@@ -49,7 +50,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.False(batch.AddCommand(new ModificationCommand("T1", null, new ParameterNameGenerator().GenerateNext, false, null)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void MaxBatchSize_is_optional()
         {
             var optionsBuilder = new DbContextOptionsBuilder();
@@ -76,6 +77,7 @@ namespace Microsoft.EntityFrameworkCore.Update
                     new TypedRelationalValueBufferFactoryFactory(
                         new RelationalValueBufferFactoryDependencies(
                             typeMapper, new CoreSingletonOptions())),
+                    new CurrentDbContext(new FakeDbContext()),
                     logger),
                 optionsBuilder.Options);
 
@@ -83,6 +85,10 @@ namespace Microsoft.EntityFrameworkCore.Update
 
             Assert.True(batch.AddCommand(new ModificationCommand("T1", null, new ParameterNameGenerator().GenerateNext, false, null)));
             Assert.True(batch.AddCommand(new ModificationCommand("T1", null, new ParameterNameGenerator().GenerateNext, false, null)));
+        }
+
+        private class FakeDbContext : DbContext
+        {
         }
     }
 }

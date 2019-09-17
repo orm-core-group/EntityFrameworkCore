@@ -5,8 +5,8 @@ using System.Linq;
 
 namespace Microsoft.EntityFrameworkCore
 {
-    // issue #15318
-    internal class GraphUpdatesSqlServerTestClientCascade : GraphUpdatesSqlServerTestBase<GraphUpdatesSqlServerTestClientCascade.GraphUpdatesWithClientCascadeSqlServerFixture>
+    public class GraphUpdatesSqlServerTestClientCascade : GraphUpdatesSqlServerTestBase<
+        GraphUpdatesSqlServerTestClientCascade.GraphUpdatesWithClientCascadeSqlServerFixture>
     {
         public GraphUpdatesSqlServerTestClientCascade(GraphUpdatesWithClientCascadeSqlServerFixture fixture)
             : base(fixture)
@@ -24,7 +24,7 @@ namespace Microsoft.EntityFrameworkCore
 
                 foreach (var foreignKey in modelBuilder.Model
                     .GetEntityTypes()
-                    .SelectMany(e => MutableEntityTypeExtensions.GetDeclaredForeignKeys(e))
+                    .SelectMany(e => e.GetDeclaredForeignKeys())
                     .Where(e => e.DeleteBehavior == DeleteBehavior.Cascade))
                 {
                     foreignKey.DeleteBehavior = DeleteBehavior.ClientCascade;

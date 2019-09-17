@@ -3,7 +3,6 @@
 
 using System;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Xunit;
 
@@ -11,10 +10,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata
 {
     public class SequenceTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Can_be_created_with_default_values()
         {
-            var sequence = new Model().Relational().GetOrAddSequence("Foo");
+            var sequence = ((IMutableModel)new Model()).AddSequence("Foo");
 
             Assert.Equal("Foo", sequence.Name);
             Assert.Null(sequence.Schema);
@@ -25,10 +24,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata
             Assert.Same(typeof(long), sequence.ClrType);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_be_created_with_specified_values()
         {
-            var sequence = new Model().Relational().GetOrAddSequence("Foo", "Smoo");
+            var sequence = new Model().AddSequence("Foo", "Smoo");
             sequence.StartValue = 1729;
             sequence.IncrementBy = 11;
             sequence.MinValue = 2001;
@@ -44,10 +43,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata
             Assert.Same(typeof(int), sequence.ClrType);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_only_be_created_for_byte_short_int_and_long_decimal()
         {
-            var sequence = new Model().Relational().GetOrAddSequence("Foo");
+            var sequence = ((IMutableModel)new Model()).AddSequence("Foo");
             sequence.ClrType = typeof(byte);
             Assert.Same(typeof(byte), sequence.ClrType);
             sequence.ClrType = typeof(short);
@@ -65,53 +64,53 @@ namespace Microsoft.EntityFrameworkCore.Metadata
                     () => sequence.ClrType = typeof(bool)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_model()
         {
-            var model = new Model();
+            IMutableModel model = new Model();
 
-            var sequence = model.Relational().GetOrAddSequence("Foo");
+            var sequence = model.AddSequence("Foo");
 
             Assert.Same(model, sequence.Model);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_model_default_schema_if_sequence_schema_not_specified()
         {
-            var model = new Model();
+            IMutableModel model = new Model();
 
-            var sequence = model.Relational().GetOrAddSequence("Foo");
+            var sequence = model.AddSequence("Foo");
 
             Assert.Null(sequence.Schema);
 
-            model.Relational().DefaultSchema = "db0";
+            model.SetDefaultSchema("db0");
 
             Assert.Equal("db0", sequence.Schema);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_sequence_schema_if_specified_explicitly()
         {
-            var model = new Model();
+            IMutableModel model = new Model();
 
-            model.Relational().DefaultSchema = "db0";
-            var sequence = model.Relational().GetOrAddSequence("Foo", "db1");
+            model.SetDefaultSchema("db0");
+            var sequence = model.AddSequence("Foo", "db1");
 
             Assert.Equal("db1", sequence.Schema);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_serialize_and_deserialize()
         {
-            var model = new Model();
-            var sequence = model.Relational().GetOrAddSequence("Foo", "Smoo");
+            IMutableModel model = new Model();
+            var sequence = model.AddSequence("Foo", "Smoo");
             sequence.StartValue = 1729;
             sequence.IncrementBy = 11;
             sequence.MinValue = 2001;
             sequence.MaxValue = 2010;
             sequence.ClrType = typeof(int);
 
-            model.Relational().GetOrAddSequence("Foo", "Smoo");
+            model.FindSequence("Foo", "Smoo");
 
             Assert.Equal("Foo", sequence.Name);
             Assert.Equal("Smoo", sequence.Schema);
@@ -122,13 +121,13 @@ namespace Microsoft.EntityFrameworkCore.Metadata
             Assert.Same(typeof(int), sequence.ClrType);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_serialize_and_deserialize_with_defaults()
         {
-            var model = new Model();
-            model.Relational().GetOrAddSequence("Foo");
+            IMutableModel model = new Model();
+            model.AddSequence("Foo");
 
-            var sequence = model.Relational().GetOrAddSequence("Foo");
+            var sequence = model.FindSequence("Foo");
 
             Assert.Equal("Foo", sequence.Name);
             Assert.Null(sequence.Schema);
@@ -139,16 +138,16 @@ namespace Microsoft.EntityFrameworkCore.Metadata
             Assert.Same(typeof(long), sequence.ClrType);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_serialize_and_deserialize_with_funky_names()
         {
-            var model = new Model();
-            var sequence = model.Relational().GetOrAddSequence("'Foo'", "''S'''m'oo'''");
+            IMutableModel model = new Model();
+            var sequence = model.AddSequence("'Foo'", "''S'''m'oo'''");
             sequence.StartValue = 1729;
             sequence.IncrementBy = 11;
             sequence.ClrType = typeof(int);
 
-            sequence = model.Relational().GetOrAddSequence("'Foo'", "''S'''m'oo'''");
+            sequence = model.FindSequence("'Foo'", "''S'''m'oo'''");
 
             Assert.Equal("'Foo'", sequence.Name);
             Assert.Equal("''S'''m'oo'''", sequence.Schema);
@@ -159,11 +158,11 @@ namespace Microsoft.EntityFrameworkCore.Metadata
             Assert.Same(typeof(int), sequence.ClrType);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_on_bad_serialized_form()
         {
-            var model = new Model();
-            var sequence = model.Relational().GetOrAddSequence("Foo", "Smoo");
+            IMutableModel model = new Model();
+            var sequence = model.AddSequence("Foo", "Smoo");
             sequence.StartValue = 1729;
             sequence.IncrementBy = 11;
             sequence.MinValue = 2001;
@@ -177,7 +176,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata
             Assert.Equal(
                 RelationalStrings.BadSequenceString,
                 Assert.Throws<ArgumentException>(
-                    () => model.Relational().GetOrAddSequence("Foo", "Smoo").ClrType).Message);
+                    () => model.FindSequence("Foo", "Smoo").ClrType).Message);
         }
     }
 }

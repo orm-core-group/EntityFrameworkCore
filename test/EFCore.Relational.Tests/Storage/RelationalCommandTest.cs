@@ -37,13 +37,14 @@ namespace Microsoft.EntityFrameworkCore.Storage
     {
         private static readonly string _eol = Environment.NewLine;
 
-        [Fact]
+        [ConditionalFact]
         public void Configures_DbCommand()
         {
             var fakeConnection = CreateConnection();
             var relationalCommand = CreateRelationalCommand(commandText: "CommandText");
 
-            relationalCommand.ExecuteNonQuery(fakeConnection, null, null);
+            relationalCommand.ExecuteNonQuery(
+                new RelationalCommandParameterObject(fakeConnection, null, null, null));
 
             Assert.Equal(1, fakeConnection.DbConnections.Count);
             Assert.Equal(1, fakeConnection.DbConnections[0].DbCommands.Count);
@@ -55,7 +56,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Assert.Equal(FakeDbCommand.DefaultCommandTimeout, command.CommandTimeout);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Configures_DbCommand_with_transaction()
         {
             var fakeConnection = CreateConnection();
@@ -64,7 +65,8 @@ namespace Microsoft.EntityFrameworkCore.Storage
 
             var relationalCommand = CreateRelationalCommand();
 
-            relationalCommand.ExecuteNonQuery(fakeConnection, null, null);
+            relationalCommand.ExecuteNonQuery(
+                new RelationalCommandParameterObject(fakeConnection, null, null, null));
 
             Assert.Equal(1, fakeConnection.DbConnections.Count);
             Assert.Equal(1, fakeConnection.DbConnections[0].DbCommands.Count);
@@ -74,7 +76,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Assert.Same(relationalTransaction.GetDbTransaction(), command.Transaction);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Configures_DbCommand_with_timeout()
         {
             var optionsExtension = new FakeRelationalOptionsExtension()
@@ -85,7 +87,8 @@ namespace Microsoft.EntityFrameworkCore.Storage
 
             var relationalCommand = CreateRelationalCommand();
 
-            relationalCommand.ExecuteNonQuery(fakeConnection, null, null);
+            relationalCommand.ExecuteNonQuery(
+                new RelationalCommandParameterObject(fakeConnection, null, null, null));
 
             Assert.Equal(1, fakeConnection.DbConnections.Count);
             Assert.Equal(1, fakeConnection.DbConnections[0].DbCommands.Count);
@@ -95,7 +98,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Assert.Equal(42, command.CommandTimeout);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_ExecuteNonQuery()
         {
             var executeNonQueryCount = 0;
@@ -118,7 +121,8 @@ namespace Microsoft.EntityFrameworkCore.Storage
             var relationalCommand = CreateRelationalCommand();
 
             var result = relationalCommand.ExecuteNonQuery(
-                new FakeRelationalConnection(options), null, null);
+                new RelationalCommandParameterObject(
+                    new FakeRelationalConnection(options), null, null, null));
 
             Assert.Equal(1, result);
 
@@ -134,7 +138,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Assert.Equal(1, fakeDbConnection.DbCommands[0].DisposeCount);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual async Task Can_ExecuteNonQueryAsync()
         {
             var executeNonQueryCount = 0;
@@ -157,7 +161,8 @@ namespace Microsoft.EntityFrameworkCore.Storage
             var relationalCommand = CreateRelationalCommand();
 
             var result = await relationalCommand.ExecuteNonQueryAsync(
-                new FakeRelationalConnection(options), null, null);
+                new RelationalCommandParameterObject(
+                    new FakeRelationalConnection(options), null, null, null));
 
             Assert.Equal(1, result);
 
@@ -173,7 +178,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Assert.Equal(1, fakeDbConnection.DbCommands[0].DisposeCount);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_ExecuteScalar()
         {
             var executeScalarCount = 0;
@@ -196,7 +201,8 @@ namespace Microsoft.EntityFrameworkCore.Storage
             var relationalCommand = CreateRelationalCommand();
 
             var result = (string)relationalCommand.ExecuteScalar(
-                new FakeRelationalConnection(options), null, null);
+                new RelationalCommandParameterObject(
+                    new FakeRelationalConnection(options), null, null, null));
 
             Assert.Equal("ExecuteScalar Result", result);
 
@@ -212,7 +218,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Assert.Equal(1, fakeDbConnection.DbCommands[0].DisposeCount);
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Can_ExecuteScalarAsync()
         {
             var executeScalarCount = 0;
@@ -235,7 +241,8 @@ namespace Microsoft.EntityFrameworkCore.Storage
             var relationalCommand = CreateRelationalCommand();
 
             var result = (string)await relationalCommand.ExecuteScalarAsync(
-                new FakeRelationalConnection(options), null, null);
+                new RelationalCommandParameterObject(
+                    new FakeRelationalConnection(options), null, null, null));
 
             Assert.Equal("ExecuteScalar Result", result);
 
@@ -251,7 +258,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Assert.Equal(1, fakeDbConnection.DbCommands[0].DisposeCount);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_ExecuteReader()
         {
             var executeReaderCount = 0;
@@ -276,7 +283,8 @@ namespace Microsoft.EntityFrameworkCore.Storage
             var relationalCommand = CreateRelationalCommand();
 
             var result = relationalCommand.ExecuteReader(
-                new FakeRelationalConnection(options), null, null);
+                new RelationalCommandParameterObject(
+                    new FakeRelationalConnection(options), null, null, null));
 
             Assert.Same(dbDataReader, result.DbDataReader);
             Assert.Equal(0, fakeDbConnection.CloseCount);
@@ -299,7 +307,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Assert.Equal(expectedCount, fakeDbConnection.CloseCount);
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Can_ExecuteReaderAsync()
         {
             var executeReaderCount = 0;
@@ -324,7 +332,8 @@ namespace Microsoft.EntityFrameworkCore.Storage
             var relationalCommand = CreateRelationalCommand();
 
             var result = await relationalCommand.ExecuteReaderAsync(
-                new FakeRelationalConnection(options), null, null);
+                new RelationalCommandParameterObject(
+                    new FakeRelationalConnection(options), null, null, null));
 
             Assert.Same(dbDataReader, result.DbDataReader);
             Assert.Equal(0, fakeDbConnection.CloseCount);
@@ -353,52 +362,54 @@ namespace Microsoft.EntityFrameworkCore.Storage
                 {
                     new CommandAction(
                         (connection, command, parameterValues, logger)
-                            => command.ExecuteNonQuery(connection, parameterValues, logger)),
-                    DbCommandMethod.ExecuteNonQuery,
-                    false
+                            => command.ExecuteNonQuery(
+                                new RelationalCommandParameterObject(connection, parameterValues, null, logger))),
+                    DbCommandMethod.ExecuteNonQuery, false
                 },
                 {
                     new CommandAction(
                         (connection, command, parameterValues, logger)
-                            => command.ExecuteScalar(connection, parameterValues, logger)),
-                    DbCommandMethod.ExecuteScalar,
-                    false
+                            => command.ExecuteScalar(
+                                new RelationalCommandParameterObject(connection, parameterValues, null, logger))),
+                    DbCommandMethod.ExecuteScalar, false
                 },
                 {
                     new CommandAction(
                         (connection, command, parameterValues, logger)
-                            => command.ExecuteReader(connection, parameterValues, logger)),
-                    DbCommandMethod.ExecuteReader,
-                    false
+                            => command.ExecuteReader(
+                                new RelationalCommandParameterObject(connection, parameterValues, null, logger))),
+                    DbCommandMethod.ExecuteReader, false
                 },
                 {
                     new CommandFunc(
                         (connection, command, parameterValues, logger)
-                            => command.ExecuteNonQueryAsync(connection, parameterValues, logger)),
-                    DbCommandMethod.ExecuteNonQuery,
-                    true
+                            => command.ExecuteNonQueryAsync(
+                                new RelationalCommandParameterObject(connection, parameterValues, null, logger))),
+                    DbCommandMethod.ExecuteNonQuery, true
                 },
                 {
                     new CommandFunc(
                         (connection, command, parameterValues, logger)
-                            => command.ExecuteScalarAsync(connection, parameterValues, logger)),
-                    DbCommandMethod.ExecuteScalar,
-                    true
+                            => command.ExecuteScalarAsync(
+                                new RelationalCommandParameterObject(connection, parameterValues, null, logger))),
+                    DbCommandMethod.ExecuteScalar, true
                 },
                 {
                     new CommandFunc(
                         (connection, command, parameterValues, logger)
-                            => command.ExecuteReaderAsync(connection, parameterValues, logger)),
-                    DbCommandMethod.ExecuteReader,
-                    true
+                            => command.ExecuteReaderAsync(
+                                new RelationalCommandParameterObject(connection, parameterValues, null, logger))),
+                    DbCommandMethod.ExecuteReader, true
                 }
             };
 
-        [Theory]
+        [ConditionalTheory]
         [MemberData(nameof(CommandActions))]
         public async Task Throws_when_parameters_are_configured_and_parameter_values_is_null(
             Delegate commandDelegate,
+#pragma warning disable xUnit1026 // Theory methods should use all of their parameters
             string telemetryName,
+#pragma warning restore xUnit1026 // Theory methods should use all of their parameters
             bool async)
         {
             var fakeConnection = CreateConnection();
@@ -431,11 +442,13 @@ namespace Microsoft.EntityFrameworkCore.Storage
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [MemberData(nameof(CommandActions))]
         public async Task Throws_when_parameters_are_configured_and_value_is_missing(
             Delegate commandDelegate,
+#pragma warning disable xUnit1026 // Theory methods should use all of their parameters
             string telemetryName,
+#pragma warning restore xUnit1026 // Theory methods should use all of their parameters
             bool async)
         {
             var fakeConnection = CreateConnection();
@@ -449,11 +462,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
                     new TypeMappedRelationalParameter("ThirdInvariant", "ThirdParameter", RelationalTypeMapping.NullMapping, null)
                 });
 
-            var parameterValues = new Dictionary<string, object>
-            {
-                { "FirstInvariant", 17 },
-                { "SecondInvariant", 18L }
-            };
+            var parameterValues = new Dictionary<string, object> { { "FirstInvariant", 17 }, { "SecondInvariant", 18L } };
 
             if (async)
             {
@@ -474,11 +483,13 @@ namespace Microsoft.EntityFrameworkCore.Storage
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [MemberData(nameof(CommandActions))]
         public async Task Configures_DbCommand_with_type_mapped_parameters(
             Delegate commandDelegate,
+#pragma warning disable xUnit1026 // Theory methods should use all of their parameters
             string telemetryName,
+#pragma warning restore xUnit1026 // Theory methods should use all of their parameters
             bool async)
         {
             var fakeConnection = CreateConnection();
@@ -494,9 +505,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
 
             var parameterValues = new Dictionary<string, object>
             {
-                { "FirstInvariant", 17 },
-                { "SecondInvariant", 18L },
-                { "ThirdInvariant", null }
+                { "FirstInvariant", 17 }, { "SecondInvariant", 18L }, { "ThirdInvariant", null }
             };
 
             if (async)
@@ -537,11 +546,13 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Assert.Equal(FakeDbParameter.DefaultDbType, parameter.DbType);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [MemberData(nameof(CommandActions))]
         public async Task Configures_DbCommand_with_dynamic_parameters(
             Delegate commandDelegate,
+#pragma warning disable xUnit1026 // Theory methods should use all of their parameters
             string telemetryName,
+#pragma warning restore xUnit1026 // Theory methods should use all of their parameters
             bool async)
         {
             var fakeConnection = CreateConnection();
@@ -550,12 +561,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
                 TestServiceFactory.Instance.Create<TypeMappingSourceDependencies>(),
                 TestServiceFactory.Instance.Create<RelationalTypeMappingSourceDependencies>());
 
-            var dbParameter = new FakeDbParameter
-            {
-                ParameterName = "FirstParameter",
-                Value = 17,
-                DbType = DbType.Int32
-            };
+            var dbParameter = new FakeDbParameter { ParameterName = "FirstParameter", Value = 17, DbType = DbType.Int32 };
 
             var relationalCommand = CreateRelationalCommand(
                 parameters: new[]
@@ -567,9 +573,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
 
             var parameterValues = new Dictionary<string, object>
             {
-                { "FirstInvariant", dbParameter },
-                { "SecondInvariant", 18L },
-                { "ThirdInvariant", null }
+                { "FirstInvariant", dbParameter }, { "SecondInvariant", 18L }, { "ThirdInvariant", null }
             };
 
             if (async)
@@ -607,11 +611,13 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Assert.Equal(FakeDbParameter.DefaultDbType, parameter.DbType);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [MemberData(nameof(CommandActions))]
         public async Task Configures_DbCommand_with_composite_parameters(
             Delegate commandDelegate,
+#pragma warning disable xUnit1026 // Theory methods should use all of their parameters
             string telemetryName,
+#pragma warning restore xUnit1026 // Theory methods should use all of their parameters
             bool async)
         {
             var fakeConnection = CreateConnection();
@@ -631,10 +637,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
                         })
                 });
 
-            var parameterValues = new Dictionary<string, object>
-            {
-                { "CompositeInvariant", new object[] { 17, 18L, null } }
-            };
+            var parameterValues = new Dictionary<string, object> { { "CompositeInvariant", new object[] { 17, 18L, null } } };
 
             if (async)
             {
@@ -674,11 +677,13 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Assert.Equal(FakeDbParameter.DefaultDbType, parameter.DbType);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [MemberData(nameof(CommandActions))]
         public async Task Throws_when_composite_parameters_are_configured_and_value_is_missing(
             Delegate commandDelegate,
+#pragma warning disable xUnit1026 // Theory methods should use all of their parameters
             string telemetryName,
+#pragma warning restore xUnit1026 // Theory methods should use all of their parameters
             bool async)
         {
             var fakeConnection = CreateConnection();
@@ -698,10 +703,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
                         })
                 });
 
-            var parameterValues = new Dictionary<string, object>
-            {
-                { "CompositeInvariant", new object[] { 17, 18L } }
-            };
+            var parameterValues = new Dictionary<string, object> { { "CompositeInvariant", new object[] { 17, 18L } } };
 
             if (async)
             {
@@ -722,11 +724,13 @@ namespace Microsoft.EntityFrameworkCore.Storage
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [MemberData(nameof(CommandActions))]
         public async Task Throws_when_composite_parameters_are_configured_and_value_is_not_object_array(
             Delegate commandDelegate,
+#pragma warning disable xUnit1026 // Theory methods should use all of their parameters
             string telemetryName,
+#pragma warning restore xUnit1026 // Theory methods should use all of their parameters
             bool async)
         {
             var fakeConnection = CreateConnection();
@@ -743,10 +747,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
                         })
                 });
 
-            var parameterValues = new Dictionary<string, object>
-            {
-                { "CompositeInvariant", 17 }
-            };
+            var parameterValues = new Dictionary<string, object> { { "CompositeInvariant", 17 } };
 
             if (async)
             {
@@ -767,11 +768,13 @@ namespace Microsoft.EntityFrameworkCore.Storage
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [MemberData(nameof(CommandActions))]
         public async Task Disposes_command_on_exception(
             Delegate commandDelegate,
+#pragma warning disable xUnit1026 // Theory methods should use all of their parameters
             string telemetryName,
+#pragma warning restore xUnit1026 // Theory methods should use all of their parameters
             bool async)
         {
             var exception = new InvalidOperationException();
@@ -810,11 +813,13 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Assert.Equal(1, fakeDbConnection.DbCommands[0].DisposeCount);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [MemberData(nameof(CommandActions))]
         public async Task Closes_managed_connections_on_exception(
             Delegate commandDelegate,
+#pragma warning disable xUnit1026 // Theory methods should use all of their parameters
             string telemetryName,
+#pragma warning restore xUnit1026 // Theory methods should use all of their parameters
             bool async)
         {
             var exception = new InvalidOperationException();
@@ -857,11 +862,13 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Assert.Equal(1, fakeDbConnection.CloseCount);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [MemberData(nameof(CommandActions))]
         public async Task Does_not_close_unmanaged_connections_on_exception(
             Delegate commandDelegate,
+#pragma warning disable xUnit1026 // Theory methods should use all of their parameters
             string telemetryName,
+#pragma warning restore xUnit1026 // Theory methods should use all of their parameters
             bool async)
         {
             var exception = new InvalidOperationException();
@@ -904,11 +911,13 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Assert.Equal(1, fakeDbConnection.CloseCount);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [MemberData(nameof(CommandActions))]
         public async Task Logs_commands_without_parameter_values(
             Delegate commandDelegate,
+#pragma warning disable xUnit1026 // Theory methods should use all of their parameters
             string diagnosticName,
+#pragma warning restore xUnit1026 // Theory methods should use all of their parameters
             bool async)
         {
             var options = CreateOptions();
@@ -927,13 +936,11 @@ namespace Microsoft.EntityFrameworkCore.Storage
                 commandText: "Logged Command",
                 parameters: new[]
                 {
-                    new TypeMappedRelationalParameter("FirstInvariant", "FirstParameter", new IntTypeMapping("int", DbType.Int32), false)
+                    new TypeMappedRelationalParameter(
+                        "FirstInvariant", "FirstParameter", new IntTypeMapping("int", DbType.Int32), false)
                 });
 
-            var parameterValues = new Dictionary<string, object>
-            {
-                { "FirstInvariant", 17 }
-            };
+            var parameterValues = new Dictionary<string, object> { { "FirstInvariant", 17 } };
 
             if (async)
             {
@@ -944,12 +951,14 @@ namespace Microsoft.EntityFrameworkCore.Storage
                 ((CommandAction)commandDelegate)(fakeConnection, relationalCommand, parameterValues, logger);
             }
 
-            Assert.Equal(2, logFactory.Log.Count);
+            Assert.Equal(4, logFactory.Log.Count);
 
             Assert.Equal(LogLevel.Debug, logFactory.Log[0].Level);
             Assert.Equal(LogLevel.Debug, logFactory.Log[1].Level);
+            Assert.Equal(LogLevel.Information, logFactory.Log[2].Level);
+            Assert.Equal(LogLevel.Debug, logFactory.Log[3].Level);
 
-            foreach (var (_, _, message, _, _) in logFactory.Log)
+            foreach (var (_, _, message, _, _) in logFactory.Log.Skip(2))
             {
                 Assert.EndsWith(
                     "[Parameters=[FirstParameter='?' (DbType = Int32)], CommandType='0', CommandTimeout='30']" + _eol +
@@ -958,11 +967,13 @@ namespace Microsoft.EntityFrameworkCore.Storage
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [MemberData(nameof(CommandActions))]
         public async Task Logs_commands_parameter_values(
             Delegate commandDelegate,
+#pragma warning disable xUnit1026 // Theory methods should use all of their parameters
             string diagnosticName,
+#pragma warning restore xUnit1026 // Theory methods should use all of their parameters
             bool async)
         {
             var optionsExtension = new FakeRelationalOptionsExtension().WithConnectionString(ConnectionString);
@@ -983,13 +994,11 @@ namespace Microsoft.EntityFrameworkCore.Storage
                 commandText: "Logged Command",
                 parameters: new[]
                 {
-                    new TypeMappedRelationalParameter("FirstInvariant", "FirstParameter", new IntTypeMapping("int", DbType.Int32), false)
+                    new TypeMappedRelationalParameter(
+                        "FirstInvariant", "FirstParameter", new IntTypeMapping("int", DbType.Int32), false)
                 });
 
-            var parameterValues = new Dictionary<string, object>
-            {
-                { "FirstInvariant", 17 }
-            };
+            var parameterValues = new Dictionary<string, object> { { "FirstInvariant", 17 } };
 
             if (async)
             {
@@ -1000,14 +1009,18 @@ namespace Microsoft.EntityFrameworkCore.Storage
                 ((CommandAction)commandDelegate)(fakeConnection, relationalCommand, parameterValues, logger);
             }
 
-            Assert.Equal(3, logFactory.Log.Count);
-            Assert.Equal(LogLevel.Warning, logFactory.Log[0].Level);
-            Assert.Equal(CoreResources.LogSensitiveDataLoggingEnabled(new TestLogger<TestRelationalLoggingDefinitions>()).GenerateMessage(), logFactory.Log[0].Message);
-
+            Assert.Equal(5, logFactory.Log.Count);
+            Assert.Equal(LogLevel.Debug, logFactory.Log[0].Level);
             Assert.Equal(LogLevel.Debug, logFactory.Log[1].Level);
-            Assert.Equal(LogLevel.Debug, logFactory.Log[2].Level);
+            Assert.Equal(LogLevel.Warning, logFactory.Log[2].Level);
+            Assert.Equal(
+                CoreResources.LogSensitiveDataLoggingEnabled(new TestLogger<TestRelationalLoggingDefinitions>()).GenerateMessage(),
+                logFactory.Log[2].Message);
 
-            foreach (var (_, _, message, _, _) in logFactory.Log.Skip(1))
+            Assert.Equal(LogLevel.Information, logFactory.Log[3].Level);
+            Assert.Equal(LogLevel.Debug, logFactory.Log[4].Level);
+
+            foreach (var (_, _, message, _, _) in logFactory.Log.Skip(3))
             {
                 Assert.EndsWith(
                     "[Parameters=[FirstParameter='17'], CommandType='0', CommandTimeout='30']" + _eol +
@@ -1016,7 +1029,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [MemberData(nameof(CommandActions))]
         public async Task Reports_command_diagnostic(
             Delegate commandDelegate,
@@ -1038,13 +1051,11 @@ namespace Microsoft.EntityFrameworkCore.Storage
             var relationalCommand = CreateRelationalCommand(
                 parameters: new[]
                 {
-                    new TypeMappedRelationalParameter("FirstInvariant", "FirstParameter", new IntTypeMapping("int", DbType.Int32), false)
+                    new TypeMappedRelationalParameter(
+                        "FirstInvariant", "FirstParameter", new IntTypeMapping("int", DbType.Int32), false)
                 });
 
-            var parameterValues = new Dictionary<string, object>
-            {
-                { "FirstInvariant", 17 }
-            };
+            var parameterValues = new Dictionary<string, object> { { "FirstInvariant", 17 } };
 
             if (async)
             {
@@ -1055,12 +1066,14 @@ namespace Microsoft.EntityFrameworkCore.Storage
                 ((CommandAction)commandDelegate)(fakeConnection, relationalCommand, parameterValues, logger);
             }
 
-            Assert.Equal(2, diagnostic.Count);
-            Assert.Equal(RelationalEventId.CommandExecuting.Name, diagnostic[0].Item1);
-            Assert.Equal(RelationalEventId.CommandExecuted.Name, diagnostic[1].Item1);
+            Assert.Equal(4, diagnostic.Count);
+            Assert.Equal(RelationalEventId.CommandCreating.Name, diagnostic[0].Item1);
+            Assert.Equal(RelationalEventId.CommandCreated.Name, diagnostic[1].Item1);
+            Assert.Equal(RelationalEventId.CommandExecuting.Name, diagnostic[2].Item1);
+            Assert.Equal(RelationalEventId.CommandExecuted.Name, diagnostic[3].Item1);
 
-            var beforeData = (CommandEventData)diagnostic[0].Item2;
-            var afterData = (CommandExecutedEventData)diagnostic[1].Item2;
+            var beforeData = (CommandEventData)diagnostic[2].Item2;
+            var afterData = (CommandExecutedEventData)diagnostic[3].Item2;
 
             Assert.Equal(fakeConnection.DbConnections[0].DbCommands[0], beforeData.Command);
             Assert.Equal(fakeConnection.DbConnections[0].DbCommands[0], afterData.Command);
@@ -1072,7 +1085,7 @@ namespace Microsoft.EntityFrameworkCore.Storage
             Assert.Equal(async, afterData.IsAsync);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [MemberData(nameof(CommandActions))]
         public async Task Reports_command_diagnostic_on_exception(
             Delegate commandDelegate,
@@ -1108,13 +1121,11 @@ namespace Microsoft.EntityFrameworkCore.Storage
             var relationalCommand = CreateRelationalCommand(
                 parameters: new[]
                 {
-                    new TypeMappedRelationalParameter("FirstInvariant", "FirstParameter", new IntTypeMapping("int", DbType.Int32), false)
+                    new TypeMappedRelationalParameter(
+                        "FirstInvariant", "FirstParameter", new IntTypeMapping("int", DbType.Int32), false)
                 });
 
-            var parameterValues = new Dictionary<string, object>
-            {
-                { "FirstInvariant", 17 }
-            };
+            var parameterValues = new Dictionary<string, object> { { "FirstInvariant", 17 } };
 
             if (async)
             {
@@ -1129,12 +1140,14 @@ namespace Microsoft.EntityFrameworkCore.Storage
                         => ((CommandAction)commandDelegate)(fakeConnection, relationalCommand, parameterValues, logger));
             }
 
-            Assert.Equal(2, diagnostic.Count);
-            Assert.Equal(RelationalEventId.CommandExecuting.Name, diagnostic[0].Item1);
-            Assert.Equal(RelationalEventId.CommandError.Name, diagnostic[1].Item1);
+            Assert.Equal(4, diagnostic.Count);
+            Assert.Equal(RelationalEventId.CommandCreating.Name, diagnostic[0].Item1);
+            Assert.Equal(RelationalEventId.CommandCreated.Name, diagnostic[1].Item1);
+            Assert.Equal(RelationalEventId.CommandExecuting.Name, diagnostic[2].Item1);
+            Assert.Equal(RelationalEventId.CommandError.Name, diagnostic[3].Item1);
 
-            var beforeData = (CommandEventData)diagnostic[0].Item2;
-            var afterData = (CommandErrorEventData)diagnostic[1].Item2;
+            var beforeData = (CommandEventData)diagnostic[2].Item2;
+            var afterData = (CommandErrorEventData)diagnostic[3].Item2;
 
             Assert.Equal(fakeDbConnection.DbCommands[0], beforeData.Command);
             Assert.Equal(fakeDbConnection.DbCommands[0], afterData.Command);

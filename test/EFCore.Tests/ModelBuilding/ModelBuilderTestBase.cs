@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -27,7 +26,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
                 IEnumerable<string> actualNames,
                 StringComparer stringComparer = null)
             {
-                stringComparer = stringComparer ?? StringComparer.Ordinal;
+                stringComparer ??= StringComparer.Ordinal;
                 Assert.Equal(
                     new SortedSet<string>(expectedNames, stringComparer),
                     new SortedSet<string>(actualNames, stringComparer),
@@ -39,7 +38,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
                 IEnumerable<IProperty> actualProperties,
                 PropertyComparer propertyComparer = null)
             {
-                propertyComparer = propertyComparer ?? new PropertyComparer();
+                propertyComparer ??= new PropertyComparer();
                 Assert.Equal(
                     new SortedSet<IProperty>(expectedProperties, propertyComparer),
                     new SortedSet<IProperty>(actualProperties, propertyComparer),
@@ -51,7 +50,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
                 IEnumerable<INavigation> actualNavigations,
                 NavigationComparer navigationComparer = null)
             {
-                navigationComparer = navigationComparer ?? new NavigationComparer();
+                navigationComparer ??= new NavigationComparer();
                 Assert.Equal(
                     new SortedSet<INavigation>(expectedNavigations, navigationComparer),
                     new SortedSet<INavigation>(actualNavigations, navigationComparer),
@@ -63,7 +62,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
                 IEnumerable<IKey> actualKeys,
                 KeyComparer keyComparer = null)
             {
-                keyComparer = keyComparer ?? new KeyComparer();
+                keyComparer ??= new KeyComparer();
                 Assert.Equal(
                     new SortedSet<IKey>(expectedKeys, keyComparer),
                     new SortedSet<IKey>(actualKeys, keyComparer),
@@ -75,7 +74,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
                 IEnumerable<IForeignKey> actualForeignKeys,
                 ForeignKeyStrictComparer foreignKeyComparer = null)
             {
-                foreignKeyComparer = foreignKeyComparer ?? new ForeignKeyStrictComparer();
+                foreignKeyComparer ??= new ForeignKeyStrictComparer();
                 Assert.Equal(
                     new SortedSet<IForeignKey>(expectedForeignKeys, foreignKeyComparer),
                     new SortedSet<IForeignKey>(actualForeignKeys, foreignKeyComparer),
@@ -87,7 +86,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
                 IEnumerable<IIndex> actualIndexes,
                 IndexComparer indexComparer = null)
             {
-                indexComparer = indexComparer ?? new IndexComparer();
+                indexComparer ??= new IndexComparer();
                 Assert.Equal(
                     new SortedSet<IIndex>(expectedIndexes, indexComparer),
                     new SortedSet<IIndex>(actualIndexes, indexComparer),
@@ -102,17 +101,9 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
                 var builder = CreateModelBuilder();
 
                 builder.Entity<Hob>().HasKey(
-                    e => new
-                    {
-                        e.Id1,
-                        e.Id2
-                    });
+                    e => new { e.Id1, e.Id2 });
                 builder.Entity<Nob>().HasKey(
-                    e => new
-                    {
-                        e.Id1,
-                        e.Id2
-                    });
+                    e => new { e.Id1, e.Id2 });
 
                 return builder;
             }
@@ -166,12 +157,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             public abstract TestModelBuilder Ignore<TEntity>()
                 where TEntity : class;
 
-            public virtual TestModelBuilder FinalizeModel()
-            {
-                ModelBuilder.FinalizeModel();
-
-                return this;
-            }
+            public virtual IModel FinalizeModel() => ModelBuilder.FinalizeModel();
 
             public virtual string GetDisplayName(Type entityType) => entityType.Name;
 

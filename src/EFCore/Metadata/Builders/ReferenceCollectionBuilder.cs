@@ -30,10 +30,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         /// </summary>
         [EntityFrameworkInternal]
         public ReferenceCollectionBuilder(
-            [NotNull] EntityType principalEntityType,
-            [NotNull] EntityType dependentEntityType,
-            [NotNull] InternalRelationshipBuilder builder)
-            : base(principalEntityType, dependentEntityType, builder)
+            [NotNull] IMutableEntityType principalEntityType,
+            [NotNull] IMutableEntityType dependentEntityType,
+            [NotNull] IMutableForeignKey foreignKey)
+            : base(principalEntityType, dependentEntityType, foreignKey)
         {
         }
 
@@ -108,7 +108,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         /// </summary>
         [EntityFrameworkInternal]
         protected virtual InternalRelationshipBuilder HasForeignKeyBuilder([NotNull] IReadOnlyList<string> foreignKeyPropertyNames)
-            => Builder.HasForeignKey(foreignKeyPropertyNames, DependentEntityType, ConfigurationSource.Explicit);
+            => Builder.HasForeignKey(foreignKeyPropertyNames, (EntityType)DependentEntityType, ConfigurationSource.Explicit);
 
         /// <summary>
         ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -117,8 +117,8 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         ///     doing so can result in application failures when updating to a new Entity Framework Core release.
         /// </summary>
         [EntityFrameworkInternal]
-        protected virtual InternalRelationshipBuilder HasForeignKeyBuilder([NotNull] IReadOnlyList<PropertyInfo> foreignKeyProperties)
-            => Builder.HasForeignKey(foreignKeyProperties, DependentEntityType, ConfigurationSource.Explicit);
+        protected virtual InternalRelationshipBuilder HasForeignKeyBuilder([NotNull] IReadOnlyList<MemberInfo> foreignKeyProperties)
+            => Builder.HasForeignKey(foreignKeyProperties, (EntityType)DependentEntityType, ConfigurationSource.Explicit);
 
         /// <summary>
         ///     Configures the unique property(s) that this relationship targets. Typically you would only call this
@@ -151,7 +151,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Builders
         ///     doing so can result in application failures when updating to a new Entity Framework Core release.
         /// </summary>
         [EntityFrameworkInternal]
-        protected virtual InternalRelationshipBuilder HasPrincipalKeyBuilder([NotNull] IReadOnlyList<PropertyInfo> keyProperties)
+        protected virtual InternalRelationshipBuilder HasPrincipalKeyBuilder([NotNull] IReadOnlyList<MemberInfo> keyProperties)
             => Builder.HasPrincipalKey(keyProperties, ConfigurationSource.Explicit);
 
         /// <summary>

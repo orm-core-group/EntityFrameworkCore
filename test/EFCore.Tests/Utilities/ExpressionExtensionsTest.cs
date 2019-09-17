@@ -6,7 +6,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
 using Xunit;
 
 // ReSharper disable InconsistentNaming
@@ -14,7 +13,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
 {
     public class ExpressionExtensionsTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Get_property_access_should_return_property_info_when_valid_property_access_expression()
         {
             Expression<Func<DateTime, int>> expression = d => d.Hour;
@@ -25,7 +24,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             Assert.Equal("Hour", propertyInfo.Name);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Get_property_access_should_throw_when_not_property_access()
         {
             Expression<Func<DateTime, int>> expression = d => 123;
@@ -35,7 +34,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                 Assert.Throws<ArgumentException>(() => expression.GetPropertyAccess()).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Get_property_access_should_throw_when_not_property_access_on_the_provided_argument()
         {
             var closure = DateTime.Now;
@@ -46,7 +45,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                 Assert.Throws<ArgumentException>(() => expression.GetPropertyAccess()).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Get_property_access_should_remove_convert()
         {
             Expression<Func<DateTime, long>> expression = d => d.Hour;
@@ -57,14 +56,10 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             Assert.Equal("Hour", propertyInfo.Name);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Get_property_access_list_should_return_property_info_collection()
         {
-            Expression<Func<DateTime, object>> expression = d => new
-            {
-                d.Date,
-                d.Day
-            };
+            Expression<Func<DateTime, object>> expression = d => new { d.Date, d.Day };
 
             var propertyInfos = expression.GetPropertyAccessList();
 
@@ -74,7 +69,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             Assert.Equal("Day", propertyInfos.Last().Name);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Get_property_access_should_handle_convert()
         {
             Expression<Func<DateTime, object>> expression = d => d.Date;
@@ -84,14 +79,10 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             Assert.NotNull(propertyInfos);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Get_property_access_list_should_handle_convert()
         {
-            Expression<Func<DateTime, object>> expression = d => new
-            {
-                d.Date,
-                d.Day
-            };
+            Expression<Func<DateTime, object>> expression = d => new { d.Date, d.Day };
 
             var propertyInfos = expression.GetPropertyAccessList();
 
@@ -101,29 +92,22 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             Assert.Equal("Day", propertyInfos.Last().Name);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Get_property_access_list_should_throw_when_invalid_expression()
         {
-            Expression<Func<DateTime, object>> expression = d => new
-            {
-                P = d.AddTicks(23)
-            };
+            Expression<Func<DateTime, object>> expression = d => new { P = d.AddTicks(23) };
 
             Assert.Contains(
                 CoreStrings.InvalidPropertiesExpression(expression),
                 Assert.Throws<ArgumentException>(() => expression.GetPropertyAccessList()).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Get_property_access_list_should_throw_when_property_access_not_on_the_provided_argument()
         {
             var closure = DateTime.Now;
 
-            Expression<Func<DateTime, object>> expression = d => new
-            {
-                d.Date,
-                closure.Day
-            };
+            Expression<Func<DateTime, object>> expression = d => new { d.Date, closure.Day };
 
             Assert.Contains(
                 CoreStrings.InvalidPropertiesExpression(expression),

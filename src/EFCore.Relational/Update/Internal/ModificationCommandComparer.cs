@@ -20,9 +20,9 @@ namespace Microsoft.EntityFrameworkCore.Update.Internal
     ///         doing so can result in application failures when updating to a new Entity Framework Core release.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Singleton"/>. This means a single instance
-    ///         is used by many <see cref="DbContext"/> instances. The implementation must be thread-safe.
-    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped"/>.
+    ///         The service lifetime is <see cref="ServiceLifetime.Singleton" />. This means a single instance
+    ///         is used by many <see cref="DbContext" /> instances. The implementation must be thread-safe.
+    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped" />.
     ///     </para>
     /// </summary>
     public class ModificationCommandComparer : IComparer<ModificationCommand>
@@ -151,6 +151,16 @@ namespace Microsoft.EntityFrameworkCore.Update.Internal
         private static readonly MethodInfo _structuralCompareMethod
             = typeof(ModificationCommandComparer).GetTypeInfo().GetDeclaredMethod(nameof(CompareStructureValue));
 
-        private static int CompareStructureValue<T>(T x, T y) => StructuralComparisons.StructuralComparer.Compare(x, y);
+        private static int CompareStructureValue<T>(T x, T y)
+        {
+            if (x is Array array1
+                && y is Array array2
+                && array1.Length != array2.Length)
+            {
+                return array1.Length - array2.Length;
+            }
+
+            return StructuralComparisons.StructuralComparer.Compare(x, y);
+        }
     }
 }

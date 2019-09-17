@@ -5,7 +5,7 @@ using System;
 using System.Linq;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
-using Microsoft.EntityFrameworkCore.Internal;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,13 +16,13 @@ namespace Microsoft.EntityFrameworkCore
 {
     public abstract class LoggingTestBase
     {
-        [Fact]
+        [ConditionalFact]
         public void Logs_context_initialization_default_options()
         {
             Assert.Equal(ExpectedMessage(DefaultOptions), ActualMessage(CreateOptionsBuilder));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Logs_context_initialization_no_tracking()
         {
             Assert.Equal(
@@ -30,7 +30,7 @@ namespace Microsoft.EntityFrameworkCore
                 ActualMessage(s => CreateOptionsBuilder(s).UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Logs_context_initialization_sensitive_data_logging()
         {
             Assert.Equal(

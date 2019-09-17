@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -25,7 +26,7 @@ namespace Microsoft.EntityFrameworkCore
 
         protected TFixture Fixture { get; }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -63,7 +64,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -103,7 +104,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -143,7 +144,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -183,7 +184,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -223,7 +224,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -263,7 +264,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -274,11 +275,7 @@ namespace Microsoft.EntityFrameworkCore
                 var changeDetector = (ChangeDetectorProxy)context.GetService<IChangeDetector>();
 
                 var child = context.Attach(
-                    new Child(context.GetService<ILazyLoader>().Load)
-                    {
-                        Id = 767,
-                        ParentId = null
-                    }).Entity;
+                    new Child(context.GetService<ILazyLoader>().Load) { Id = 767, ParentId = null }).Entity;
 
                 ClearLog();
 
@@ -299,12 +296,12 @@ namespace Microsoft.EntityFrameworkCore
                 RecordLog();
                 context.ChangeTracker.LazyLoadingEnabled = false;
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
                 Assert.Null(child.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -315,11 +312,7 @@ namespace Microsoft.EntityFrameworkCore
                 var changeDetector = (ChangeDetectorProxy)context.GetService<IChangeDetector>();
 
                 var single = context.Attach(
-                    new Single(context.GetService<ILazyLoader>().Load)
-                    {
-                        Id = 767,
-                        ParentId = null
-                    }).Entity;
+                    new Single(context.GetService<ILazyLoader>().Load) { Id = 767, ParentId = null }).Entity;
 
                 ClearLog();
 
@@ -340,13 +333,13 @@ namespace Microsoft.EntityFrameworkCore
                 RecordLog();
                 context.ChangeTracker.LazyLoadingEnabled = false;
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 Assert.Null(single.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -357,11 +350,7 @@ namespace Microsoft.EntityFrameworkCore
                 var changeDetector = (ChangeDetectorProxy)context.GetService<IChangeDetector>();
 
                 var parent = context.Attach(
-                    new Parent(context.GetService<ILazyLoader>().Load)
-                    {
-                        Id = 767,
-                        AlternateId = "NewRoot"
-                    }).Entity;
+                    new Parent(context.GetService<ILazyLoader>().Load) { Id = 767, AlternateId = "NewRoot" }).Entity;
 
                 ClearLog();
 
@@ -382,12 +371,12 @@ namespace Microsoft.EntityFrameworkCore
                 RecordLog();
                 context.ChangeTracker.LazyLoadingEnabled = false;
 
-                Assert.Equal(0, parent.Children.Count());
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Empty(parent.Children);
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -398,11 +387,7 @@ namespace Microsoft.EntityFrameworkCore
                 var changeDetector = (ChangeDetectorProxy)context.GetService<IChangeDetector>();
 
                 var child = context.Attach(
-                    new Child(context.GetService<ILazyLoader>().Load)
-                    {
-                        Id = 767,
-                        ParentId = 787
-                    }).Entity;
+                    new Child(context.GetService<ILazyLoader>().Load) { Id = 767, ParentId = 787 }).Entity;
 
                 ClearLog();
 
@@ -423,12 +408,12 @@ namespace Microsoft.EntityFrameworkCore
                 RecordLog();
                 context.ChangeTracker.LazyLoadingEnabled = false;
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
                 Assert.Null(child.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -439,11 +424,7 @@ namespace Microsoft.EntityFrameworkCore
                 var changeDetector = (ChangeDetectorProxy)context.GetService<IChangeDetector>();
 
                 var single = context.Attach(
-                    new Single(context.GetService<ILazyLoader>().Load)
-                    {
-                        Id = 767,
-                        ParentId = 787
-                    }).Entity;
+                    new Single(context.GetService<ILazyLoader>().Load) { Id = 767, ParentId = 787 }).Entity;
 
                 ClearLog();
 
@@ -464,13 +445,13 @@ namespace Microsoft.EntityFrameworkCore
                 RecordLog();
                 context.ChangeTracker.LazyLoadingEnabled = false;
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 Assert.Null(single.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -481,11 +462,7 @@ namespace Microsoft.EntityFrameworkCore
                 var changeDetector = (ChangeDetectorProxy)context.GetService<IChangeDetector>();
 
                 var parent = context.Attach(
-                    new Parent(context.GetService<ILazyLoader>().Load)
-                    {
-                        Id = 767,
-                        AlternateId = "NewRoot"
-                    }).Entity;
+                    new Parent(context.GetService<ILazyLoader>().Load) { Id = 767, AlternateId = "NewRoot" }).Entity;
 
                 ClearLog();
 
@@ -506,13 +483,13 @@ namespace Microsoft.EntityFrameworkCore
                 RecordLog();
                 context.ChangeTracker.LazyLoadingEnabled = false;
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 Assert.Null(parent.Single);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, CascadeTiming.Immediate)]
         [InlineData(EntityState.Modified, CascadeTiming.Immediate)]
         [InlineData(EntityState.Deleted, CascadeTiming.Immediate)]
@@ -564,7 +541,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -604,7 +581,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -644,7 +621,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, CascadeTiming.Immediate)]
         [InlineData(EntityState.Modified, CascadeTiming.Immediate)]
         [InlineData(EntityState.Deleted, CascadeTiming.Immediate)]
@@ -698,7 +675,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -738,7 +715,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -778,7 +755,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -812,7 +789,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -846,7 +823,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -880,7 +857,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -889,11 +866,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext(lazyLoadingEnabled: true))
             {
                 var child = context.Attach(
-                    new ChildAk(context.GetService<ILazyLoader>().Load)
-                    {
-                        Id = 767,
-                        ParentId = null
-                    }).Entity;
+                    new ChildAk(context.GetService<ILazyLoader>().Load) { Id = 767, ParentId = null }).Entity;
 
                 ClearLog();
 
@@ -910,12 +883,12 @@ namespace Microsoft.EntityFrameworkCore
                 RecordLog();
                 context.ChangeTracker.LazyLoadingEnabled = false;
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
                 Assert.Null(child.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -924,11 +897,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext(lazyLoadingEnabled: true))
             {
                 var single = context.Attach(
-                    new SingleAk(context.GetService<ILazyLoader>().Load)
-                    {
-                        Id = 767,
-                        ParentId = null
-                    }).Entity;
+                    new SingleAk(context.GetService<ILazyLoader>().Load) { Id = 767, ParentId = null }).Entity;
 
                 ClearLog();
 
@@ -945,13 +914,13 @@ namespace Microsoft.EntityFrameworkCore
                 RecordLog();
                 context.ChangeTracker.LazyLoadingEnabled = false;
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 Assert.Null(single.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -983,7 +952,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -1017,7 +986,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -1051,7 +1020,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -1085,7 +1054,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -1094,10 +1063,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext(lazyLoadingEnabled: true))
             {
                 var child = context.Attach(
-                    new ChildShadowFk(context.GetService<ILazyLoader>().Load)
-                    {
-                        Id = 767
-                    }).Entity;
+                    new ChildShadowFk(context.GetService<ILazyLoader>().Load) { Id = 767 }).Entity;
 
                 ClearLog();
 
@@ -1114,12 +1080,12 @@ namespace Microsoft.EntityFrameworkCore
                 RecordLog();
                 context.ChangeTracker.LazyLoadingEnabled = false;
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
                 Assert.Null(child.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -1128,10 +1094,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext(lazyLoadingEnabled: true))
             {
                 var single = context.Attach(
-                    new SingleShadowFk(context.GetService<ILazyLoader>().Load)
-                    {
-                        Id = 767
-                    }).Entity;
+                    new SingleShadowFk(context.GetService<ILazyLoader>().Load) { Id = 767 }).Entity;
 
                 ClearLog();
 
@@ -1148,13 +1111,13 @@ namespace Microsoft.EntityFrameworkCore
                 RecordLog();
                 context.ChangeTracker.LazyLoadingEnabled = false;
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 Assert.Null(single.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -1186,7 +1149,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -1220,7 +1183,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -1254,7 +1217,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -1288,7 +1251,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -1297,11 +1260,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext(lazyLoadingEnabled: true))
             {
                 var child = context.Attach(
-                    new ChildCompositeKey(context.GetService<ILazyLoader>().Load)
-                    {
-                        Id = 767,
-                        ParentId = 567
-                    }).Entity;
+                    new ChildCompositeKey(context.GetService<ILazyLoader>().Load) { Id = 767, ParentId = 567 }).Entity;
 
                 ClearLog();
 
@@ -1318,12 +1277,12 @@ namespace Microsoft.EntityFrameworkCore
                 RecordLog();
                 context.ChangeTracker.LazyLoadingEnabled = false;
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
                 Assert.Null(child.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Deleted)]
@@ -1332,11 +1291,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext(lazyLoadingEnabled: true))
             {
                 var single = context.Attach(
-                    new SingleCompositeKey(context.GetService<ILazyLoader>().Load)
-                    {
-                        Id = 767,
-                        ParentAlternateId = "Boot"
-                    }).Entity;
+                    new SingleCompositeKey(context.GetService<ILazyLoader>().Load) { Id = 767, ParentAlternateId = "Boot" }).Entity;
 
                 ClearLog();
 
@@ -1353,13 +1308,13 @@ namespace Microsoft.EntityFrameworkCore
                 RecordLog();
                 context.ChangeTracker.LazyLoadingEnabled = false;
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 Assert.Null(single.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public virtual void Lazy_load_collection_for_detached_throws(bool noTracking)
@@ -1376,14 +1331,15 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Equal(
                     CoreStrings.WarningAsErrorTemplate(
                         CoreEventId.DetachedLazyLoadingWarning.ToString(),
-                        CoreResources.LogDetachedLazyLoading(new TestLogger<TestLoggingDefinitions>()).GenerateMessage(nameof(Parent.Children), "Parent"),
+                        CoreResources.LogDetachedLazyLoading(new TestLogger<TestLoggingDefinitions>())
+                            .GenerateMessage(nameof(Parent.Children), "Parent"),
                         "CoreEventId.DetachedLazyLoadingWarning"),
                     Assert.Throws<InvalidOperationException>(
                         () => parent.Children).Message);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public virtual void Lazy_load_reference_to_principal_for_detached_throws(bool noTracking)
@@ -1400,14 +1356,15 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Equal(
                     CoreStrings.WarningAsErrorTemplate(
                         CoreEventId.DetachedLazyLoadingWarning.ToString(),
-                        CoreResources.LogDetachedLazyLoading(new TestLogger<TestLoggingDefinitions>()).GenerateMessage(nameof(Child.Parent), "Child"),
+                        CoreResources.LogDetachedLazyLoading(new TestLogger<TestLoggingDefinitions>())
+                            .GenerateMessage(nameof(Child.Parent), "Child"),
                         "CoreEventId.DetachedLazyLoadingWarning"),
                     Assert.Throws<InvalidOperationException>(
                         () => child.Parent).Message);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public virtual void Lazy_load_reference_to_dependent_for_detached_throws(bool noTracking)
@@ -1424,14 +1381,15 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Equal(
                     CoreStrings.WarningAsErrorTemplate(
                         CoreEventId.DetachedLazyLoadingWarning.ToString(),
-                        CoreResources.LogDetachedLazyLoading(new TestLogger<TestLoggingDefinitions>()).GenerateMessage(nameof(Parent.Single), "Parent"),
+                        CoreResources.LogDetachedLazyLoading(new TestLogger<TestLoggingDefinitions>())
+                            .GenerateMessage(nameof(Parent.Single), "Parent"),
                         "CoreEventId.DetachedLazyLoadingWarning"),
                     Assert.Throws<InvalidOperationException>(
                         () => parent.Single).Message);
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Lazy_loading_uses_field_access_when_abstract_base_class_navigation()
         {
             using (var context = CreateContext(lazyLoadingEnabled: true))
@@ -1444,7 +1402,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -1486,7 +1444,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -1530,7 +1488,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -1573,7 +1531,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -1616,7 +1574,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -1661,7 +1619,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -1704,7 +1662,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -1747,7 +1705,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -1790,7 +1748,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -1828,7 +1786,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -1865,7 +1823,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -1902,7 +1860,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -1939,7 +1897,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -1976,7 +1934,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2013,7 +1971,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2025,11 +1983,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var child = context.Attach(
-                    new Child
-                    {
-                        Id = 767,
-                        ParentId = null
-                    }).Entity;
+                    new Child { Id = 767, ParentId = null }).Entity;
 
                 ClearLog();
 
@@ -2052,12 +2006,12 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
                 Assert.Null(child.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2069,11 +2023,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var single = context.Attach(
-                    new Single
-                    {
-                        Id = 767,
-                        ParentId = null
-                    }).Entity;
+                    new Single { Id = 767, ParentId = null }).Entity;
 
                 ClearLog();
 
@@ -2096,13 +2046,13 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 Assert.Null(single.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2114,11 +2064,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var child = context.Attach(
-                    new Child
-                    {
-                        Id = 767,
-                        ParentId = null
-                    }).Entity;
+                    new Child { Id = 767, ParentId = null }).Entity;
 
                 ClearLog();
 
@@ -2139,11 +2085,11 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Null(parent);
                 Assert.Null(child.Parent);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2155,11 +2101,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var single = context.Attach(
-                    new Single
-                    {
-                        Id = 767,
-                        ParentId = null
-                    }).Entity;
+                    new Single { Id = 767, ParentId = null }).Entity;
 
                 ClearLog();
 
@@ -2180,11 +2122,11 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Null(parent);
                 Assert.Null(single.Parent);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2196,11 +2138,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var parent = context.Attach(
-                    new Parent
-                    {
-                        Id = 767,
-                        AlternateId = "NewRoot"
-                    }).Entity;
+                    new Parent { Id = 767, AlternateId = "NewRoot" }).Entity;
 
                 ClearLog();
 
@@ -2223,12 +2161,12 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(0, parent.Children.Count());
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Empty(parent.Children);
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2240,11 +2178,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var child = context.Attach(
-                    new Child
-                    {
-                        Id = 767,
-                        ParentId = 787
-                    }).Entity;
+                    new Child { Id = 767, ParentId = 787 }).Entity;
 
                 ClearLog();
 
@@ -2267,12 +2201,12 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
                 Assert.Null(child.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2284,11 +2218,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var single = context.Attach(
-                    new Single
-                    {
-                        Id = 767,
-                        ParentId = 787
-                    }).Entity;
+                    new Single { Id = 767, ParentId = 787 }).Entity;
 
                 ClearLog();
 
@@ -2311,13 +2241,13 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 Assert.Null(single.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2329,11 +2259,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var parent = context.Attach(
-                    new Parent
-                    {
-                        Id = 767,
-                        AlternateId = "NewRoot"
-                    }).Entity;
+                    new Parent { Id = 767, AlternateId = "NewRoot" }).Entity;
 
                 ClearLog();
 
@@ -2356,13 +2282,13 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 Assert.Null(parent.Single);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2374,11 +2300,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var parent = context.Attach(
-                    new Parent
-                    {
-                        Id = 767,
-                        AlternateId = "NewRoot"
-                    }).Entity;
+                    new Parent { Id = 767, AlternateId = "NewRoot" }).Entity;
 
                 ClearLog();
 
@@ -2396,14 +2318,14 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(0, children.Count);
-                Assert.Equal(0, parent.Children.Count());
+                Assert.Empty(children);
+                Assert.Empty(parent.Children);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2415,11 +2337,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var child = context.Attach(
-                    new Child
-                    {
-                        Id = 767,
-                        ParentId = 787
-                    }).Entity;
+                    new Child { Id = 767, ParentId = 787 }).Entity;
 
                 ClearLog();
 
@@ -2440,11 +2358,11 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Null(parent);
                 Assert.Null(child.Parent);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2456,11 +2374,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var single = context.Attach(
-                    new Single
-                    {
-                        Id = 767,
-                        ParentId = 787
-                    }).Entity;
+                    new Single { Id = 767, ParentId = 787 }).Entity;
 
                 ClearLog();
 
@@ -2481,11 +2395,11 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Null(parent);
                 Assert.Null(single.Parent);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2497,11 +2411,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var parent = context.Attach(
-                    new Parent
-                    {
-                        Id = 767,
-                        AlternateId = "NewRoot"
-                    }).Entity;
+                    new Parent { Id = 767, AlternateId = "NewRoot" }).Entity;
 
                 ClearLog();
 
@@ -2522,11 +2432,11 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Null(single);
                 Assert.Null(parent.Single);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true, CascadeTiming.Immediate)]
         [InlineData(EntityState.Unchanged, false, CascadeTiming.Immediate)]
         [InlineData(EntityState.Modified, true, CascadeTiming.Immediate)]
@@ -2584,7 +2494,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2627,7 +2537,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true, CascadeTiming.Immediate)]
         [InlineData(EntityState.Unchanged, false, CascadeTiming.Immediate)]
         [InlineData(EntityState.Modified, true, CascadeTiming.Immediate)]
@@ -2640,7 +2550,8 @@ namespace Microsoft.EntityFrameworkCore
         [InlineData(EntityState.Modified, false, CascadeTiming.OnSaveChanges)]
         [InlineData(EntityState.Deleted, true, CascadeTiming.OnSaveChanges)]
         [InlineData(EntityState.Deleted, false, CascadeTiming.OnSaveChanges)]
-        public virtual async Task Load_one_to_one_reference_to_principal_already_loaded(EntityState state, bool async, CascadeTiming deleteOrphansTiming)
+        public virtual async Task Load_one_to_one_reference_to_principal_already_loaded(
+            EntityState state, bool async, CascadeTiming deleteOrphansTiming)
         {
             using (var context = CreateContext())
             {
@@ -2678,7 +2589,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true, CascadeTiming.Immediate)]
         [InlineData(EntityState.Unchanged, false, CascadeTiming.Immediate)]
         [InlineData(EntityState.Modified, true, CascadeTiming.Immediate)]
@@ -2691,7 +2602,8 @@ namespace Microsoft.EntityFrameworkCore
         [InlineData(EntityState.Modified, false, CascadeTiming.OnSaveChanges)]
         [InlineData(EntityState.Deleted, true, CascadeTiming.OnSaveChanges)]
         [InlineData(EntityState.Deleted, false, CascadeTiming.OnSaveChanges)]
-        public virtual async Task Load_one_to_one_reference_to_dependent_already_loaded(EntityState state, bool async, CascadeTiming deleteOrphansTiming)
+        public virtual async Task Load_one_to_one_reference_to_dependent_already_loaded(
+            EntityState state, bool async, CascadeTiming deleteOrphansTiming)
         {
             using (var context = CreateContext())
             {
@@ -2738,7 +2650,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2781,7 +2693,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2824,7 +2736,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true, CascadeTiming.Immediate)]
         [InlineData(EntityState.Unchanged, false, CascadeTiming.Immediate)]
         [InlineData(EntityState.Modified, true, CascadeTiming.Immediate)]
@@ -2837,7 +2749,8 @@ namespace Microsoft.EntityFrameworkCore
         [InlineData(EntityState.Modified, false, CascadeTiming.OnSaveChanges)]
         [InlineData(EntityState.Deleted, true, CascadeTiming.OnSaveChanges)]
         [InlineData(EntityState.Deleted, false, CascadeTiming.OnSaveChanges)]
-        public virtual async Task Load_collection_using_Query_already_loaded(EntityState state, bool async, CascadeTiming deleteOrphansTiming)
+        public virtual async Task Load_collection_using_Query_already_loaded(
+            EntityState state, bool async, CascadeTiming deleteOrphansTiming)
         {
             using (var context = CreateContext())
             {
@@ -2870,7 +2783,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2907,7 +2820,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -2944,7 +2857,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true, CascadeTiming.Immediate)]
         [InlineData(EntityState.Unchanged, false, CascadeTiming.Immediate)]
         [InlineData(EntityState.Modified, true, CascadeTiming.Immediate)]
@@ -2957,7 +2870,8 @@ namespace Microsoft.EntityFrameworkCore
         [InlineData(EntityState.Modified, false, CascadeTiming.OnSaveChanges)]
         [InlineData(EntityState.Deleted, true, CascadeTiming.OnSaveChanges)]
         [InlineData(EntityState.Deleted, false, CascadeTiming.OnSaveChanges)]
-        public virtual async Task Load_one_to_one_reference_to_dependent_using_Query_already_loaded(EntityState state, bool async, CascadeTiming deleteOrphansTiming)
+        public virtual async Task Load_one_to_one_reference_to_dependent_using_Query_already_loaded(
+            EntityState state, bool async, CascadeTiming deleteOrphansTiming)
         {
             using (var context = CreateContext())
             {
@@ -2989,7 +2903,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3026,7 +2940,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3063,7 +2977,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3104,7 +3018,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3147,7 +3061,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3190,7 +3104,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3233,7 +3147,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3254,8 +3168,7 @@ namespace Microsoft.EntityFrameworkCore
 
                 Assert.False(navigationEntry.IsLoaded);
 
-                // Issue #14935. Cannot eval 'OfType<System.Object>()'
-                // Uses test method non-generic IQueryable.ToList instead.
+                // Issue #16429
                 var children = async
                     ? await navigationEntry.Query().ToListAsync<object>()
                     : navigationEntry.Query().ToList<object>();
@@ -3273,7 +3186,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3294,8 +3207,7 @@ namespace Microsoft.EntityFrameworkCore
 
                 Assert.False(navigationEntry.IsLoaded);
 
-                // Issue #14935. Cannot eval 'OfType<System.Object>()'
-                // Uses test method non-generic IQueryable.ToList instead.
+                // Issue #16429
                 var parent = async
                     ? (await navigationEntry.Query().ToListAsync<object>()).Single()
                     : navigationEntry.Query().ToList<object>().Single();
@@ -3312,7 +3224,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3333,8 +3245,7 @@ namespace Microsoft.EntityFrameworkCore
 
                 Assert.False(navigationEntry.IsLoaded);
 
-                // Issue #14935. Cannot eval 'OfType<System.Object>()'
-                // Uses test method non-generic IQueryable.ToList instead.
+                // Issue #16429
                 var parent = async
                     ? (await navigationEntry.Query().ToListAsync<object>()).Single()
                     : navigationEntry.Query().ToList<object>().Single();
@@ -3351,7 +3262,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3372,8 +3283,7 @@ namespace Microsoft.EntityFrameworkCore
 
                 Assert.False(navigationEntry.IsLoaded);
 
-                // Issue #14935. Cannot eval 'OfType<System.Object>()'
-                // Uses test method non-generic IQueryable.ToList instead.
+                // Issue #16429
                 var single = async
                     ? (await navigationEntry.Query().ToListAsync<object>()).Single()
                     : navigationEntry.Query().ToList<object>().Single();
@@ -3390,7 +3300,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3402,11 +3312,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var parent = context.Attach(
-                    new Parent
-                    {
-                        Id = 767,
-                        AlternateId = "NewRoot"
-                    }).Entity;
+                    new Parent { Id = 767, AlternateId = "NewRoot" }).Entity;
 
                 ClearLog();
 
@@ -3429,12 +3335,12 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(0, parent.Children.Count());
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Empty(parent.Children);
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3446,11 +3352,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var child = context.Attach(
-                    new Child
-                    {
-                        Id = 767,
-                        ParentId = 787
-                    }).Entity;
+                    new Child { Id = 767, ParentId = 787 }).Entity;
 
                 ClearLog();
 
@@ -3473,12 +3375,12 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
                 Assert.Null(child.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3490,11 +3392,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var single = context.Attach(
-                    new Single
-                    {
-                        Id = 767,
-                        ParentId = 787
-                    }).Entity;
+                    new Single { Id = 767, ParentId = 787 }).Entity;
 
                 ClearLog();
 
@@ -3517,13 +3415,13 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 Assert.Null(single.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3535,11 +3433,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var parent = context.Attach(
-                    new Parent
-                    {
-                        Id = 767,
-                        AlternateId = "NewRoot"
-                    }).Entity;
+                    new Parent { Id = 767, AlternateId = "NewRoot" }).Entity;
 
                 ClearLog();
 
@@ -3562,13 +3456,13 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 Assert.Null(parent.Single);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3580,11 +3474,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var parent = context.Attach(
-                    new Parent
-                    {
-                        Id = 767,
-                        AlternateId = "NewRoot"
-                    }).Entity;
+                    new Parent { Id = 767, AlternateId = "NewRoot" }).Entity;
 
                 ClearLog();
 
@@ -3594,8 +3484,7 @@ namespace Microsoft.EntityFrameworkCore
 
                 Assert.False(navigationEntry.IsLoaded);
 
-                // Issue #14935. Cannot eval 'OfType<System.Object>()'
-                // Uses test method non-generic IQueryable.ToList instead.
+                // Issue #16429
                 var children = async
                     ? await navigationEntry.Query().ToListAsync<object>()
                     : navigationEntry.Query().ToList<object>();
@@ -3604,14 +3493,14 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(0, children.Count);
-                Assert.Equal(0, parent.Children.Count());
+                Assert.Empty(children);
+                Assert.Empty(parent.Children);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3623,11 +3512,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var child = context.Attach(
-                    new Child
-                    {
-                        Id = 767,
-                        ParentId = 787
-                    }).Entity;
+                    new Child { Id = 767, ParentId = 787 }).Entity;
 
                 ClearLog();
 
@@ -3637,8 +3522,7 @@ namespace Microsoft.EntityFrameworkCore
 
                 Assert.False(navigationEntry.IsLoaded);
 
-                // Issue #14935. Cannot eval 'OfType<System.Object>()'
-                // Uses test method non-generic IQueryable.ToList instead.
+                // Issue #16429
                 var parent = async
                     ? (await navigationEntry.Query().ToListAsync<object>()).SingleOrDefault()
                     : navigationEntry.Query().ToList<object>().SingleOrDefault();
@@ -3650,11 +3534,11 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Null(parent);
                 Assert.Null(child.Parent);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3666,11 +3550,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var single = context.Attach(
-                    new Single
-                    {
-                        Id = 767,
-                        ParentId = 787
-                    }).Entity;
+                    new Single { Id = 767, ParentId = 787 }).Entity;
 
                 ClearLog();
 
@@ -3680,8 +3560,7 @@ namespace Microsoft.EntityFrameworkCore
 
                 Assert.False(navigationEntry.IsLoaded);
 
-                // Issue #14935. Cannot eval 'OfType<System.Object>()'
-                // Uses test method non-generic IQueryable.ToList instead.
+                // Issue #16429
                 var parent = async
                     ? (await navigationEntry.Query().ToListAsync<object>()).SingleOrDefault()
                     : navigationEntry.Query().ToList<object>().SingleOrDefault();
@@ -3693,11 +3572,11 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Null(parent);
                 Assert.Null(single.Parent);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3709,11 +3588,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var parent = context.Attach(
-                    new Parent
-                    {
-                        Id = 767,
-                        AlternateId = "NewRoot"
-                    }).Entity;
+                    new Parent { Id = 767, AlternateId = "NewRoot" }).Entity;
 
                 ClearLog();
 
@@ -3723,8 +3598,7 @@ namespace Microsoft.EntityFrameworkCore
 
                 Assert.False(navigationEntry.IsLoaded);
 
-                // Issue #14935. Cannot eval 'OfType<System.Object>()'
-                // Uses test method non-generic IQueryable.ToList instead.
+                // Issue #16429
                 var single = async
                     ? (await navigationEntry.Query().ToListAsync<object>()).SingleOrDefault()
                     : navigationEntry.Query().ToList<object>().SingleOrDefault();
@@ -3736,11 +3610,11 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Null(single);
                 Assert.Null(parent.Single);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true, CascadeTiming.Immediate)]
         [InlineData(EntityState.Unchanged, false, CascadeTiming.Immediate)]
         [InlineData(EntityState.Modified, true, CascadeTiming.Immediate)]
@@ -3798,7 +3672,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3841,7 +3715,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -3884,7 +3758,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true, CascadeTiming.Immediate)]
         [InlineData(EntityState.Unchanged, false, CascadeTiming.Immediate)]
         [InlineData(EntityState.Modified, true, CascadeTiming.Immediate)]
@@ -3897,7 +3771,8 @@ namespace Microsoft.EntityFrameworkCore
         [InlineData(EntityState.Modified, false, CascadeTiming.OnSaveChanges)]
         [InlineData(EntityState.Deleted, true, CascadeTiming.OnSaveChanges)]
         [InlineData(EntityState.Deleted, false, CascadeTiming.OnSaveChanges)]
-        public virtual async Task Load_one_to_one_reference_to_dependent_already_loaded_untyped(EntityState state, bool async, CascadeTiming deleteOrphansTiming)
+        public virtual async Task Load_one_to_one_reference_to_dependent_already_loaded_untyped(
+            EntityState state, bool async, CascadeTiming deleteOrphansTiming)
         {
             using (var context = CreateContext())
             {
@@ -3944,7 +3819,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true, CascadeTiming.Immediate)]
         [InlineData(EntityState.Unchanged, false, CascadeTiming.Immediate)]
         [InlineData(EntityState.Modified, true, CascadeTiming.Immediate)]
@@ -3957,7 +3832,8 @@ namespace Microsoft.EntityFrameworkCore
         [InlineData(EntityState.Modified, false, CascadeTiming.OnSaveChanges)]
         [InlineData(EntityState.Deleted, true, CascadeTiming.OnSaveChanges)]
         [InlineData(EntityState.Deleted, false, CascadeTiming.OnSaveChanges)]
-        public virtual async Task Load_collection_using_Query_already_loaded_untyped(EntityState state, bool async, CascadeTiming deleteOrphansTiming)
+        public virtual async Task Load_collection_using_Query_already_loaded_untyped(
+            EntityState state, bool async, CascadeTiming deleteOrphansTiming)
         {
             using (var context = CreateContext())
             {
@@ -3974,8 +3850,7 @@ namespace Microsoft.EntityFrameworkCore
 
                 Assert.True(navigationEntry.IsLoaded);
 
-                // Issue #14935. Cannot eval 'OfType<System.Object>()'
-                // Uses test method non-generic IQueryable.ToList instead.
+                // Issue #16429
                 var children = async
                     ? await navigationEntry.Query().ToListAsync<object>()
                     : navigationEntry.Query().ToList<object>();
@@ -3992,7 +3867,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4013,8 +3888,7 @@ namespace Microsoft.EntityFrameworkCore
 
                 Assert.True(navigationEntry.IsLoaded);
 
-                // Issue #14935. Cannot eval 'OfType<System.Object>()'
-                // Uses test method non-generic IQueryable.ToList instead.
+                // Issue #16429
                 var parent = async
                     ? (await navigationEntry.Query().ToListAsync<object>()).Single()
                     : navigationEntry.Query().ToList<object>().Single();
@@ -4031,7 +3905,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4052,8 +3926,7 @@ namespace Microsoft.EntityFrameworkCore
 
                 Assert.True(navigationEntry.IsLoaded);
 
-                // Issue #14935. Cannot eval 'OfType<System.Object>()'
-                // Uses test method non-generic IQueryable.ToList instead.
+                // Issue #16429
                 var parent = async
                     ? (await navigationEntry.Query().ToListAsync<object>()).Single()
                     : navigationEntry.Query().ToList<object>().Single();
@@ -4070,7 +3943,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true, CascadeTiming.Immediate)]
         [InlineData(EntityState.Unchanged, false, CascadeTiming.Immediate)]
         [InlineData(EntityState.Modified, true, CascadeTiming.Immediate)]
@@ -4083,7 +3956,8 @@ namespace Microsoft.EntityFrameworkCore
         [InlineData(EntityState.Modified, false, CascadeTiming.OnSaveChanges)]
         [InlineData(EntityState.Deleted, true, CascadeTiming.OnSaveChanges)]
         [InlineData(EntityState.Deleted, false, CascadeTiming.OnSaveChanges)]
-        public virtual async Task Load_one_to_one_reference_to_dependent_using_Query_already_loaded_untyped(EntityState state, bool async, CascadeTiming deleteOrphansTiming)
+        public virtual async Task Load_one_to_one_reference_to_dependent_using_Query_already_loaded_untyped(
+            EntityState state, bool async, CascadeTiming deleteOrphansTiming)
         {
             using (var context = CreateContext())
             {
@@ -4100,8 +3974,7 @@ namespace Microsoft.EntityFrameworkCore
 
                 Assert.True(navigationEntry.IsLoaded);
 
-                // Issue #14935. Cannot eval 'OfType<System.Object>()'
-                // Uses test method non-generic IQueryable.ToList instead.
+                // Issue #16429
                 var single = async
                     ? (await navigationEntry.Query().ToListAsync<object>()).Single()
                     : navigationEntry.Query().ToList<object>().Single();
@@ -4119,7 +3992,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4160,7 +4033,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4203,7 +4076,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4246,7 +4119,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4289,7 +4162,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4327,7 +4200,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4364,7 +4237,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4401,7 +4274,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4438,7 +4311,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4450,11 +4323,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var child = context.Attach(
-                    new ChildAk
-                    {
-                        Id = 767,
-                        ParentId = null
-                    }).Entity;
+                    new ChildAk { Id = 767, ParentId = null }).Entity;
 
                 ClearLog();
 
@@ -4477,12 +4346,12 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
                 Assert.Null(child.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4494,11 +4363,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var single = context.Attach(
-                    new SingleAk
-                    {
-                        Id = 767,
-                        ParentId = null
-                    }).Entity;
+                    new SingleAk { Id = 767, ParentId = null }).Entity;
 
                 ClearLog();
 
@@ -4521,13 +4386,13 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 Assert.Null(single.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4539,11 +4404,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var child = context.Attach(
-                    new ChildAk
-                    {
-                        Id = 767,
-                        ParentId = null
-                    }).Entity;
+                    new ChildAk { Id = 767, ParentId = null }).Entity;
 
                 ClearLog();
 
@@ -4564,11 +4425,11 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Null(parent);
                 Assert.Null(child.Parent);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4580,11 +4441,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var single = context.Attach(
-                    new SingleAk
-                    {
-                        Id = 767,
-                        ParentId = null
-                    }).Entity;
+                    new SingleAk { Id = 767, ParentId = null }).Entity;
 
                 ClearLog();
 
@@ -4605,11 +4462,11 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Null(parent);
                 Assert.Null(single.Parent);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4650,7 +4507,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4693,7 +4550,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4736,7 +4593,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4779,7 +4636,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4817,7 +4674,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4854,7 +4711,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4891,7 +4748,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4928,7 +4785,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4940,10 +4797,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var child = context.Attach(
-                    new ChildShadowFk
-                    {
-                        Id = 767
-                    }).Entity;
+                    new ChildShadowFk { Id = 767 }).Entity;
 
                 ClearLog();
 
@@ -4966,12 +4820,12 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
                 Assert.Null(child.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -4983,10 +4837,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var single = context.Attach(
-                    new SingleShadowFk
-                    {
-                        Id = 767
-                    }).Entity;
+                    new SingleShadowFk { Id = 767 }).Entity;
 
                 ClearLog();
 
@@ -5009,13 +4860,13 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 Assert.Null(single.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -5027,10 +4878,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var child = context.Attach(
-                    new ChildShadowFk
-                    {
-                        Id = 767
-                    }).Entity;
+                    new ChildShadowFk { Id = 767 }).Entity;
 
                 ClearLog();
 
@@ -5051,11 +4899,11 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Null(parent);
                 Assert.Null(child.Parent);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -5067,10 +4915,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var single = context.Attach(
-                    new SingleShadowFk
-                    {
-                        Id = 767
-                    }).Entity;
+                    new SingleShadowFk { Id = 767 }).Entity;
 
                 ClearLog();
 
@@ -5091,11 +4936,11 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Null(parent);
                 Assert.Null(single.Parent);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -5136,7 +4981,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -5179,7 +5024,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -5222,7 +5067,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -5265,7 +5110,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -5303,7 +5148,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -5340,7 +5185,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -5377,7 +5222,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -5414,7 +5259,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -5426,11 +5271,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var child = context.Attach(
-                    new ChildCompositeKey
-                    {
-                        Id = 767,
-                        ParentId = 567
-                    }).Entity;
+                    new ChildCompositeKey { Id = 767, ParentId = 567 }).Entity;
 
                 ClearLog();
 
@@ -5453,12 +5294,12 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
                 Assert.Null(child.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -5470,11 +5311,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var single = context.Attach(
-                    new SingleCompositeKey
-                    {
-                        Id = 767,
-                        ParentAlternateId = "Boot"
-                    }).Entity;
+                    new SingleCompositeKey { Id = 767, ParentAlternateId = "Boot" }).Entity;
 
                 ClearLog();
 
@@ -5497,13 +5334,13 @@ namespace Microsoft.EntityFrameworkCore
 
                 RecordLog();
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 Assert.Null(single.Parent);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -5515,11 +5352,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var child = context.Attach(
-                    new ChildCompositeKey
-                    {
-                        Id = 767,
-                        ParentAlternateId = "Boot"
-                    }).Entity;
+                    new ChildCompositeKey { Id = 767, ParentAlternateId = "Boot" }).Entity;
 
                 ClearLog();
 
@@ -5540,11 +5373,11 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Null(parent);
                 Assert.Null(child.Parent);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Unchanged, true)]
         [InlineData(EntityState.Unchanged, false)]
         [InlineData(EntityState.Modified, true)]
@@ -5556,11 +5389,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = CreateContext())
             {
                 var single = context.Attach(
-                    new SingleCompositeKey
-                    {
-                        Id = 767,
-                        ParentId = 567
-                    }).Entity;
+                    new SingleCompositeKey { Id = 767, ParentId = 567 }).Entity;
 
                 ClearLog();
 
@@ -5581,11 +5410,11 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Null(parent);
                 Assert.Null(single.Parent);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_change_IsLoaded_flag_for_collection()
         {
             using (var context = CreateContext())
@@ -5602,8 +5431,8 @@ namespace Microsoft.EntityFrameworkCore
 
                 collectionEntry.Load();
 
-                Assert.Equal(0, parent.Children.Count());
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Empty(parent.Children);
+                Assert.Single(context.ChangeTracker.Entries());
 
                 Assert.True(collectionEntry.IsLoaded);
 
@@ -5621,7 +5450,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_change_IsLoaded_flag_for_reference_only_if_null()
         {
             using (var context = CreateContext())
@@ -5640,7 +5469,7 @@ namespace Microsoft.EntityFrameworkCore
 
                 Assert.True(referenceEntry.IsLoaded);
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 referenceEntry.IsLoaded = true;
 
@@ -5658,7 +5487,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true, false)]
         [InlineData(false, false)]
         [InlineData(true, true)]
@@ -5693,7 +5522,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true, false)]
         [InlineData(false, false)]
         [InlineData(true, true)]
@@ -5728,7 +5557,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true, false)]
         [InlineData(false, false)]
         [InlineData(true, true)]
@@ -5763,7 +5592,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true, false)]
         [InlineData(false, false)]
         [InlineData(true, true)]
@@ -5798,7 +5627,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true, false)]
         [InlineData(false, false)]
         [InlineData(true, true)]
@@ -5833,7 +5662,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true, false)]
         [InlineData(false, false)]
         [InlineData(true, true)]
@@ -5868,7 +5697,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true, false)]
         [InlineData(false, false)]
         [InlineData(true, true)]
@@ -5903,7 +5732,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true, false)]
         [InlineData(false, false)]
         [InlineData(true, true)]
@@ -5938,7 +5767,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true, false)]
         [InlineData(false, false)]
         [InlineData(true, true)]
@@ -5973,7 +5802,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public virtual void Query_collection_for_detached_throws(bool noTracking)
@@ -5995,7 +5824,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public virtual void Query_collection_using_string_for_detached_throws(bool noTracking)
@@ -6017,7 +5846,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public virtual void Query_collection_with_navigation_for_detached_throws(bool noTracking)
@@ -6039,7 +5868,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public virtual void Query_reference_to_principal_for_detached_throws(bool noTracking)
@@ -6061,7 +5890,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public virtual void Query_reference_with_navigation_to_principal_for_detached_throws(bool noTracking)
@@ -6083,7 +5912,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public virtual void Query_reference_using_string_to_principal_for_detached_throws(bool noTracking)
@@ -6105,7 +5934,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public virtual void Query_reference_to_dependent_for_detached_throws(bool noTracking)
@@ -6127,7 +5956,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public virtual void Query_reference_to_dependent_with_navigation_for_detached_throws(bool noTracking)
@@ -6149,7 +5978,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(true)]
         [InlineData(false)]
         public virtual void Query_reference_to_dependent_using_string_for_detached_throws(bool noTracking)
@@ -6683,32 +6512,16 @@ namespace Microsoft.EntityFrameworkCore
                         b.HasMany(e => e.ChildrenCompositeKey)
                             .WithOne(e => e.Parent)
                             .HasPrincipalKey(
-                                e => new
-                                {
-                                    e.AlternateId,
-                                    e.Id
-                                })
+                                e => new { e.AlternateId, e.Id })
                             .HasForeignKey(
-                                e => new
-                                {
-                                    e.ParentAlternateId,
-                                    e.ParentId
-                                });
+                                e => new { e.ParentAlternateId, e.ParentId });
 
                         b.HasOne<SingleCompositeKey>(nameof(Parent.SingleCompositeKey))
                             .WithOne(e => e.Parent)
                             .HasPrincipalKey<Parent>(
-                                e => new
-                                {
-                                    e.AlternateId,
-                                    e.Id
-                                })
+                                e => new { e.AlternateId, e.Id })
                             .HasForeignKey<SingleCompositeKey>(
-                                e => new
-                                {
-                                    e.ParentAlternateId,
-                                    e.ParentId
-                                });
+                                e => new { e.ParentAlternateId, e.ParentId });
                     });
 
                 modelBuilder.Entity<RootClass>();
@@ -6727,77 +6540,22 @@ namespace Microsoft.EntityFrameworkCore
                     {
                         Id = 707,
                         AlternateId = "Root",
-                        Children = new List<Child>
-                        {
-                            new Child
-                            {
-                                Id = 11
-                            },
-                            new Child
-                            {
-                                Id = 12
-                            }
-                        },
-                        SinglePkToPk = new SinglePkToPk
-                        {
-                            Id = 707
-                        },
-                        Single = new Single
-                        {
-                            Id = 21
-                        },
-                        ChildrenAk = new List<ChildAk>
-                        {
-                            new ChildAk
-                            {
-                                Id = 31
-                            },
-                            new ChildAk
-                            {
-                                Id = 32
-                            }
-                        },
-                        SingleAk = new SingleAk
-                        {
-                            Id = 42
-                        },
-                        ChildrenShadowFk = new List<ChildShadowFk>
-                        {
-                            new ChildShadowFk
-                            {
-                                Id = 51
-                            },
-                            new ChildShadowFk
-                            {
-                                Id = 52
-                            }
-                        },
-                        SingleShadowFk = new SingleShadowFk
-                        {
-                            Id = 62
-                        },
+                        Children = new List<Child> { new Child { Id = 11 }, new Child { Id = 12 } },
+                        SinglePkToPk = new SinglePkToPk { Id = 707 },
+                        Single = new Single { Id = 21 },
+                        ChildrenAk = new List<ChildAk> { new ChildAk { Id = 31 }, new ChildAk { Id = 32 } },
+                        SingleAk = new SingleAk { Id = 42 },
+                        ChildrenShadowFk = new List<ChildShadowFk> { new ChildShadowFk { Id = 51 }, new ChildShadowFk { Id = 52 } },
+                        SingleShadowFk = new SingleShadowFk { Id = 62 },
                         ChildrenCompositeKey = new List<ChildCompositeKey>
                         {
-                            new ChildCompositeKey
-                            {
-                                Id = 51
-                            },
-                            new ChildCompositeKey
-                            {
-                                Id = 52
-                            }
+                            new ChildCompositeKey { Id = 51 }, new ChildCompositeKey { Id = 52 }
                         },
-                        SingleCompositeKey = new SingleCompositeKey
-                        {
-                            Id = 62
-                        }
+                        SingleCompositeKey = new SingleCompositeKey { Id = 62 }
                     });
 
                 context.Add(
-                    new SimpleProduct
-                    {
-                        Deposit = new Deposit()
-                    });
+                    new SimpleProduct { Deposit = new Deposit() });
 
                 context.SaveChanges();
             }

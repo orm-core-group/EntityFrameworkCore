@@ -5,7 +5,7 @@
     <PackageId>Microsoft.EntityFrameworkCore.Sqlite.NetTopologySuite</PackageId>
     <RootNamespace>Microsoft.EntityFrameworkCore.Sqlite</RootNamespace>
     <Description>NetTopologySuite support for the SQLite database provider for Entity Framework Core.</Description>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <MinClientVersion>3.6</MinClientVersion>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageTags>$(PackageTags);SQLite;GIS;NTS;OGC;SpatiaLite</PackageTags>
@@ -29,7 +29,6 @@
 
   <ItemGroup>
     <PackageReference Include="mod_spatialite" Version="$(mod_spatialitePackageVersion)" />
-    <PackageReference Include="NetTopologySuite.Core" Version="$(NetTopologySuiteCorePackageVersion)" />
     <PackageReference Include="NetTopologySuite.IO.SpatiaLite" Version="$(NetTopologySuiteIOSpatiaLitePackageVersion)" />
     <PackageReference Include="StyleCop.Analyzers" Version="$(StyleCopAnalyzersPackageVersion)" PrivateAssets="All" />
   </ItemGroup>

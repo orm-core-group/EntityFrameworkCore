@@ -31,13 +31,13 @@ namespace Microsoft.EntityFrameworkCore
 
         protected ExecutionStrategyFixture Fixture { get; }
 
-        [Fact]
+        [ConditionalFact]
         public void Does_not_throw_or_retry_on_false_commit_failure()
         {
             Test_commit_failure(false);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Retries_on_true_commit_failure()
         {
             Test_commit_failure(true);
@@ -112,7 +112,7 @@ namespace Microsoft.EntityFrameworkCore
                 var retryMessage =
                     "A transient exception has been encountered during execution and the operation will be retried after 0ms."
                     + Environment.NewLine +
-                    "System.Data.SqlClient.SqlException (0x80131904): Bang!";
+                    "Microsoft.Data.SqlClient.SqlException (0x80131904): Bang!";
                 if (realFailure)
                 {
                     var logEntry = Fixture.TestSqlLoggerFactory.Log.Single(l => l.Id == CoreEventId.ExecutionStrategyRetrying);
@@ -133,13 +133,13 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Does_not_throw_or_retry_on_false_commit_failure_async()
         {
             return Test_commit_failure_async(false);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Retries_on_true_commit_failure_async()
         {
             return Test_commit_failure_async(true);
@@ -240,13 +240,13 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Does_not_throw_or_retry_on_false_commit_failure_multiple_SaveChanges()
         {
             Test_commit_failure_multiple_SaveChanges(false);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Retries_on_true_commit_failure_multiple_SaveChanges()
         {
             Test_commit_failure_multiple_SaveChanges(true);
@@ -291,7 +291,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false, false, false)]
         [InlineData(true, false, false)]
         [InlineData(false, true, false)]
@@ -366,7 +366,14 @@ namespace Microsoft.EntityFrameworkCore
 
                 if (openConnection)
                 {
-                    context.Database.CloseConnection();
+                    if (async)
+                    {
+                        context.Database.CloseConnection();
+                    }
+                    else
+                    {
+                        await context.Database.CloseConnectionAsync();
+                    }
                 }
 
                 Assert.Equal(ConnectionState.Closed, context.Database.GetDbConnection().State);
@@ -378,9 +385,9 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
-        //[InlineData(true)] (Skip = "QueryIssue")
+        //[InlineData(true)]
         public async Task Retries_query_on_execution_failure(bool async)
         {
             CleanContext();
@@ -437,7 +444,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task Retries_OpenConnection_on_execution_failure(bool async)
@@ -465,13 +472,20 @@ namespace Microsoft.EntityFrameworkCore
 
                 Assert.Equal(2, connection.OpenCount);
 
-                context.Database.CloseConnection();
+                if (async)
+                {
+                    context.Database.CloseConnection();
+                }
+                else
+                {
+                    await context.Database.CloseConnectionAsync();
+                }
 
                 Assert.Equal(ConnectionState.Closed, context.Database.GetDbConnection().State);
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task Retries_BeginTransaction_on_execution_failure(bool async)
@@ -507,7 +521,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Verification_is_retried_using_same_retry_limit()
         {
             CleanContext();

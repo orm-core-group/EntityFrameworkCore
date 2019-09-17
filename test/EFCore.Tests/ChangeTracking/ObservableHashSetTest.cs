@@ -16,7 +16,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
     {
         private static readonly Random _random = new Random();
 
-        [Fact]
+        [ConditionalFact]
         public void Can_construct()
         {
             Assert.Same(
@@ -42,7 +42,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             Assert.Same(rh2.Comparer, ohs2.Comparer);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add()
         {
             var hashSet = new ObservableHashSet<string>();
@@ -87,7 +87,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             Assert.Equal(new[] { "Carmack", "Palmer" }, hashSet.OrderBy(i => i));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_clear()
         {
             var testData = new HashSet<int>(CreateTestData());
@@ -124,7 +124,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             Assert.Empty(hashSet);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Contains_works()
         {
             var testData = CreateTestData();
@@ -132,16 +132,16 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
 
             foreach (var item in testData)
             {
-                Assert.True(hashSet.Contains(item));
+                Assert.Contains(item, hashSet);
             }
 
             foreach (var item in CreateTestData(1000, 10000).Except(testData))
             {
-                Assert.False(hashSet.Contains(item));
+                Assert.DoesNotContain(item, hashSet);
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_copy_to_array()
         {
             var testData = CreateTestData();
@@ -171,14 +171,10 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_remove()
         {
-            var hashSet = new ObservableHashSet<string>
-            {
-                "Palmer",
-                "Carmack"
-            };
+            var hashSet = new ObservableHashSet<string> { "Palmer", "Carmack" };
             var countChanging = 0;
             var countChanged = 0;
             var collectionChanged = 0;
@@ -220,20 +216,16 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             Assert.Empty(hashSet);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Not_read_only()
         {
             Assert.False(new ObservableHashSet<Random>().IsReadOnly);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_union_with()
         {
-            var hashSet = new ObservableHashSet<string>
-            {
-                "Palmer",
-                "Carmack"
-            };
+            var hashSet = new ObservableHashSet<string> { "Palmer", "Carmack" };
             var countChanging = 0;
             var countChanged = 0;
             var collectionChanged = 0;
@@ -266,16 +258,10 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             Assert.Equal(new[] { "Brendan", "Carmack", "Nate", "Palmer" }, hashSet.OrderBy(i => i));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_intersect_with()
         {
-            var hashSet = new ObservableHashSet<string>
-            {
-                "Brendan",
-                "Carmack",
-                "Nate",
-                "Palmer"
-            };
+            var hashSet = new ObservableHashSet<string> { "Brendan", "Carmack", "Nate", "Palmer" };
             var countChanging = 0;
             var countChanged = 0;
             var collectionChanged = 0;
@@ -308,16 +294,10 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             Assert.Equal(new[] { "Carmack", "Palmer" }, hashSet.OrderBy(i => i));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_except_with()
         {
-            var hashSet = new ObservableHashSet<string>
-            {
-                "Brendan",
-                "Carmack",
-                "Nate",
-                "Palmer"
-            };
+            var hashSet = new ObservableHashSet<string> { "Brendan", "Carmack", "Nate", "Palmer" };
             var countChanging = 0;
             var countChanged = 0;
             var collectionChanged = 0;
@@ -350,16 +330,10 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             Assert.Equal(new[] { "Brendan", "Nate" }, hashSet.OrderBy(i => i));
         }
 
-        [Fact]
-        public void Can_symetrical_except_with()
+        [ConditionalFact]
+        public void Can_symmetrical_except_with()
         {
-            var hashSet = new ObservableHashSet<string>
-            {
-                "Brendan",
-                "Carmack",
-                "Nate",
-                "Palmer"
-            };
+            var hashSet = new ObservableHashSet<string> { "Brendan", "Carmack", "Nate", "Palmer" };
             var countChanging = 0;
             var countChanged = 0;
             var collectionChanged = 0;
@@ -393,7 +367,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             Assert.Equal(new[] { "Abrash", "Brendan", "Nate" }, hashSet.OrderBy(i => i));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void IsSubsetOf_works_like_normal_hashset()
         {
             var bigData = CreateTestData();
@@ -404,7 +378,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                 new ObservableHashSet<int>(smallData).IsSubsetOf(bigData));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void IsProperSubsetOf_works_like_normal_hashset()
         {
             var bigData = CreateTestData();
@@ -415,7 +389,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                 new ObservableHashSet<int>(smallData).IsProperSubsetOf(bigData));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void IsSupersetOf_works_like_normal_hashset()
         {
             var bigData = CreateTestData();
@@ -426,7 +400,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                 new ObservableHashSet<int>(bigData).IsSupersetOf(smallData));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void IsProperSupersetOf_works_like_normal_hashset()
         {
             var bigData = CreateTestData();
@@ -437,7 +411,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                 new ObservableHashSet<int>(bigData).IsProperSupersetOf(smallData));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Overlaps_works_like_normal_hashset()
         {
             var bigData = CreateTestData();
@@ -448,7 +422,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                 new ObservableHashSet<int>(bigData).Overlaps(smallData));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void SetEquals_works_like_normal_hashset()
         {
             var data1 = CreateTestData(5);
@@ -459,7 +433,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
                 new ObservableHashSet<int>(data1).SetEquals(data2));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void TrimExcess_doesnt_throw()
         {
             var bigData = CreateTestData();
@@ -474,16 +448,10 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             hashSet.TrimExcess();
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_remove_with_predicate()
         {
-            var hashSet = new ObservableHashSet<string>
-            {
-                "Brendan",
-                "Carmack",
-                "Nate",
-                "Palmer"
-            };
+            var hashSet = new ObservableHashSet<string> { "Brendan", "Carmack", "Nate", "Palmer" };
             var countChanging = 0;
             var countChanged = 0;
             var collectionChanged = 0;
@@ -516,7 +484,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
             Assert.Equal(new[] { "Brendan", "Nate" }, hashSet.OrderBy(i => i));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void ToBindingList_returns_a_new_binding_list_each_time_when_called_on_non_DbLocalView_ObservableCollections()
         {
             var oc = new ObservableCollection<string>();

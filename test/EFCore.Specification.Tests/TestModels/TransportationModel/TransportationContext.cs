@@ -42,6 +42,9 @@ namespace Microsoft.EntityFrameworkCore.TestModels.TransportationModel
                     eb.HasOne(e => e.Vehicle)
                         .WithOne(e => e.Operator)
                         .HasForeignKey<Operator>(e => e.VehicleName);
+                    eb.HasOne(e => e.Details)
+                        .WithOne()
+                        .HasForeignKey<OperatorDetails>(e => e.VehicleName);
                 });
             modelBuilder.Entity<LicensedOperator>();
 
@@ -64,6 +67,12 @@ namespace Microsoft.EntityFrameworkCore.TestModels.TransportationModel
                         .WithOne(e => e.SolidFuelTank)
                         .HasForeignKey<SolidFuelTank>(e => e.VehicleName);
                 });
+
+            modelBuilder.Entity<OperatorDetails>(
+                eb =>
+                {
+                    eb.HasKey(e => e.VehicleName);
+                });
         }
 
         public void Seed()
@@ -77,11 +86,12 @@ namespace Microsoft.EntityFrameworkCore.TestModels.TransportationModel
             var expected = CreateVehicles().OrderBy(v => v.Name).ToList();
             var actual = Vehicles
                 .Include(v => v.Operator)
+                .ThenInclude(v => v.Details)
                 .Include(v => ((PoweredVehicle)v).Engine)
                 .ThenInclude(e => (e as CombustionEngine).FuelTank)
                 .OrderBy(v => v.Name).ToList();
-            //issue #15318
-            //Assert.Equal(expected, actual);
+
+            Assert.Equal(expected, actual);
         }
 
         protected IEnumerable<Vehicle> CreateVehicles()
@@ -91,11 +101,7 @@ namespace Microsoft.EntityFrameworkCore.TestModels.TransportationModel
                 {
                     Name = "Trek Pro Fit Madone 6 Series",
                     SeatingCapacity = 1,
-                    Operator = new Operator
-                    {
-                        Name = "Lance Armstrong",
-                        VehicleName = "Trek Pro Fit Madone 6 Series"
-                    }
+                    Operator = new Operator { Name = "Lance Armstrong", VehicleName = "Trek Pro Fit Madone 6 Series" }
                 },
                 new PoweredVehicle
                 {
@@ -103,9 +109,7 @@ namespace Microsoft.EntityFrameworkCore.TestModels.TransportationModel
                     SeatingCapacity = 34,
                     Operator = new LicensedOperator
                     {
-                        Name = "Albert Williams",
-                        LicenseType = "Muni Transit",
-                        VehicleName = "1984 California Car"
+                        Name = "Albert Williams", LicenseType = "Muni Transit", VehicleName = "1984 California Car"
                     }
                 },
                 new PoweredVehicle
@@ -119,9 +123,7 @@ namespace Microsoft.EntityFrameworkCore.TestModels.TransportationModel
                     },
                     Operator = new LicensedOperator
                     {
-                        Name = "Elon Musk",
-                        LicenseType = "Driver",
-                        VehicleName = "P85 2012 Tesla Model S Performance Edition"
+                        Name = "Elon Musk", LicenseType = "Driver", VehicleName = "P85 2012 Tesla Model S Performance Edition"
                     }
                 },
                 new PoweredVehicle
@@ -141,9 +143,7 @@ namespace Microsoft.EntityFrameworkCore.TestModels.TransportationModel
                     },
                     Operator = new LicensedOperator
                     {
-                        Name = "William J. Knight",
-                        LicenseType = "Air Force Test Pilot",
-                        VehicleName = "North American X-15A-2"
+                        Name = "William J. Knight", LicenseType = "Air Force Test Pilot", VehicleName = "North American X-15A-2"
                     }
                 },
                 new PoweredVehicle
@@ -159,6 +159,11 @@ namespace Microsoft.EntityFrameworkCore.TestModels.TransportationModel
                             GrainGeometry = "Cylindrical",
                             VehicleName = "AIM-9M Sidewinder"
                         },
+                        VehicleName = "AIM-9M Sidewinder"
+                    },
+                    Operator = new Operator
+                    {
+                        Details = new OperatorDetails { Type = "Heat-seeking", VehicleName = "AIM-9M Sidewinder" },
                         VehicleName = "AIM-9M Sidewinder"
                     }
                 }

@@ -13,9 +13,9 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
     ///         Validates a model after it is built.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Singleton"/>. This means a single instance
-    ///         is used by many <see cref="DbContext"/> instances. The implementation must be thread-safe.
-    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped"/>.
+    ///         The service lifetime is <see cref="ServiceLifetime.Singleton" />. This means a single instance
+    ///         is used by many <see cref="DbContext" /> instances. The implementation must be thread-safe.
+    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped" />.
     ///     </para>
     /// </summary>
     public interface IModelValidator
@@ -24,7 +24,7 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         ///     Validates a model, throwing an exception if any errors are found.
         /// </summary>
         /// <param name="model"> The model to validate. </param>
-        /// <param name="loggers"> Loggers to use. </param>
-        void Validate([NotNull] IModel model, DiagnosticsLoggers loggers);
+        /// <param name="logger"> The logger to use. </param>
+        void Validate([NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger);
     }
 }

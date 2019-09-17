@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -98,7 +98,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking
         /// </summary>
         public virtual void DetectChanges()
         {
-            if (Context.Model[ChangeDetector.SkipDetectChangesAnnotation] == null)
+            if ((string)Context.Model[ChangeDetector.SkipDetectChangesAnnotation] != "true")
             {
                 Context.GetDependencies().ChangeDetector.DetectChanges(InternalEntry);
             }

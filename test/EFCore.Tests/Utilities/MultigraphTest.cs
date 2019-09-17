@@ -92,17 +92,11 @@ namespace Microsoft.EntityFrameworkCore.Utilities
 
         #endregion
 
-        [Fact]
+        [ConditionalFact]
         public void AddVertex_adds_a_vertex()
         {
-            var vertexOne = new Vertex
-            {
-                Id = 1
-            };
-            var vertexTwo = new Vertex
-            {
-                Id = 2
-            };
+            var vertexOne = new Vertex { Id = 1 };
+            var vertexTwo = new Vertex { Id = 2 };
 
             var graph = new Multigraph<Vertex, Edge>();
 
@@ -113,21 +107,12 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             Assert.Equal(2, graph.Vertices.Intersect(new[] { vertexOne, vertexTwo }).Count());
         }
 
-        [Fact]
-        public void AddVertices_add_verticies()
+        [ConditionalFact]
+        public void AddVertices_add_vertices()
         {
-            var vertexOne = new Vertex
-            {
-                Id = 1
-            };
-            var vertexTwo = new Vertex
-            {
-                Id = 2
-            };
-            var vertexThree = new Vertex
-            {
-                Id = 3
-            };
+            var vertexOne = new Vertex { Id = 1 };
+            var vertexTwo = new Vertex { Id = 2 };
+            var vertexThree = new Vertex { Id = 3 };
 
             var graph = new Multigraph<Vertex, Edge>();
 
@@ -138,26 +123,14 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             Assert.Equal(3, graph.Vertices.Intersect(new[] { vertexOne, vertexTwo, vertexThree }).Count());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void AddEdge_adds_an_edge()
         {
-            var vertexOne = new Vertex
-            {
-                Id = 1
-            };
-            var vertexTwo = new Vertex
-            {
-                Id = 2
-            };
+            var vertexOne = new Vertex { Id = 1 };
+            var vertexTwo = new Vertex { Id = 2 };
 
-            var edgeOne = new Edge
-            {
-                Id = 1
-            };
-            var edgeTwo = new Edge
-            {
-                Id = 2
-            };
+            var edgeOne = new Edge { Id = 1 };
+            var edgeTwo = new Edge { Id = 2 };
 
             var graph = new Multigraph<Vertex, Edge>();
             graph.AddVertices(new[] { vertexOne, vertexTwo });
@@ -167,27 +140,18 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             Assert.Equal(2, graph.Edges.Count());
             Assert.Equal(2, graph.Edges.Intersect(new[] { edgeOne, edgeTwo }).Count());
 
-            Assert.Equal(0, graph.GetEdges(vertexTwo, vertexOne).Count());
+            Assert.Empty(graph.GetEdges(vertexTwo, vertexOne));
             Assert.Equal(2, graph.GetEdges(vertexOne, vertexTwo).Count());
             Assert.Equal(2, graph.GetEdges(vertexOne, vertexTwo).Intersect(new[] { edgeOne, edgeTwo }).Count());
         }
 
-        [Fact]
-        public void AddEdge_throws_on_verticies_not_in_the_graph()
+        [ConditionalFact]
+        public void AddEdge_throws_on_vertices_not_in_the_graph()
         {
-            var vertexOne = new Vertex
-            {
-                Id = 1
-            };
-            var vertexTwo = new Vertex
-            {
-                Id = 2
-            };
+            var vertexOne = new Vertex { Id = 1 };
+            var vertexTwo = new Vertex { Id = 2 };
 
-            var edgeOne = new Edge
-            {
-                Id = 1
-            };
+            var edgeOne = new Edge { Id = 1 };
 
             var graph = new Multigraph<Vertex, Edge>();
             graph.AddVertex(vertexOne);
@@ -201,57 +165,33 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                 Assert.Throws<InvalidOperationException>(() => graph.AddEdge(vertexTwo, vertexOne, edgeOne)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void AddEdges_adds_multiple_edges()
         {
-            var vertexOne = new Vertex
-            {
-                Id = 1
-            };
-            var vertexTwo = new Vertex
-            {
-                Id = 2
-            };
+            var vertexOne = new Vertex { Id = 1 };
+            var vertexTwo = new Vertex { Id = 2 };
 
-            var edgeOne = new Edge
-            {
-                Id = 1
-            };
-            var edgeTwo = new Edge
-            {
-                Id = 2
-            };
-            var edgeThree = new Edge
-            {
-                Id = 3
-            };
+            var edgeOne = new Edge { Id = 1 };
+            var edgeTwo = new Edge { Id = 2 };
+            var edgeThree = new Edge { Id = 3 };
 
             var graph = new Multigraph<Vertex, Edge>();
             graph.AddVertices(new[] { vertexOne, vertexTwo });
             graph.AddEdges(vertexOne, vertexTwo, new[] { edgeOne });
             graph.AddEdges(vertexOne, vertexTwo, new[] { edgeTwo, edgeThree });
 
-            Assert.Equal(0, graph.GetEdges(vertexTwo, vertexOne).Count());
+            Assert.Empty(graph.GetEdges(vertexTwo, vertexOne));
             Assert.Equal(3, graph.GetEdges(vertexOne, vertexTwo).Count());
             Assert.Equal(3, graph.GetEdges(vertexOne, vertexTwo).Intersect(new[] { edgeOne, edgeTwo, edgeThree }).Count());
         }
 
-        [Fact]
-        public void AddEdges_throws_on_verticies_not_in_the_graph()
+        [ConditionalFact]
+        public void AddEdges_throws_on_vertices_not_in_the_graph()
         {
-            var vertexOne = new Vertex
-            {
-                Id = 1
-            };
-            var vertexTwo = new Vertex
-            {
-                Id = 2
-            };
+            var vertexOne = new Vertex { Id = 1 };
+            var vertexTwo = new Vertex { Id = 2 };
 
-            var edgeOne = new Edge
-            {
-                Id = 1
-            };
+            var edgeOne = new Edge { Id = 1 };
 
             var graph = new Multigraph<Vertex, Edge>();
             graph.AddVertex(vertexOne);
@@ -265,34 +205,16 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                 Assert.Throws<InvalidOperationException>(() => graph.AddEdges(vertexTwo, vertexOne, new[] { edgeOne })).Message);
         }
 
-        [Fact]
-        public void AddEdge_updates_incomming_and_outgoing_neighbours()
+        [ConditionalFact]
+        public void AddEdge_updates_incoming_and_outgoing_neighbors()
         {
-            var vertexOne = new Vertex
-            {
-                Id = 1
-            };
-            var vertexTwo = new Vertex
-            {
-                Id = 2
-            };
-            var vertexThree = new Vertex
-            {
-                Id = 3
-            };
+            var vertexOne = new Vertex { Id = 1 };
+            var vertexTwo = new Vertex { Id = 2 };
+            var vertexThree = new Vertex { Id = 3 };
 
-            var edgeOne = new Edge
-            {
-                Id = 1
-            };
-            var edgeTwo = new Edge
-            {
-                Id = 2
-            };
-            var edgeThree = new Edge
-            {
-                Id = 3
-            };
+            var edgeOne = new Edge { Id = 1 };
+            var edgeTwo = new Edge { Id = 2 };
+            var edgeThree = new Edge { Id = 3 };
 
             var graph = new Multigraph<Vertex, Edge>();
             graph.AddVertices(new[] { vertexOne, vertexTwo, vertexThree });
@@ -300,28 +222,19 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             graph.AddEdge(vertexOne, vertexThree, edgeTwo);
             graph.AddEdge(vertexTwo, vertexThree, edgeThree);
 
-            Assert.Equal(2, graph.GetOutgoingNeighbours(vertexOne).Count());
-            Assert.Equal(2, graph.GetOutgoingNeighbours(vertexOne).Intersect(new[] { vertexTwo, vertexThree }).Count());
+            Assert.Equal(2, graph.GetOutgoingNeighbors(vertexOne).Count());
+            Assert.Equal(2, graph.GetOutgoingNeighbors(vertexOne).Intersect(new[] { vertexTwo, vertexThree }).Count());
 
-            Assert.Equal(2, graph.GetIncomingNeighbours(vertexThree).Count());
-            Assert.Equal(2, graph.GetIncomingNeighbours(vertexThree).Intersect(new[] { vertexOne, vertexTwo }).Count());
+            Assert.Equal(2, graph.GetIncomingNeighbors(vertexThree).Count());
+            Assert.Equal(2, graph.GetIncomingNeighbors(vertexThree).Intersect(new[] { vertexOne, vertexTwo }).Count());
         }
 
-        [Fact]
-        public void TopologicalSort_on_graph_with_no_edges_returns_all_verticies()
+        [ConditionalFact]
+        public void TopologicalSort_on_graph_with_no_edges_returns_all_vertices()
         {
-            var vertexOne = new Vertex
-            {
-                Id = 1
-            };
-            var vertexTwo = new Vertex
-            {
-                Id = 2
-            };
-            var vertexThree = new Vertex
-            {
-                Id = 3
-            };
+            var vertexOne = new Vertex { Id = 1 };
+            var vertexTwo = new Vertex { Id = 2 };
+            var vertexThree = new Vertex { Id = 3 };
 
             var graph = new Multigraph<Vertex, Edge>();
             graph.AddVertices(new[] { vertexOne, vertexTwo, vertexThree });
@@ -331,30 +244,15 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             Assert.Equal(3, result.Intersect(new[] { vertexOne, vertexTwo, vertexThree }).Count());
         }
 
-        [Fact]
-        public void TopologicalSort_on_simple_graph_returns_all_verticies_in_order()
+        [ConditionalFact]
+        public void TopologicalSort_on_simple_graph_returns_all_vertices_in_order()
         {
-            var vertexOne = new Vertex
-            {
-                Id = 1
-            };
-            var vertexTwo = new Vertex
-            {
-                Id = 2
-            };
-            var vertexThree = new Vertex
-            {
-                Id = 3
-            };
+            var vertexOne = new Vertex { Id = 1 };
+            var vertexTwo = new Vertex { Id = 2 };
+            var vertexThree = new Vertex { Id = 3 };
 
-            var edgeOne = new Edge
-            {
-                Id = 1
-            };
-            var edgeTwo = new Edge
-            {
-                Id = 2
-            };
+            var edgeOne = new Edge { Id = 1 };
+            var edgeTwo = new Edge { Id = 2 };
 
             var graph = new Multigraph<Vertex, Edge>();
             graph.AddVertices(new[] { vertexOne, vertexTwo, vertexThree });
@@ -369,34 +267,16 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                 graph.TopologicalSort().ToArray());
         }
 
-        [Fact]
-        public void TopologicalSort_on_tree_graph_returns_all_verticies_in_order()
+        [ConditionalFact]
+        public void TopologicalSort_on_tree_graph_returns_all_vertices_in_order()
         {
-            var vertexOne = new Vertex
-            {
-                Id = 1
-            };
-            var vertexTwo = new Vertex
-            {
-                Id = 2
-            };
-            var vertexThree = new Vertex
-            {
-                Id = 3
-            };
+            var vertexOne = new Vertex { Id = 1 };
+            var vertexTwo = new Vertex { Id = 2 };
+            var vertexThree = new Vertex { Id = 3 };
 
-            var edgeOne = new Edge
-            {
-                Id = 1
-            };
-            var edgeTwo = new Edge
-            {
-                Id = 2
-            };
-            var edgeThree = new Edge
-            {
-                Id = 3
-            };
+            var edgeOne = new Edge { Id = 1 };
+            var edgeTwo = new Edge { Id = 2 };
+            var edgeThree = new Edge { Id = 3 };
 
             var graph = new Multigraph<Vertex, Edge>();
             graph.AddVertices(new[] { vertexOne, vertexTwo, vertexThree });
@@ -412,18 +292,12 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                 graph.TopologicalSort().ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void TopologicalSort_on_self_ref_can_break_cycle()
         {
-            var vertexOne = new Vertex
-            {
-                Id = 1
-            };
+            var vertexOne = new Vertex { Id = 1 };
 
-            var edgeOne = new Edge
-            {
-                Id = 1
-            };
+            var edgeOne = new Edge { Id = 1 };
 
             var graph = new Multigraph<Vertex, Edge>();
             graph.AddVertex(vertexOne);
@@ -440,34 +314,16 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                         && (edges.Intersect(new[] { edgeOne }).Count() == 1)).ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void TopologicalSort_can_break_simple_cycle()
         {
-            var vertexOne = new Vertex
-            {
-                Id = 1
-            };
-            var vertexTwo = new Vertex
-            {
-                Id = 2
-            };
-            var vertexThree = new Vertex
-            {
-                Id = 3
-            };
+            var vertexOne = new Vertex { Id = 1 };
+            var vertexTwo = new Vertex { Id = 2 };
+            var vertexThree = new Vertex { Id = 3 };
 
-            var edgeOne = new Edge
-            {
-                Id = 1
-            };
-            var edgeTwo = new Edge
-            {
-                Id = 2
-            };
-            var edgeThree = new Edge
-            {
-                Id = 3
-            };
+            var edgeOne = new Edge { Id = 1 };
+            var edgeTwo = new Edge { Id = 2 };
+            var edgeThree = new Edge { Id = 3 };
 
             var graph = new Multigraph<Vertex, Edge>();
             graph.AddVertices(new[] { vertexOne, vertexTwo, vertexThree });
@@ -488,54 +344,21 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                         && (edges.Single() == edgeThree)).ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void TopologicalSort_can_break_two_cycles()
         {
-            var vertexOne = new Vertex
-            {
-                Id = 1
-            };
-            var vertexTwo = new Vertex
-            {
-                Id = 2
-            };
-            var vertexThree = new Vertex
-            {
-                Id = 3
-            };
-            var vertexFour = new Vertex
-            {
-                Id = 4
-            };
-            var vertexFive = new Vertex
-            {
-                Id = 5
-            };
+            var vertexOne = new Vertex { Id = 1 };
+            var vertexTwo = new Vertex { Id = 2 };
+            var vertexThree = new Vertex { Id = 3 };
+            var vertexFour = new Vertex { Id = 4 };
+            var vertexFive = new Vertex { Id = 5 };
 
-            var edgeOne = new Edge
-            {
-                Id = 1
-            };
-            var edgeTwo = new Edge
-            {
-                Id = 2
-            };
-            var edgeThree = new Edge
-            {
-                Id = 3
-            };
-            var edgeFour = new Edge
-            {
-                Id = 4
-            };
-            var edgeFive = new Edge
-            {
-                Id = 5
-            };
-            var edgeSix = new Edge
-            {
-                Id = 6
-            };
+            var edgeOne = new Edge { Id = 1 };
+            var edgeTwo = new Edge { Id = 2 };
+            var edgeThree = new Edge { Id = 3 };
+            var edgeFour = new Edge { Id = 4 };
+            var edgeFive = new Edge { Id = 5 };
+            var edgeSix = new Edge { Id = 6 };
 
             var graph = new Multigraph<Vertex, Edge>();
             graph.AddVertices(new[] { vertexOne, vertexTwo, vertexThree, vertexFour, vertexFive });
@@ -562,34 +385,16 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                     }).ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void TopologicalSort_throws_with_default_message_when_cycle_cannot_be_broken()
         {
-            var vertexOne = new Vertex
-            {
-                Id = 1
-            };
-            var vertexTwo = new Vertex
-            {
-                Id = 2
-            };
-            var vertexThree = new Vertex
-            {
-                Id = 3
-            };
+            var vertexOne = new Vertex { Id = 1 };
+            var vertexTwo = new Vertex { Id = 2 };
+            var vertexThree = new Vertex { Id = 3 };
 
-            var edgeOne = new Edge
-            {
-                Id = 1
-            };
-            var edgeTwo = new Edge
-            {
-                Id = 2
-            };
-            var edgeThree = new Edge
-            {
-                Id = 3
-            };
+            var edgeOne = new Edge { Id = 1 };
+            var edgeTwo = new Edge { Id = 2 };
+            var edgeThree = new Edge { Id = 3 };
 
             var graph = new Multigraph<Vertex, Edge>();
             graph.AddVertices(new[] { vertexOne, vertexTwo, vertexThree });
@@ -607,36 +412,18 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                 Assert.Throws<InvalidOperationException>(() => graph.TopologicalSort()).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void TopologicalSort_throws_with_formatted_message_when_cycle_cannot_be_broken()
         {
             const string message = "Formatted cycle";
 
-            var vertexOne = new Vertex
-            {
-                Id = 1
-            };
-            var vertexTwo = new Vertex
-            {
-                Id = 2
-            };
-            var vertexThree = new Vertex
-            {
-                Id = 3
-            };
+            var vertexOne = new Vertex { Id = 1 };
+            var vertexTwo = new Vertex { Id = 2 };
+            var vertexThree = new Vertex { Id = 3 };
 
-            var edgeOne = new Edge
-            {
-                Id = 1
-            };
-            var edgeTwo = new Edge
-            {
-                Id = 2
-            };
-            var edgeThree = new Edge
-            {
-                Id = 3
-            };
+            var edgeOne = new Edge { Id = 1 };
+            var edgeTwo = new Edge { Id = 2 };
+            var edgeThree = new Edge { Id = 3 };
 
             var graph = new Multigraph<Vertex, Edge>();
             graph.AddVertices(new[] { vertexOne, vertexTwo, vertexThree });
@@ -672,36 +459,18 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             Assert.Equal(new[] { edgeThree }, cycleData[vertexThree].Item3);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void BatchingTopologicalSort_throws_with_formatted_message_when_cycle_cannot_be_broken()
         {
             const string message = "Formatted cycle";
 
-            var vertexOne = new Vertex
-            {
-                Id = 1
-            };
-            var vertexTwo = new Vertex
-            {
-                Id = 2
-            };
-            var vertexThree = new Vertex
-            {
-                Id = 3
-            };
+            var vertexOne = new Vertex { Id = 1 };
+            var vertexTwo = new Vertex { Id = 2 };
+            var vertexThree = new Vertex { Id = 3 };
 
-            var edgeOne = new Edge
-            {
-                Id = 1
-            };
-            var edgeTwo = new Edge
-            {
-                Id = 2
-            };
-            var edgeThree = new Edge
-            {
-                Id = 3
-            };
+            var edgeOne = new Edge { Id = 1 };
+            var edgeTwo = new Edge { Id = 2 };
+            var edgeThree = new Edge { Id = 3 };
 
             var graph = new Multigraph<Vertex, Edge>();
             graph.AddVertices(new[] { vertexOne, vertexTwo, vertexThree });
@@ -737,44 +506,20 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             Assert.Equal(new[] { edgeThree }, cycleData[vertexThree].Item3);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void BatchingTopologicalSort_throws_with_formatted_message_with_no_tail_when_cycle_cannot_be_broken()
         {
             const string message = "Formatted cycle";
 
-            var vertexOne = new Vertex
-            {
-                Id = 1
-            };
-            var vertexTwo = new Vertex
-            {
-                Id = 2
-            };
-            var vertexThree = new Vertex
-            {
-                Id = 3
-            };
-            var vertexFour = new Vertex
-            {
-                Id = 4
-            };
+            var vertexOne = new Vertex { Id = 1 };
+            var vertexTwo = new Vertex { Id = 2 };
+            var vertexThree = new Vertex { Id = 3 };
+            var vertexFour = new Vertex { Id = 4 };
 
-            var edgeOne = new Edge
-            {
-                Id = 1
-            };
-            var edgeTwo = new Edge
-            {
-                Id = 2
-            };
-            var edgeThree = new Edge
-            {
-                Id = 3
-            };
-            var edgeFour = new Edge
-            {
-                Id = 4
-            };
+            var edgeOne = new Edge { Id = 1 };
+            var edgeTwo = new Edge { Id = 2 };
+            var edgeThree = new Edge { Id = 3 };
+            var edgeFour = new Edge { Id = 4 };
 
             var graph = new Multigraph<Vertex, Edge>();
             graph.AddVertices(new[] { vertexOne, vertexTwo, vertexThree, vertexFour });
@@ -809,7 +554,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
             Assert.Equal(new[] { edgeThree }, cycleData[vertexFour].Item3);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void BatchingTopologicalSort_sorts_simple()
         {
             var model = CreateModel();
@@ -835,7 +580,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                 graph.BatchingTopologicalSort().SelectMany(e => e).Select(e => e.Name).ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void BatchingTopologicalSort_sorts_reverse()
         {
             var model = CreateModel();
@@ -861,7 +606,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                 graph.BatchingTopologicalSort().SelectMany(e => e).Select(e => e.Name).ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void BatchingTopologicalSort_sorts_preserves_graph()
         {
             var model = CreateModel();
@@ -892,18 +637,18 @@ namespace Microsoft.EntityFrameworkCore.Utilities
 
             Assert.Equal(
                 new[] { entityTypeC },
-                graph.GetOutgoingNeighbours(entityTypeA));
+                graph.GetOutgoingNeighbors(entityTypeA));
 
             Assert.Equal(
                 new[] { entityTypeA },
-                graph.GetOutgoingNeighbours(entityTypeB));
+                graph.GetOutgoingNeighbors(entityTypeB));
 
             Assert.Equal(
                 new[] { entityTypeB.Name, entityTypeA.Name, entityTypeC.Name },
                 graph.BatchingTopologicalSort().SelectMany(e => e).Select(e => e.Name).ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void BatchingTopologicalSort_sorts_tree()
         {
             var model = CreateModel();
@@ -930,7 +675,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                 graph.BatchingTopologicalSort().SelectMany(e => e).Select(e => e.Name).ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void BatchingTopologicalSort_sorts_no_edges()
         {
             var model = CreateModel();
@@ -953,7 +698,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                 graph.BatchingTopologicalSort().SelectMany(e => e).Select(e => e.Name).ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void BatchingTopologicalSort_sorts_self_ref()
         {
             var model = CreateModel();
@@ -973,7 +718,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                 Assert.Throws<InvalidOperationException>(() => graph.BatchingTopologicalSort()).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void BatchingTopologicalSort_sorts_circular_direct()
         {
             var model = CreateModel();
@@ -999,7 +744,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                 Assert.Throws<InvalidOperationException>(() => graph.BatchingTopologicalSort()).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void BatchingTopologicalSort_sorts_circular_transitive()
         {
             var model = CreateModel();
@@ -1026,7 +771,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                 Assert.Throws<InvalidOperationException>(() => graph.BatchingTopologicalSort()).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void BatchingTopologicalSort_sorts_two_cycles()
         {
             var model = CreateModel();
@@ -1064,7 +809,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities
                 Assert.Throws<InvalidOperationException>(() => graph.BatchingTopologicalSort()).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void BatchingTopologicalSort_sorts_leafy_cycle()
         {
             var model = CreateModel();

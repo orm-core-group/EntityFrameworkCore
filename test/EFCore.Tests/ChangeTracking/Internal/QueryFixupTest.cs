@@ -4,17 +4,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Xunit;
 
 // ReSharper disable AccessToDisposedClosure
 // ReSharper disable InconsistentNaming
 namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
 {
-    //issue #15318
-    internal class QueryFixupTest
+    public class QueryFixupTest
     {
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_dependent_include_principal()
         {
             Seed();
@@ -35,7 +33,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_principal_include_dependent()
         {
             Seed();
@@ -56,7 +54,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_dependent_include_principal_unidirectional()
         {
             Seed();
@@ -76,7 +74,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_principal_include_dependent_unidirectional()
         {
             Seed();
@@ -96,7 +94,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_dependent_include_principal_one_to_one()
         {
             Seed();
@@ -117,7 +115,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_principal_include_dependent_one_to_one()
         {
             Seed();
@@ -138,7 +136,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_dependent_include_principal_unidirectional_one_to_one()
         {
             Seed();
@@ -158,7 +156,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_principal_include_dependent_unidirectional_one_to_one()
         {
             Seed();
@@ -178,7 +176,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Query_self_ref()
         {
             Seed();
@@ -200,7 +198,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_dependent_include_principal_self_ref()
         {
             Seed();
@@ -222,7 +220,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_principal_include_dependent_self_ref()
         {
             Seed();
@@ -244,7 +242,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Query_self_ref_prinipal_nav_only()
         {
             Seed();
@@ -265,7 +263,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Query_self_ref_dependent_nav_only()
         {
             Seed();
@@ -286,7 +284,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_dependent_include_principal_self_ref_unidirectional()
         {
             Seed();
@@ -307,7 +305,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_principal_include_dependent_self_ref_unidirectional()
         {
             Seed();
@@ -328,7 +326,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Query_self_ref_one_to_one()
         {
             Seed();
@@ -350,7 +348,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_dependent_include_principal_self_ref_one_to_one()
         {
             Seed();
@@ -372,7 +370,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_principal_include_dependent_self_ref_one_to_one()
         {
             Seed();
@@ -394,7 +392,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Query_self_ref_one_to_one_principal_nav_only()
         {
             Seed();
@@ -415,7 +413,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Query_self_ref_one_to_one_dependent_nav_only()
         {
             Seed();
@@ -436,7 +434,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_dependent_include_principal_self_ref_one_to_one_unidirectional()
         {
             Seed();
@@ -457,7 +455,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_principal_include_dependent_self_ref_one_to_one_unidirectional()
         {
             Seed();
@@ -478,7 +476,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_dependent_include_principal_multiple_relationships()
         {
             Seed();
@@ -502,7 +500,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#19")]
+        [ConditionalFact]
         public void Query_principal_include_dependent_multiple_relationships()
         {
             Seed();
@@ -526,7 +524,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Theory(Skip = "TaskList#19")]
+        [ConditionalTheory]
         [InlineData(EntityState.Added)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Unchanged)]
@@ -536,10 +534,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
 
             using (var context = new QueryFixupContext())
             {
-                var newDependent = new Product
-                {
-                    CategoryId = 77
-                };
+                var newDependent = new Product { CategoryId = 77 };
                 context.Entry(newDependent).State = existingState;
 
                 var dependent = context.Set<Product>().Include(e => e.Category).Single();
@@ -560,7 +555,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Theory(Skip = "TaskList#19")]
+        [ConditionalTheory]
         [InlineData(EntityState.Added)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Unchanged)]
@@ -570,10 +565,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
 
             using (var context = new QueryFixupContext())
             {
-                var newDependent = new Product
-                {
-                    CategoryId = 77
-                };
+                var newDependent = new Product { CategoryId = 77 };
                 context.Entry(newDependent).State = existingState;
 
                 var principal = context.Set<Category>().Include(e => e.Products).Single();
@@ -594,7 +586,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Theory(Skip = "TaskList#19")]
+        [ConditionalTheory]
         [InlineData(EntityState.Added)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Unchanged)]
@@ -604,10 +596,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
 
             using (var context = new QueryFixupContext())
             {
-                var newDependent = new ProductDN
-                {
-                    CategoryId = 77
-                };
+                var newDependent = new ProductDN { CategoryId = 77 };
                 context.Entry(newDependent).State = existingState;
 
                 var dependent = context.Set<ProductDN>().Include(e => e.Category).Single();
@@ -626,7 +615,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Theory(Skip = "TaskList#19")]
+        [ConditionalTheory]
         [InlineData(EntityState.Added)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Unchanged)]
@@ -636,10 +625,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
 
             using (var context = new QueryFixupContext())
             {
-                var newDependent = new ProductPN
-                {
-                    CategoryId = 77
-                };
+                var newDependent = new ProductPN { CategoryId = 77 };
                 context.Entry(newDependent).State = existingState;
 
                 var principal = context.Set<CategoryPN>().Include(e => e.Products).Single();
@@ -658,7 +644,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Added)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Unchanged)]
@@ -668,10 +654,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
 
             using (var context = new QueryFixupContext())
             {
-                var newDependent = new Widget
-                {
-                    ParentWidgetId = 77
-                };
+                var newDependent = new Widget { ParentWidgetId = 77 };
                 context.Entry(newDependent).State = existingState;
 
                 var widgets = context.Set<Widget>().ToList();
@@ -693,7 +676,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Theory(Skip = "TaskList#19")]
+        [ConditionalTheory]
         [InlineData(EntityState.Added)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Unchanged)]
@@ -703,10 +686,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
 
             using (var context = new QueryFixupContext())
             {
-                var newDependent = new Widget
-                {
-                    ParentWidgetId = 77
-                };
+                var newDependent = new Widget { ParentWidgetId = 77 };
                 context.Entry(newDependent).State = existingState;
 
                 var widgets = context.Set<Widget>().Include(e => e.ParentWidget).ToList();
@@ -728,7 +708,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Theory(Skip = "TaskList#19")]
+        [ConditionalTheory]
         [InlineData(EntityState.Added)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Unchanged)]
@@ -738,10 +718,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
 
             using (var context = new QueryFixupContext())
             {
-                var newDependent = new Widget
-                {
-                    ParentWidgetId = 77
-                };
+                var newDependent = new Widget { ParentWidgetId = 77 };
                 context.Entry(newDependent).State = existingState;
 
                 var widgets = context.Set<Widget>().Include(e => e.ChildWidgets).ToList();
@@ -763,7 +740,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Added)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Unchanged)]
@@ -773,10 +750,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
 
             using (var context = new QueryFixupContext())
             {
-                var newDependent = new WidgetPN
-                {
-                    ParentWidgetId = 77
-                };
+                var newDependent = new WidgetPN { ParentWidgetId = 77 };
                 context.Entry(newDependent).State = existingState;
 
                 var widgets = context.Set<WidgetPN>().ToList();
@@ -796,7 +770,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(EntityState.Added)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Unchanged)]
@@ -806,10 +780,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
 
             using (var context = new QueryFixupContext())
             {
-                var newDependent = new WidgetDN
-                {
-                    ParentWidgetId = 77
-                };
+                var newDependent = new WidgetDN { ParentWidgetId = 77 };
                 context.Entry(newDependent).State = existingState;
 
                 var widgets = context.Set<WidgetDN>().ToList();
@@ -829,7 +800,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Theory(Skip = "TaskList#19")]
+        [ConditionalTheory]
         [InlineData(EntityState.Added)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Unchanged)]
@@ -839,10 +810,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
 
             using (var context = new QueryFixupContext())
             {
-                var newDependent = new WidgetDN
-                {
-                    ParentWidgetId = 77
-                };
+                var newDependent = new WidgetDN { ParentWidgetId = 77 };
                 context.Entry(newDependent).State = existingState;
 
                 var widgets = context.Set<WidgetDN>().Include(e => e.ParentWidget).ToList();
@@ -862,7 +830,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Theory(Skip = "TaskList#19")]
+        [ConditionalTheory]
         [InlineData(EntityState.Added)]
         [InlineData(EntityState.Modified)]
         [InlineData(EntityState.Unchanged)]
@@ -872,10 +840,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
 
             using (var context = new QueryFixupContext())
             {
-                var newDependent = new WidgetPN
-                {
-                    ParentWidgetId = 77
-                };
+                var newDependent = new WidgetPN { ParentWidgetId = 77 };
                 context.Entry(newDependent).State = existingState;
 
                 var widgets = context.Set<WidgetPN>().Include(e => e.ChildWidgets).ToList();
@@ -895,7 +860,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#20")]
+        [ConditionalFact]
         public void Query_ownership_navigations()
         {
             Seed();
@@ -946,7 +911,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#20")]
+        [ConditionalFact]
         public void Query_owned_foreign_key()
         {
             Seed();
@@ -963,7 +928,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#20")]
+        [ConditionalFact]
         public void Query_subowned_foreign_key()
         {
             Seed();
@@ -980,14 +945,14 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#20")]
+        [ConditionalFact]
         public void Query_owned()
         {
             Seed();
 
             using (var context = new QueryFixupContext())
             {
-                var owned = context.Set<Order>().Select(o => o.OrderDetails).Single();
+                var owned = context.Set<Order>().Single().OrderDetails;
                 var principal = context.Set<Order>().AsNoTracking().Single();
 
                 AssertFixup(
@@ -1001,7 +966,7 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
             }
         }
 
-        [Fact(Skip = "TaskList#20")]
+        [ConditionalFact(Skip = "Issue #16752")]
         public void Query_subowned()
         {
             Seed();
@@ -1046,137 +1011,38 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
                 context.Database.EnsureCreated();
 
                 context.AddRange(
-                    new Blog
-                    {
-                        Id = 77,
-                        TopPostId = 78
-                    },
-                    new Post
-                    {
-                        Id = 78,
-                        BlogId = 77
-                    },
-                    new Widget
-                    {
-                        Id = 77
-                    },
-                    new Widget
-                    {
-                        Id = 78,
-                        ParentWidgetId = 77
-                    },
-                    new WidgetPN
-                    {
-                        Id = 77
-                    },
-                    new WidgetPN
-                    {
-                        Id = 78,
-                        ParentWidgetId = 77
-                    },
-                    new WidgetDN
-                    {
-                        Id = 77
-                    },
-                    new WidgetDN
-                    {
-                        Id = 78,
-                        ParentWidgetId = 77
-                    },
-                    new Smidget
-                    {
-                        Id = 77
-                    },
-                    new Smidget
-                    {
-                        Id = 78,
-                        ParentSmidgetId = 77
-                    },
-                    new SmidgetPN
-                    {
-                        Id = 77
-                    },
-                    new SmidgetPN
-                    {
-                        Id = 78,
-                        ParentSmidgetId = 77
-                    },
-                    new SmidgetDN
-                    {
-                        Id = 77
-                    },
-                    new SmidgetDN
-                    {
-                        Id = 78,
-                        ParentSmidgetId = 77
-                    },
-                    new Category
-                    {
-                        Id = 77
-                    },
-                    new Product
-                    {
-                        Id = 78,
-                        CategoryId = 77
-                    },
-                    new CategoryPN
-                    {
-                        Id = 77
-                    },
-                    new ProductPN
-                    {
-                        Id = 78,
-                        CategoryId = 77
-                    },
-                    new CategoryDN
-                    {
-                        Id = 77
-                    },
-                    new ProductDN
-                    {
-                        Id = 78,
-                        CategoryId = 77
-                    },
-                    new Parent
-                    {
-                        Id = 77
-                    },
-                    new Child
-                    {
-                        Id = 78,
-                        ParentId = 77
-                    },
-                    new ParentPN
-                    {
-                        Id = 77
-                    },
-                    new ChildPN
-                    {
-                        Id = 78,
-                        ParentId = 77
-                    },
-                    new ParentDN
-                    {
-                        Id = 77
-                    },
-                    new ChildDN
-                    {
-                        Id = 78,
-                        ParentId = 77
-                    },
+                    new Blog { Id = 77, TopPostId = 78 },
+                    new Post { Id = 78, BlogId = 77 },
+                    new Widget { Id = 77 },
+                    new Widget { Id = 78, ParentWidgetId = 77 },
+                    new WidgetPN { Id = 77 },
+                    new WidgetPN { Id = 78, ParentWidgetId = 77 },
+                    new WidgetDN { Id = 77 },
+                    new WidgetDN { Id = 78, ParentWidgetId = 77 },
+                    new Smidget { Id = 77 },
+                    new Smidget { Id = 78, ParentSmidgetId = 77 },
+                    new SmidgetPN { Id = 77 },
+                    new SmidgetPN { Id = 78, ParentSmidgetId = 77 },
+                    new SmidgetDN { Id = 77 },
+                    new SmidgetDN { Id = 78, ParentSmidgetId = 77 },
+                    new Category { Id = 77 },
+                    new Product { Id = 78, CategoryId = 77 },
+                    new CategoryPN { Id = 77 },
+                    new ProductPN { Id = 78, CategoryId = 77 },
+                    new CategoryDN { Id = 77 },
+                    new ProductDN { Id = 78, CategoryId = 77 },
+                    new Parent { Id = 77 },
+                    new Child { Id = 78, ParentId = 77 },
+                    new ParentPN { Id = 77 },
+                    new ChildPN { Id = 78, ParentId = 77 },
+                    new ParentDN { Id = 77 },
+                    new ChildDN { Id = 78, ParentId = 77 },
                     new Order
                     {
                         Id = 77,
                         OrderDetails = new OrderDetails
                         {
-                            BillingAddress = new Address
-                            {
-                                Street = "BillMe"
-                            },
-                            ShippingAddress = new Address
-                            {
-                                Street = "ShipMe"
-                            }
+                            BillingAddress = new Address { Street = "BillMe" }, ShippingAddress = new Address { Street = "ShipMe" }
                         }
                     });
 
@@ -1447,12 +1313,12 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
                                     .HasForeignKey("OrderId");
 
                                 cb.OwnsOne(c => c.BillingAddress)
-                                  .WithOwner(c => c.OrderDetails)
-                                  .HasForeignKey("OrderDetailsId");
+                                    .WithOwner(c => c.OrderDetails)
+                                    .HasForeignKey("OrderDetailsId");
 
                                 cb.OwnsOne(c => c.ShippingAddress)
-                                  .WithOwner(c => c.OrderDetails)
-                                  .HasForeignKey("OrderDetailsId");
+                                    .WithOwner(c => c.OrderDetails)
+                                    .HasForeignKey("OrderDetailsId");
                             });
                     });
             }

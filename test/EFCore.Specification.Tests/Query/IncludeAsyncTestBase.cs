@@ -1,12 +1,13 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.TestModels.Northwind;
 using Microsoft.EntityFrameworkCore.TestUtilities;
-using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
 using Xunit;
 
 // ReSharper disable InconsistentNaming
@@ -20,7 +21,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
         protected TFixture Fixture { get; }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection()
         {
             using (var context = CreateContext())
@@ -37,7 +38,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_order_by_subquery()
         {
             using (var context = CreateContext())
@@ -55,7 +56,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_closes_reader()
         {
             using (var context = CreateContext())
@@ -68,7 +69,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_alias_generation()
         {
             using (var context = CreateContext())
@@ -82,7 +83,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_and_reference()
         {
             using (var context = CreateContext())
@@ -97,7 +98,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_as_no_tracking()
         {
             using (var context = CreateContext())
@@ -111,11 +112,11 @@ namespace Microsoft.EntityFrameworkCore.Query
                 Assert.Equal(91, customers.Count);
                 Assert.Equal(830, customers.Where(c => c.Orders != null).SelectMany(c => c.Orders).Count());
                 Assert.True(customers.Where(c => c.Orders != null).SelectMany(c => c.Orders).All(o => o.Customer != null));
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Empty(context.ChangeTracker.Entries());
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_as_no_tracking2()
         {
             using (var context = CreateContext())
@@ -131,11 +132,11 @@ namespace Microsoft.EntityFrameworkCore.Query
                 Assert.Equal(5, customers.Count);
                 Assert.Equal(48, customers.Where(c => c.Orders != null).SelectMany(c => c.Orders).Count());
                 Assert.True(customers.Where(c => c.Orders != null).SelectMany(c => c.Orders).All(o => o.Customer != null));
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Empty(context.ChangeTracker.Entries());
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_dependent_already_tracked()
         {
             using (var context = CreateContext())
@@ -159,7 +160,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_dependent_already_tracked_as_no_tracking()
         {
             using (var context = CreateContext())
@@ -184,7 +185,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_on_additional_from_clause()
         {
             using (var context = CreateContext())
@@ -202,7 +203,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_on_additional_from_clause_no_tracking()
         {
             using (var context = CreateContext())
@@ -216,11 +217,11 @@ namespace Microsoft.EntityFrameworkCore.Query
                 Assert.Equal(455, customers.Count);
                 Assert.Equal(4150, customers.SelectMany(c => c.Orders).Count());
                 Assert.True(customers.SelectMany(c => c.Orders).All(o => o.Customer != null));
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Empty(context.ChangeTracker.Entries());
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_on_additional_from_clause_with_filter()
         {
             using (var context = CreateContext())
@@ -240,7 +241,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_on_additional_from_clause2()
         {
             using (var context = CreateContext())
@@ -257,7 +258,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_on_join_clause_with_filter()
         {
             using (var context = CreateContext())
@@ -276,7 +277,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_on_join_clause_with_order_by_and_filter()
         {
             using (var context = CreateContext())
@@ -296,7 +297,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'Distinct()'")]
+        [ConditionalFact(Skip = "Issue #17068")]
         public virtual async Task Include_collection_on_group_join_clause_with_filter()
         {
             using (var context = CreateContext())
@@ -305,21 +306,17 @@ namespace Microsoft.EntityFrameworkCore.Query
                     = await (from c in context.Set<Customer>().Include(c => c.Orders)
                              join o in context.Set<Order>() on c.CustomerID equals o.CustomerID into g
                              where c.CustomerID == "ALFKI"
-                             select new
-                             {
-                                 c,
-                                 g
-                             })
+                             select new { c, g })
                         .ToListAsync();
 
-                Assert.Equal(1, customers.Count);
+                Assert.Single(customers);
                 Assert.Equal(6, customers.SelectMany(c => c.c.Orders).Count());
                 Assert.True(customers.SelectMany(c => c.c.Orders).All(o => o.Customer != null));
                 Assert.Equal(1 + 6, context.ChangeTracker.Entries().Count());
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact(Skip = "Issue#17068")]
         public virtual async Task Include_collection_on_inner_group_join_clause_with_filter()
         {
             using (var context = CreateContext())
@@ -329,21 +326,17 @@ namespace Microsoft.EntityFrameworkCore.Query
                              join o in context.Set<Order>().Include(o => o.OrderDetails)
                                  on c.CustomerID equals o.CustomerID into g
                              where c.CustomerID == "ALFKI"
-                             select new
-                             {
-                                 c,
-                                 g
-                             })
+                             select new { c, g })
                         .ToListAsync();
 
-                Assert.Equal(1, customers.Count);
+                Assert.Single(customers);
                 Assert.Equal(6, customers.SelectMany(c => c.g).Count());
                 Assert.True(customers.SelectMany(c => c.g).SelectMany(o => o.OrderDetails).All(od => od.Order != null));
                 Assert.Equal(1 + 6 + 12, context.ChangeTracker.Entries().Count());
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'GroupBy([c].City, Result(_IncludeAsync(queryContext, [c], new [] {}, (queryContext, entity, included, ct) => { ... }, ct))))'")]
+        [ConditionalFact(Skip = "Issue #17068")]
         public virtual async Task Include_collection_when_groupby()
         {
             using (var context = CreateContext())
@@ -354,13 +347,13 @@ namespace Microsoft.EntityFrameworkCore.Query
                              group c by c.City)
                         .ToListAsync();
 
-                Assert.Equal(1, customers.Count);
+                Assert.Single(customers);
                 Assert.Equal(6, customers.SelectMany(c => c.Single().Orders).Count());
                 Assert.Equal(1 + 6, context.ChangeTracker.Entries().Count());
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_order_by_key()
         {
             using (var context = CreateContext())
@@ -378,7 +371,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_order_by_non_key()
         {
             using (var context = CreateContext())
@@ -396,7 +389,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_principal_already_tracked()
         {
             using (var context = CreateContext())
@@ -405,7 +398,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                     = await context.Set<Customer>()
                         .SingleAsync(c => c.CustomerID == "ALFKI");
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 var customer2
                     = await context.Set<Customer>()
@@ -419,7 +412,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_principal_already_tracked_as_no_tracking()
         {
             using (var context = CreateContext())
@@ -428,7 +421,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                     = await context.Set<Customer>()
                         .SingleAsync(c => c.CustomerID == "ALFKI");
 
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
 
                 var customer2
                     = await context.Set<Customer>()
@@ -439,11 +432,11 @@ namespace Microsoft.EntityFrameworkCore.Query
                 Assert.Null(customer1.Orders);
                 Assert.Equal(6, customer2.Orders.Count);
                 Assert.True(customer2.Orders.All(o => o.Customer != null));
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_single_or_default_no_result()
         {
             using (var context = CreateContext())
@@ -457,7 +450,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_when_projection()
         {
             using (var context = CreateContext())
@@ -469,11 +462,11 @@ namespace Microsoft.EntityFrameworkCore.Query
                         .ToListAsync();
 
                 Assert.Equal(91, productIds.Count);
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Empty(context.ChangeTracker.Entries());
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_with_filter()
         {
             using (var context = CreateContext())
@@ -484,14 +477,14 @@ namespace Microsoft.EntityFrameworkCore.Query
                         .Where(c => c.CustomerID == "ALFKI")
                         .ToListAsync();
 
-                Assert.Equal(1, customers.Count);
+                Assert.Single(customers);
                 Assert.Equal(6, customers.SelectMany(c => c.Orders).Count());
                 Assert.True(customers.SelectMany(c => c.Orders).All(o => o.Customer != null));
                 Assert.Equal(1 + 6, context.ChangeTracker.Entries().Count());
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_with_filter_reordered()
         {
             using (var context = CreateContext())
@@ -502,14 +495,14 @@ namespace Microsoft.EntityFrameworkCore.Query
                         .Include(c => c.Orders)
                         .ToListAsync();
 
-                Assert.Equal(1, customers.Count);
+                Assert.Single(customers);
                 Assert.Equal(6, customers.SelectMany(c => c.Orders).Count());
                 Assert.True(customers.SelectMany(c => c.Orders).All(o => o.Customer != null));
                 Assert.Equal(1 + 6, context.ChangeTracker.Entries().Count());
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_duplicate_collection()
         {
             using (var context = CreateContext())
@@ -524,11 +517,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                                  .OrderBy(c => c.CustomerID)
                                  .Skip(2)
                                  .Take(2)
-                             select new
-                             {
-                                 c1,
-                                 c2
-                             })
+                             select new { c1, c2 })
                         .ToListAsync();
 
                 Assert.Equal(4, customers.Count);
@@ -540,7 +529,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_duplicate_collection_result_operator()
         {
             using (var context = CreateContext())
@@ -555,15 +544,11 @@ namespace Microsoft.EntityFrameworkCore.Query
                                  .OrderBy(c => c.CustomerID)
                                  .Skip(2)
                                  .Take(2)
-                             select new
-                             {
-                                 c1,
-                                 c2
-                             })
+                             select new { c1, c2 })
                         .Take(1)
                         .ToListAsync();
 
-                Assert.Equal(1, customers.Count);
+                Assert.Single(customers);
                 Assert.Equal(6, customers.SelectMany(c => c.c1.Orders).Count());
                 Assert.True(customers.SelectMany(c => c.c1.Orders).All(o => o.Customer != null));
                 Assert.Equal(7, customers.SelectMany(c => c.c2.Orders).Count());
@@ -572,7 +557,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_duplicate_collection_result_operator2()
         {
             using (var context = CreateContext())
@@ -586,15 +571,11 @@ namespace Microsoft.EntityFrameworkCore.Query
                                  .OrderBy(c => c.CustomerID)
                                  .Skip(2)
                                  .Take(2)
-                             select new
-                             {
-                                 c1,
-                                 c2
-                             })
+                             select new { c1, c2 })
                         .Take(1)
                         .ToListAsync();
 
-                Assert.Equal(1, customers.Count);
+                Assert.Single(customers);
                 Assert.Equal(6, customers.SelectMany(c => c.c1.Orders).Count());
                 Assert.True(customers.SelectMany(c => c.c1.Orders).All(o => o.Customer != null));
                 Assert.True(customers.All(c => c.c2.Orders == null));
@@ -619,20 +600,15 @@ namespace Microsoft.EntityFrameworkCore.Query
                                  .ThenBy(o => o.OrderID)
                                  .Skip(2)
                                  .Take(2)
-                             select new
-                             {
-                                 o1,
-                                 o2
-                             })
+                             select new { o1, o2 })
                         .ToListAsync();
 
                 Assert.Equal(4, orders.Count);
                 Assert.True(orders.All(o => o.o1.Customer != null));
                 Assert.True(orders.All(o => o.o2.Customer != null));
-                Assert.Equal(1, orders.Select(o => o.o1.Customer).Distinct().Count());
-                Assert.Equal(1, orders.Select(o => o.o2.Customer).Distinct().Count());
-                //issue #15064
-                //Assert.Equal(5, context.ChangeTracker.Entries().Count());
+                Assert.Single(orders.Select(o => o.o1.Customer).Distinct());
+                Assert.Single(orders.Select(o => o.o2.Customer).Distinct());
+                Assert.Equal(5, context.ChangeTracker.Entries().Count());
             }
         }
 
@@ -650,19 +626,14 @@ namespace Microsoft.EntityFrameworkCore.Query
                                  .OrderBy(o => o.OrderID)
                                  .Skip(2)
                                  .Take(2)
-                             select new
-                             {
-                                 o1,
-                                 o2
-                             })
+                             select new { o1, o2 })
                         .ToListAsync();
 
                 Assert.Equal(4, orders.Count);
                 Assert.True(orders.All(o => o.o1.Customer != null));
                 Assert.True(orders.All(o => o.o2.Customer == null));
                 Assert.Equal(2, orders.Select(o => o.o1.Customer).Distinct().Count());
-                //issue #15064
-                //Assert.Equal(6, context.ChangeTracker.Entries().Count());
+                Assert.Equal(6, context.ChangeTracker.Entries().Count());
             }
         }
 
@@ -680,23 +651,18 @@ namespace Microsoft.EntityFrameworkCore.Query
                                  .Include(o => o.Customer)
                                  .Skip(2)
                                  .Take(2)
-                             select new
-                             {
-                                 o1,
-                                 o2
-                             })
+                             select new { o1, o2 })
                         .ToListAsync();
 
                 Assert.Equal(4, orders.Count);
                 Assert.True(orders.All(o => o.o1.Customer == null));
                 Assert.True(orders.All(o => o.o2.Customer != null));
                 Assert.Equal(2, orders.Select(o => o.o2.Customer).Distinct().Count());
-                //issue #15064
-                //Assert.Equal(6, context.ChangeTracker.Entries().Count());
+                Assert.Equal(6, context.ChangeTracker.Entries().Count());
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_multi_level_reference_and_collection_predicate()
         {
             using (var context = CreateContext())
@@ -711,27 +677,22 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'where [c].IsLondon'")]
+        [ConditionalFact]
         public virtual async Task Include_collection_with_client_filter()
         {
             using (var context = CreateContext())
             {
-                var customers
-                    = await context.Set<Customer>()
-                        .Include(c => c.Orders)
-                        .Where(c => c.IsLondon)
-                        .ToListAsync();
-
-                Assert.Equal(6, customers.Count);
-                Assert.Equal(46, customers.SelectMany(c => c.Orders).Count());
-                Assert.True(customers.SelectMany(c => c.Orders).All(o => o.Customer != null));
-                Assert.Equal(13, customers.First().Orders.Count); // AROUT
-                Assert.Equal(9, customers.Last().Orders.Count); // SEVES
-                Assert.Equal(6 + 46, context.ChangeTracker.Entries().Count());
+                Assert.Equal(
+                    CoreStrings.TranslationFailed("Where<Customer>(    source: DbSet<Customer>,     predicate: (c) => c.IsLondon)"),
+                    (await Assert.ThrowsAsync<InvalidOperationException>(
+                        () => context.Set<Customer>()
+                            .Include(c => c.Orders)
+                            .Where(c => c.IsLondon)
+                            .ToListAsync())).Message.Replace("\r", "").Replace("\n",""));
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_multi_level_collection_and_then_include_reference_predicate()
         {
             using (var context = CreateContext())
@@ -766,7 +727,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_multiple_references_and_collection_multi_level()
         {
             using (var context = CreateContext())
@@ -783,7 +744,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_multiple_references_and_collection_multi_level_reverse()
         {
             using (var context = CreateContext())
@@ -845,8 +806,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 Assert.Equal(830, orders.Count);
                 Assert.True(orders.All(o => o.Customer != null));
                 Assert.Equal(89, orders.Select(o => o.Customer).Distinct().Count());
-                //issue #15064
-                //Assert.Equal(830 + 89, context.ChangeTracker.Entries().Count());
+                Assert.Equal(830 + 89, context.ChangeTracker.Entries().Count());
             }
         }
 
@@ -864,7 +824,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_reference_and_collection()
         {
             using (var context = CreateContext())
@@ -892,7 +852,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
                 Assert.Equal(830, orders.Count);
                 Assert.True(orders.All(o => o.Customer != null));
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Empty(context.ChangeTracker.Entries());
             }
         }
 
@@ -915,8 +875,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
                 Assert.True(orders1.All(o1 => orders2.Contains(o1, ReferenceEqualityComparer.Instance)));
                 Assert.True(orders2.All(o => o.Customer != null));
-                //issue #15064
-                //Assert.Equal(830 + 89, context.ChangeTracker.Entries().Count());
+                Assert.Equal(830 + 89, context.ChangeTracker.Entries().Count());
             }
         }
 
@@ -946,7 +905,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                         .ToListAsync();
 
                 Assert.Equal(830, orders.Count);
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Empty(context.ChangeTracker.Entries());
             }
         }
 
@@ -963,9 +922,8 @@ namespace Microsoft.EntityFrameworkCore.Query
 
                 Assert.Equal(6, orders.Count);
                 Assert.True(orders.All(o => o.Customer != null));
-                Assert.Equal(1, orders.Select(o => o.Customer).Distinct().Count());
-                //issue #15064
-                //Assert.Equal(6 + 1, context.ChangeTracker.Entries().Count());
+                Assert.Single(orders.Select(o => o.Customer).Distinct());
+                Assert.Equal(6 + 1, context.ChangeTracker.Entries().Count());
             }
         }
 
@@ -982,13 +940,12 @@ namespace Microsoft.EntityFrameworkCore.Query
 
                 Assert.Equal(6, orders.Count);
                 Assert.True(orders.All(o => o.Customer != null));
-                Assert.Equal(1, orders.Select(o => o.Customer).Distinct().Count());
-                //issue #15064
-                //Assert.Equal(6 + 1, context.ChangeTracker.Entries().Count());
+                Assert.Single(orders.Select(o => o.Customer).Distinct());
+                Assert.Equal(6 + 1, context.ChangeTracker.Entries().Count());
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_references_and_collection_multi_level()
         {
             using (var context = CreateContext())
@@ -1004,7 +961,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_then_include_collection()
         {
             using (var context = CreateContext())
@@ -1020,7 +977,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_then_include_collection_then_include_reference()
         {
             using (var context = CreateContext())
@@ -1036,7 +993,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_collection_then_include_collection_predicate()
         {
             using (var context = CreateContext())
@@ -1052,7 +1009,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_references_and_collection_multi_level_predicate()
         {
             using (var context = CreateContext())
@@ -1084,7 +1041,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_multi_level_reference_then_include_collection_predicate()
         {
             using (var context = CreateContext())
@@ -1099,7 +1056,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_multiple_references_then_include_collection_multi_level()
         {
             using (var context = CreateContext())
@@ -1116,7 +1073,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_multiple_references_then_include_collection_multi_level_reverse()
         {
             using (var context = CreateContext())
@@ -1165,7 +1122,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_references_then_include_collection_multi_level()
         {
             using (var context = CreateContext())
@@ -1181,7 +1138,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual async Task Include_references_then_include_collection_multi_level_predicate()
         {
             using (var context = CreateContext())

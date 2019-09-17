@@ -10,16 +10,13 @@ namespace Microsoft.EntityFrameworkCore
 {
     public class NamedDatabaseTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Transient_databases_are_not_shared()
         {
             using (var context = new PusheenContext())
             {
                 context.Add(
-                    new Pusheen
-                    {
-                        Activity = "In a box"
-                    });
+                    new Pusheen { Activity = "In a box" });
                 context.SaveChanges();
             }
 
@@ -29,16 +26,13 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Database_per_app_domain_is_default_with_internal_service_provider()
         {
             using (var context = new PusheenContext(nameof(PusheenContext)))
             {
                 context.Add(
-                    new Pusheen
-                    {
-                        Activity = "In a box"
-                    });
+                    new Pusheen { Activity = "In a box" });
                 context.SaveChanges();
             }
 
@@ -48,7 +42,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Database_per_service_provider_is_default()
         {
             var provider1 = new ServiceCollection().AddEntityFrameworkInMemoryDatabase().BuildServiceProvider();
@@ -57,10 +51,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = new PusheenContext(nameof(PusheenContext), provider1))
             {
                 context.Add(
-                    new Pusheen
-                    {
-                        Activity = "In a box"
-                    });
+                    new Pusheen { Activity = "In a box" });
                 context.SaveChanges();
             }
 
@@ -69,10 +60,7 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Empty(context.Pusheens);
 
                 context.Add(
-                    new Pusheen
-                    {
-                        Activity = "With some yarn"
-                    });
+                    new Pusheen { Activity = "With some yarn" });
                 context.SaveChanges();
             }
 
@@ -87,16 +75,13 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Named_databases_shared_per_app_domain_with_internal_service_provider()
         {
             using (var context = new PusheenContext("Cats"))
             {
                 context.Add(
-                    new Pusheen
-                    {
-                        Activity = "In a box"
-                    });
+                    new Pusheen { Activity = "In a box" });
                 context.SaveChanges();
             }
 
@@ -105,10 +90,7 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Empty(context.Pusheens);
 
                 context.Add(
-                    new Pusheen
-                    {
-                        Activity = "With some yarn"
-                    });
+                    new Pusheen { Activity = "With some yarn" });
                 context.SaveChanges();
             }
 
@@ -123,7 +105,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Named_databases_shared_per_service_provider()
         {
             var provider1 = new ServiceCollection().AddEntityFrameworkInMemoryDatabase().BuildServiceProvider();
@@ -132,10 +114,7 @@ namespace Microsoft.EntityFrameworkCore
             using (var context = new PusheenContext("Cats", provider1))
             {
                 context.Add(
-                    new Pusheen
-                    {
-                        Activity = "In a box"
-                    });
+                    new Pusheen { Activity = "In a box" });
                 context.SaveChanges();
             }
 
@@ -144,10 +123,7 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Empty(context.Pusheens);
 
                 context.Add(
-                    new Pusheen
-                    {
-                        Activity = "With some yarn"
-                    });
+                    new Pusheen { Activity = "With some yarn" });
                 context.SaveChanges();
             }
 
@@ -156,10 +132,7 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Empty(context.Pusheens);
 
                 context.Add(
-                    new Pusheen
-                    {
-                        Activity = "On a scooter"
-                    });
+                    new Pusheen { Activity = "On a scooter" });
                 context.SaveChanges();
             }
 
@@ -168,10 +141,7 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Empty(context.Pusheens);
 
                 context.Add(
-                    new Pusheen
-                    {
-                        Activity = "Is a DJ"
-                    });
+                    new Pusheen { Activity = "Is a DJ" });
                 context.SaveChanges();
             }
 
@@ -180,10 +150,7 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Empty(context.Pusheens);
 
                 context.Add(
-                    new Pusheen
-                    {
-                        Activity = "Goes to sleep"
-                    });
+                    new Pusheen { Activity = "Goes to sleep" });
                 context.SaveChanges();
             }
 
@@ -192,10 +159,7 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Empty(context.Pusheens);
 
                 context.Add(
-                    new Pusheen
-                    {
-                        Activity = "Loves magic unicorns"
-                    });
+                    new Pusheen { Activity = "Loves magic unicorns" });
                 context.SaveChanges();
             }
 

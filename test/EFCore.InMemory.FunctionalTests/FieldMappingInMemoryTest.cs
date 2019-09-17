@@ -3,6 +3,7 @@
 
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.TestUtilities;
+using Xunit;
 
 namespace Microsoft.EntityFrameworkCore
 {

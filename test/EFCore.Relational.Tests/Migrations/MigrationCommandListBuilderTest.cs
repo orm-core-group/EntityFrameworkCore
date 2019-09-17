@@ -1,6 +1,7 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 using Microsoft.EntityFrameworkCore.TestUtilities.FakeProvider;
@@ -11,7 +12,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
 {
     public class MigrationCommandListBuilderTest
     {
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public void MigrationCommandListBuilder_groups_multiple_statements_into_one_batch(bool suppressTransaction)
@@ -36,7 +37,7 @@ Statement3
                 ignoreLineEndingDifferences: true);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public void MigrationCommandListBuilder_correctly_produces_multiple_batches(bool suppressTransaction)
@@ -81,7 +82,7 @@ Statement6
                 ignoreLineEndingDifferences: true);
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public void MigrationCommandListBuilder_ignores_empty_batches(bool suppressTransaction)
@@ -136,7 +137,12 @@ Statement3
                             typeMappingSource)),
                     generationHelper,
                     typeMappingSource,
+                    new CurrentDbContext(new FakeDbContext()),
                     logger));
+        }
+
+        private class FakeDbContext : DbContext
+        {
         }
     }
 }

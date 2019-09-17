@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.EntityFrameworkCore.TestModels.NullSemanticsModel;
-using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
 using Xunit;
 
 // ReSharper disable SimplifyConditionalTernaryExpression
@@ -29,7 +28,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
         protected TFixture Fixture { get; }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_bool_with_bool_equal()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.BoolA == e.BoolB));
@@ -38,7 +37,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.NullableBoolA == e.NullableBoolB));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_negated_bool_with_bool_equal()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !e.BoolA == e.BoolB));
@@ -47,7 +46,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !e.NullableBoolA == e.NullableBoolB));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_bool_with_negated_bool_equal()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.BoolA == !e.BoolB));
@@ -56,7 +55,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.NullableBoolA == !e.NullableBoolB));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_negated_bool_with_negated_bool_equal()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !e.BoolA == !e.BoolB));
@@ -65,7 +64,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !e.NullableBoolA == !e.NullableBoolB));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_bool_with_bool_equal_negated()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !(e.BoolA == e.BoolB)));
@@ -74,7 +73,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !(e.NullableBoolA == e.NullableBoolB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_negated_bool_with_bool_equal_negated()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !(!e.BoolA == e.BoolB)));
@@ -83,7 +82,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !(!e.NullableBoolA == e.NullableBoolB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_bool_with_negated_bool_equal_negated()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !(e.BoolA == !e.BoolB)));
@@ -92,7 +91,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !(e.NullableBoolA == !e.NullableBoolB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_negated_bool_with_negated_bool_equal_negated()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !(!e.BoolA == !e.BoolB)));
@@ -101,7 +100,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !(!e.NullableBoolA == !e.NullableBoolB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_bool_with_bool_not_equal()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.BoolA != e.BoolB));
@@ -110,7 +109,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.NullableBoolA != e.NullableBoolB));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_negated_bool_with_bool_not_equal()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !e.BoolA != e.BoolB));
@@ -119,7 +118,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !e.NullableBoolA != e.NullableBoolB));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_bool_with_negated_bool_not_equal()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.BoolA != !e.BoolB));
@@ -128,7 +127,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.NullableBoolA != !e.NullableBoolB));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_negated_bool_with_negated_bool_not_equal()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !e.BoolA != !e.BoolB));
@@ -137,7 +136,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !e.NullableBoolA != !e.NullableBoolB));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_bool_with_bool_not_equal_negated()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !(e.BoolA != e.BoolB)));
@@ -146,7 +145,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !(e.NullableBoolA != e.NullableBoolB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_negated_bool_with_bool_not_equal_negated()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !(!e.BoolA != e.BoolB)));
@@ -155,7 +154,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !(!e.NullableBoolA != e.NullableBoolB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_bool_with_negated_bool_not_equal_negated()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !(e.BoolA != !e.BoolB)));
@@ -164,7 +163,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !(e.NullableBoolA != !e.NullableBoolB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_negated_bool_with_negated_bool_not_equal_negated()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !(!e.BoolA != !e.BoolB)));
@@ -173,7 +172,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !(!e.NullableBoolA != !e.NullableBoolB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_equals_method()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.BoolA.Equals(e.BoolB)));
@@ -182,7 +181,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.NullableBoolA.Equals(e.NullableBoolB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_equals_method_static()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => Equals(e.BoolA, e.BoolB)));
@@ -191,7 +190,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => Equals(e.NullableBoolA, e.NullableBoolB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_equals_method_negated()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !e.BoolA.Equals(e.BoolB)));
@@ -200,7 +199,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !e.NullableBoolA.Equals(e.NullableBoolB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_equals_method_negated_static()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !Equals(e.BoolA, e.BoolB)));
@@ -209,7 +208,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !Equals(e.NullableBoolA, e.NullableBoolB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_complex_equal_equal_equal()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.BoolA == e.BoolB == (e.IntA == e.IntB)));
@@ -218,7 +217,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 es => es.Where(e => e.NullableBoolA == e.NullableBoolB == (e.NullableIntA == e.NullableIntB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_complex_equal_not_equal_equal()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.BoolA == e.BoolB != (e.IntA == e.IntB)));
@@ -227,7 +226,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 es => es.Where(e => e.NullableBoolA == e.NullableBoolB != (e.NullableIntA == e.NullableIntB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_complex_not_equal_equal_equal()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.BoolA != e.BoolB == (e.IntA == e.IntB)));
@@ -236,7 +235,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 es => es.Where(e => e.NullableBoolA != e.NullableBoolB == (e.NullableIntA == e.NullableIntB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_complex_not_equal_not_equal_equal()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.BoolA != e.BoolB != (e.IntA == e.IntB)));
@@ -245,7 +244,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 es => es.Where(e => e.NullableBoolA != e.NullableBoolB != (e.NullableIntA == e.NullableIntB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_complex_not_equal_equal_not_equal()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.BoolA != e.BoolB == (e.IntA != e.IntB)));
@@ -254,7 +253,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 es => es.Where(e => e.NullableBoolA != e.NullableBoolB == (e.NullableIntA != e.NullableIntB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_complex_not_equal_not_equal_not_equal()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.BoolA != e.BoolB != (e.IntA != e.IntB)));
@@ -263,7 +262,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 es => es.Where(e => e.NullableBoolA != e.NullableBoolB != (e.NullableIntA != e.NullableIntB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_nullable_with_null_parameter_equal()
         {
             string prm = null;
@@ -271,7 +270,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.NullableStringA == prm));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Compare_nullable_with_non_null_parameter_not_equal()
         {
             var prm = "Foo";
@@ -286,54 +285,55 @@ namespace Microsoft.EntityFrameworkCore.Query
             {
                 var query = from e1 in context.Entities1
                             join e2 in context.Entities2 on e1.NullableIntA equals e2.NullableIntB
-                            select new
-                            {
-                                Id1 = e1.Id,
-                                Id2 = e2.Id,
-                                e1.NullableIntA,
-                                e2.NullableIntB
-                            };
+                            select new { Id1 = e1.Id, Id2 = e2.Id, e1.NullableIntA, e2.NullableIntB };
 
                 query.ToList();
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Contains_with_local_array_closure_with_null()
         {
             string[] ids = { "Foo", null };
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => ids.Contains(e.NullableStringA)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Contains_with_local_array_closure_with_multiple_nulls()
         {
             string[] ids = { null, "Foo", null, null };
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => ids.Contains(e.NullableStringA)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Contains_with_local_array_closure_false_with_null()
         {
             string[] ids = { "Foo", null };
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !ids.Contains(e.NullableStringA)));
         }
 
-        [Fact]
+        [ConditionalFact(Skip = "issue #14171")]
+        public virtual void Contains_with_local_nullable_array_closure_negated()
+        {
+            string[] ids = { "Foo" };
+            AssertQuery<NullSemanticsEntity1>(es => es.Where(e => !ids.Contains(e.NullableStringA)));
+        }
+
+        [ConditionalFact]
         public virtual void Where_multiple_ors_with_null()
         {
             AssertQuery<NullSemanticsEntity1>(
                 es => es.Where(e => e.NullableStringA == "Foo" || e.NullableStringA == "Blah" || e.NullableStringA == null));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_multiple_ands_with_null()
         {
             AssertQuery<NullSemanticsEntity1>(
                 es => es.Where(e => e.NullableStringA != "Foo" && e.NullableStringA != "Blah" && e.NullableStringA != null));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_multiple_ors_with_nullable_parameter()
         {
             string prm = null;
@@ -341,7 +341,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 es => es.Where(e => e.NullableStringA == "Foo" || e.NullableStringA == prm));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_multiple_ands_with_nullable_parameter_and_constant()
         {
             string prm1 = null;
@@ -357,7 +357,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                         && e.NullableStringA != prm3));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_multiple_ands_with_nullable_parameter_and_constant_not_optimized()
         {
             string prm1 = null;
@@ -374,13 +374,13 @@ namespace Microsoft.EntityFrameworkCore.Query
                         && e.NullableStringA != prm3));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_coalesce()
         {
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.NullableBoolA ?? true));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_equal_nullable_with_null_value_parameter()
         {
             string prm = null;
@@ -390,7 +390,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                     e => e.NullableStringA == prm));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_not_equal_nullable_with_null_value_parameter()
         {
             string prm = null;
@@ -400,7 +400,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                     e => e.NullableStringA != prm));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_equal_with_coalesce()
         {
             AssertQuery<NullSemanticsEntity1>(
@@ -408,7 +408,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                     e => (e.NullableStringA ?? e.NullableStringB) == e.NullableStringC));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_not_equal_with_coalesce()
         {
             AssertQuery<NullSemanticsEntity1>(
@@ -416,7 +416,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                     e => (e.NullableStringA ?? e.NullableStringB) != e.NullableStringC));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_equal_with_coalesce_both_sides()
         {
             AssertQuery<NullSemanticsEntity1>(
@@ -424,7 +424,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                     e => (e.NullableStringA ?? e.NullableStringB) == (e.StringA ?? e.StringB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_not_equal_with_coalesce_both_sides()
         {
             AssertQuery<NullSemanticsEntity1>(
@@ -432,7 +432,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                     e => (e.NullableIntA ?? e.NullableIntB) != (e.NullableIntC ?? e.NullableIntB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_equal_with_conditional()
         {
             AssertQuery<NullSemanticsEntity1>(
@@ -442,7 +442,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                              : e.NullableStringB) == e.NullableStringC));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_not_equal_with_conditional()
         {
             AssertQuery<NullSemanticsEntity1>(
@@ -452,7 +452,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                              : e.NullableStringB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_equal_with_conditional_non_nullable()
         {
             AssertQuery<NullSemanticsEntity1>(
@@ -462,7 +462,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                              : e.StringB)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_conditional_search_condition_in_result()
         {
             var prm = true;
@@ -477,7 +477,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                     e => !prm ? true : e.StringA.StartsWith("A")));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_nested_conditional_search_condition_in_result()
         {
             var prm1 = true;
@@ -495,7 +495,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                         : (e.BoolB ? list.Contains(e.StringA) : list.Contains(e.StringB))));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_equal_with_and_and_contains()
         {
             AssertQuery<NullSemanticsEntity1>(
@@ -506,7 +506,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 useRelationalNulls: false);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Null_comparison_in_selector_with_relational_nulls()
         {
             using (var ctx = CreateContext(useRelationalNulls: true))
@@ -519,7 +519,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Null_comparison_in_order_by_with_relational_nulls()
         {
             using (var ctx = CreateContext(useRelationalNulls: true))
@@ -531,15 +531,16 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact(Skip = "issue #15743")]
         public virtual void Null_comparison_in_join_key_with_relational_nulls()
         {
             using (var ctx = CreateContext(useRelationalNulls: true))
             {
-                var query = ctx.Entities1.Join(ctx.Entities2, e1 => e1.NullableStringA != "Foo", e2 => e2.NullableBoolB != true, (o, i) => new { o, i });
-                var result = query.ToList();
+                var query = ctx.Entities1.Join(
+                    ctx.Entities2, e1 => e1.NullableStringA != "Foo", e2 => e2.NullableBoolB != true, (o, i) => new { o, i });
 
-                Assert.Equal(405, result.Count);
+                var result = query.ToList();
+                Assert.Equal(162, result.Count);
             }
         }
 
@@ -549,7 +550,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             where TItem : NullSemanticsEntityBase
             => AssertQuery(query, query, useDatabaseNullSemantics);
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_equal_using_relational_null_semantics()
         {
             using (var context = CreateContext(useRelationalNulls: true))
@@ -560,7 +561,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_nullable_bool()
         {
             using (var context = CreateContext())
@@ -571,7 +572,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_nullable_bool_equal_with_constant()
         {
             using (var context = CreateContext())
@@ -582,7 +583,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_nullable_bool_with_null_check()
         {
             using (var context = CreateContext())
@@ -593,7 +594,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_equal_using_relational_null_semantics_with_parameter()
         {
             using (var context = CreateContext(useRelationalNulls: true))
@@ -605,7 +606,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_equal_using_relational_null_semantics_complex_with_parameter()
         {
             using (var context = CreateContext(useRelationalNulls: true))
@@ -617,7 +618,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_not_equal_using_relational_null_semantics()
         {
             using (var context = CreateContext(useRelationalNulls: true))
@@ -628,7 +629,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_not_equal_using_relational_null_semantics_with_parameter()
         {
             using (var context = CreateContext(useRelationalNulls: true))
@@ -640,7 +641,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_not_equal_using_relational_null_semantics_complex_with_parameter()
         {
             using (var context = CreateContext(useRelationalNulls: true))
@@ -652,7 +653,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_comparison_null_constant_and_null_parameter()
         {
             string prm = null;
@@ -660,7 +661,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => prm != null));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_comparison_null_constant_and_nonnull_parameter()
         {
             var prm = "Foo";
@@ -668,7 +669,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => null != prm));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_comparison_nonnull_constant_and_null_parameter()
         {
             string prm = null;
@@ -676,14 +677,14 @@ namespace Microsoft.EntityFrameworkCore.Query
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => "Foo" != prm));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Where_comparison_null_semantics_optimization_works_with_complex_predicates()
         {
             string prm = null;
             AssertQuery<NullSemanticsEntity1>(es => es.Where(e => null == prm && e.NullableStringA == prm));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Switching_null_semantics_produces_different_cache_entry()
         {
             List<int> results1, results2;
@@ -709,7 +710,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             Assert.True(results1.Count != results2.Count);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Switching_parameter_value_to_null_produces_different_cache_entry()
         {
             using (var context = CreateContext())
@@ -729,7 +730,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void From_sql_composed_with_relational_null_comparison()
         {
             using (var context = CreateContext(useRelationalNulls: true))
@@ -743,28 +744,20 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Projecting_nullable_bool_with_coalesce()
         {
             using (var context = CreateContext())
             {
                 var expected = context.Entities1.ToList()
                     .Select(
-                        e => new
-                        {
-                            e.Id,
-                            Coalesce = e.NullableBoolA ?? false
-                        });
+                        e => new { e.Id, Coalesce = e.NullableBoolA ?? false });
 
                 ClearLog();
 
                 var query = context.Entities1
                     .Select(
-                        e => new
-                        {
-                            e.Id,
-                            Coalesce = e.NullableBoolA ?? false
-                        });
+                        e => new { e.Id, Coalesce = e.NullableBoolA ?? false });
 
                 var results = query.ToList();
                 Assert.Equal(expected.Count(), results.Count);
@@ -775,28 +768,20 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Projecting_nullable_bool_with_coalesce_nested()
         {
             using (var context = CreateContext())
             {
                 var expected = context.Entities1.ToList()
                     .Select(
-                        e => new
-                        {
-                            e.Id,
-                            Coalesce = e.NullableBoolA ?? (e.NullableBoolB ?? false)
-                        });
+                        e => new { e.Id, Coalesce = e.NullableBoolA ?? (e.NullableBoolB ?? false) });
 
                 ClearLog();
 
                 var query = context.Entities1
                     .Select(
-                        e => new
-                        {
-                            e.Id,
-                            Coalesce = e.NullableBoolA ?? (e.NullableBoolB ?? false)
-                        });
+                        e => new { e.Id, Coalesce = e.NullableBoolA ?? (e.NullableBoolB ?? false) });
 
                 var results = query.ToList();
                 Assert.Equal(expected.Count(), results.Count);
@@ -807,7 +792,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Null_semantics_applied_when_comparing_function_with_nullable_argument_to_a_nullable_column()
         {
             AssertQuery<NullSemanticsEntity1>(
@@ -832,7 +817,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 useRelationalNulls: false);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Null_semantics_applied_when_comparing_two_functions_with_nullable_arguments()
         {
             AssertQuery<NullSemanticsEntity1>(
@@ -857,7 +842,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 useRelationalNulls: false);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Null_semantics_applied_when_comparing_two_functions_with_multiple_nullable_arguments()
         {
             AssertQuery<NullSemanticsEntity1>(
@@ -879,7 +864,131 @@ namespace Microsoft.EntityFrameworkCore.Query
                 useRelationalNulls: false);
         }
 
-        public static TResult? MaybeScalar<TResult>(object caller, Func<TResult?> expression)
+        [ConditionalFact]
+        public virtual void Null_semantics_coalesce()
+        {
+            AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.NullableBoolA == (e.NullableBoolB ?? e.BoolC)));
+            AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.NullableBoolA == (e.NullableBoolB ?? e.NullableBoolC)));
+            AssertQuery<NullSemanticsEntity1>(es => es.Where(e => (e.NullableBoolB ?? e.BoolC) != e.NullableBoolA));
+            AssertQuery<NullSemanticsEntity1>(es => es.Where(e => (e.NullableBoolB ?? e.NullableBoolC) != e.NullableBoolA));
+        }
+
+        [ConditionalFact]
+        public virtual void Null_semantics_conditional()
+        {
+            AssertQuery<NullSemanticsEntity1>(es => es.Where(e => e.BoolA == (e.BoolB ? e.NullableBoolB : e.NullableBoolC)));
+            AssertQuery<NullSemanticsEntity1>(es => es.Where(e => (e.NullableBoolA != e.NullableBoolB ? e.BoolB : e.BoolC) == e.BoolA));
+            AssertQuery<NullSemanticsEntity1>(
+                es => es.Where(
+                    e => (e.BoolA ? e.NullableBoolA != e.NullableBoolB : e.BoolC) != e.BoolB
+                        ? e.BoolA
+                        : e.NullableBoolB == e.NullableBoolC));
+        }
+
+        [ConditionalFact]
+        public virtual void Null_semantics_function()
+        {
+            AssertQuery<NullSemanticsEntity1>(
+                es => es.Where(e => e.NullableStringA.Substring(0, e.IntA) != e.NullableStringB),
+                es => es.Where(e => Maybe(e.NullableIntA, () => e.NullableStringA.Substring(0, e.IntA)) != e.NullableStringB),
+                useRelationalNulls: false);
+        }
+
+        [ConditionalFact]
+        public virtual void Null_semantics_join_with_composite_key()
+        {
+            using (var ctx = CreateContext())
+            {
+                var query = from e1 in ctx.Entities1
+                            join e2 in ctx.Entities2
+                                on new { one = e1.NullableStringA, two = e1.NullableStringB != e1.NullableStringC, three = true }
+                                equals new { one = e2.NullableStringB, two = e2.NullableBoolA ?? e2.BoolC, three = true }
+                            select new { e1, e2 };
+
+                var result = query.ToList();
+
+                var expected = (from e1 in ctx.Entities1.ToList()
+                                join e2 in ctx.Entities2.ToList()
+                                    on new { one = e1.NullableStringA, two = e1.NullableStringB != e1.NullableStringC, three = true }
+                                    equals new { one = e2.NullableStringB, two = e2.NullableBoolA ?? e2.BoolC, three = true }
+                                select new { e1, e2 }).ToList();
+
+                Assert.Equal(result.Count, expected.Count);
+            }
+        }
+
+        [ConditionalFact(Skip = "issue #14171")]
+        public virtual void Null_semantics_contains()
+        {
+            using (var ctx = CreateContext())
+            {
+                var ids = new List<int?> { 1, 2 };
+                var query1 = ctx.Entities1.Where(e => ids.Contains(e.NullableIntA));
+                var result1 = query1.ToList();
+
+                var query2 = ctx.Entities1.Where(e => !ids.Contains(e.NullableIntA));
+                var result2 = query2.ToList();
+
+                var ids2 = new List<int?> { 1, 2, null };
+                var query3 = ctx.Entities1.Where(e => ids.Contains(e.NullableIntA));
+                var result3 = query3.ToList();
+
+                var query4 = ctx.Entities1.Where(e => !ids.Contains(e.NullableIntA));
+                var result4 = query4.ToList();
+
+                var query5 = ctx.Entities1.Where(e => !new List<int?> { 1, 2 }.Contains(e.NullableIntA));
+                var result5 = query5.ToList();
+
+                var query6 = ctx.Entities1.Where(e => !new List<int?> { 1, 2, null }.Contains(e.NullableIntA));
+                var result6 = query6.ToList();
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Null_semantics_with_null_check_simple()
+        {
+            using (var ctx = CreateContext())
+            {
+                var query1 = ctx.Entities1.Where(e => e.NullableIntA != null && e.NullableIntA == e.NullableIntB);
+                var result1 = query1.ToList();
+
+                var query2 = ctx.Entities1.Where(e => e.NullableIntA != null && e.NullableIntA != e.NullableIntB);
+                var result2 = query2.ToList();
+
+                var query3 = ctx.Entities1.Where(e => e.NullableIntA != null && e.NullableIntA == e.IntC);
+                var result3 = query3.ToList();
+
+                var query4 = ctx.Entities1.Where(e => e.NullableIntA != null && e.NullableIntB != null && e.NullableIntA == e.NullableIntB);
+                var result4 = query4.ToList();
+
+                var query5 = ctx.Entities1.Where(e => e.NullableIntA != null && e.NullableIntB != null && e.NullableIntA != e.NullableIntB);
+                var result5 = query5.ToList();
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Null_semantics_with_null_check_complex()
+        {
+            using (var ctx = CreateContext())
+            {
+                var query1 = ctx.Entities1.Where(e => e.NullableIntA != null && ((e.NullableIntC != e.NullableIntA) || (e.NullableIntB != null && e.NullableIntA != e.NullableIntB)));
+                var result1 = query1.ToList();
+
+                var query2 = ctx.Entities1.Where(e => e.NullableIntA != null && ((e.NullableIntC != e.NullableIntA) || (e.NullableIntA != e.NullableIntB)));
+                var result2 = query2.ToList();
+
+                var query3 = ctx.Entities1.Where(e => (e.NullableIntA != null || e.NullableIntB != null) && e.NullableIntA == e.NullableIntC);
+                var result3 = query3.ToList();
+            }
+        }
+
+        protected static TResult Maybe<TResult>(object caller, Func<TResult> expression)
+            where TResult : class
+        {
+            return caller == null ? null : expression();
+        }
+
+        protected static TResult? MaybeScalar<TResult>(object caller, Func<TResult?> expression)
             where TResult : struct
         {
             return caller == null ? null : expression();

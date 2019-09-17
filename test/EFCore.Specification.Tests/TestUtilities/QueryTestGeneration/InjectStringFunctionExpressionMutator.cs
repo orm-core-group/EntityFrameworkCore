@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using Microsoft.EntityFrameworkCore.Extensions.Internal;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Microsoft.EntityFrameworkCore.TestUtilities.QueryTestGeneration
 {
@@ -51,8 +51,8 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities.QueryTestGeneration
                 if (_insideLambda
                     && !_insideEFProperty
                     && node?.Type == typeof(string)
-                    && node?.NodeType != ExpressionType.Parameter
-                    && (node?.NodeType != ExpressionType.Constant || ((ConstantExpression)node)?.Value != null))
+                    && node.NodeType != ExpressionType.Parameter
+                    && (node.NodeType != ExpressionType.Constant || ((ConstantExpression)node)?.Value != null))
                 {
                     FoundExpressions.Add(node);
                 }
@@ -63,7 +63,7 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities.QueryTestGeneration
             protected override Expression VisitMethodCall(MethodCallExpression node)
             {
                 if (node != null
-                    && node.IsEFProperty())
+                    && node.Method.IsEFPropertyMethod())
                 {
                     var oldInsideEFProperty = _insideEFProperty;
                     _insideEFProperty = true;

@@ -6,7 +6,7 @@ using System.Collections;
 using System.Collections.Generic;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Internal;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Utilities;
 
@@ -37,7 +37,6 @@ namespace Microsoft.EntityFrameworkCore.Update
         /// </summary>
         /// <param name="entry"> The <see cref="IUpdateEntry" /> that represents the entity that is being modified. </param>
         /// <param name="property"> The property that maps to the column. </param>
-        /// <param name="propertyAnnotations"> Provides access to relational-specific annotations for the column. </param>
         /// <param name="generateParameterName"> A delegate for generating parameter names for the update SQL. </param>
         /// <param name="isRead"> Indicates whether or not a value must be read from the database for the column. </param>
         /// <param name="isWrite"> Indicates whether or not a value must be written to the database for the column. </param>
@@ -48,7 +47,6 @@ namespace Microsoft.EntityFrameworkCore.Update
         public ColumnModification(
             [NotNull] IUpdateEntry entry,
             [NotNull] IProperty property,
-            [NotNull] IRelationalPropertyAnnotations propertyAnnotations,
             [NotNull] Func<string> generateParameterName,
             bool isRead,
             bool isWrite,
@@ -57,7 +55,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             bool isConcurrencyToken,
             bool sensitiveLoggingEnabled)
             : this(
-                Check.NotNull(propertyAnnotations, nameof(propertyAnnotations)).ColumnName,
+                Check.NotNull(property, nameof(property)).GetColumnName(),
                 originalValue: null,
                 value: null,
                 property: property,
@@ -200,9 +198,9 @@ namespace Microsoft.EntityFrameworkCore.Update
                 else
                 {
                     Entry.SetStoreGeneratedValue(Property, value);
-                    if(_sharedColumnModifications != null)
+                    if (_sharedColumnModifications != null)
                     {
-                        foreach(var sharedModification in _sharedColumnModifications)
+                        foreach (var sharedModification in _sharedColumnModifications)
                         {
                             sharedModification.Value = value;
                         }
@@ -215,7 +213,7 @@ namespace Microsoft.EntityFrameworkCore.Update
         ///     Adds a modification affecting the same database value.
         /// </summary>
         /// <param name="modification"> The modification for the shared column. </param>
-        public virtual void AddSharedColumnModification(ColumnModification modification)
+        public virtual void AddSharedColumnModification([NotNull] ColumnModification modification)
         {
             if (_sharedColumnModifications == null)
             {
@@ -245,8 +243,9 @@ namespace Microsoft.EntityFrameworkCore.Update
                         new[] { modification.Property }.Format(),
                         new[] { Property }.FormatColumns()));
             }
-            else if (UseOriginalValueParameter
-                     && !StructuralComparisons.StructuralEqualityComparer.Equals(OriginalValue, modification.OriginalValue))
+
+            if (UseOriginalValueParameter
+                && !StructuralComparisons.StructuralEqualityComparer.Equals(OriginalValue, modification.OriginalValue))
             {
                 if (_sensitiveLoggingEnabled)
                 {

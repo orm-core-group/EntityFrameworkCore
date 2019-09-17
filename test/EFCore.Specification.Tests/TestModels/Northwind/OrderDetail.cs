@@ -1,9 +1,11 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System;
+
 namespace Microsoft.EntityFrameworkCore.TestModels.Northwind
 {
-    public class OrderDetail
+    public class OrderDetail : IComparable<OrderDetail>
     {
         public int OrderID { get; set; }
         public int ProductID { get; set; }
@@ -31,12 +33,19 @@ namespace Microsoft.EntityFrameworkCore.TestModels.Northwind
                   && Equals((OrderDetail)obj);
         }
 
-        public override int GetHashCode()
+        public override int GetHashCode() => HashCode.Combine(OrderID, ProductID);
+
+        public int CompareTo(OrderDetail other)
         {
-            unchecked
+            if (other == null)
             {
-                return (OrderID * 397) ^ ProductID;
+                return 1;
             }
+
+            var comp1 = OrderID.CompareTo(other.OrderID);
+            return comp1 == 0
+                ? ProductID.CompareTo(other.ProductID)
+                : comp1;
         }
     }
 }

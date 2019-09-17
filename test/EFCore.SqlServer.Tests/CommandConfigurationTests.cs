@@ -3,7 +3,6 @@
 
 using System;
 using Microsoft.EntityFrameworkCore.TestUtilities.FakeProvider;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 #pragma warning disable RCS1102 // Make class static.
@@ -13,7 +12,7 @@ namespace Microsoft.EntityFrameworkCore
     {
         public class CommandTimeout
         {
-            [Fact]
+            [ConditionalFact]
             public void Default_value_for_CommandTimeout_is_null_and_can_be_changed_including_setting_to_null()
             {
                 using (var context = new TimeoutContext())
@@ -31,7 +30,7 @@ namespace Microsoft.EntityFrameworkCore
                 }
             }
 
-            [Fact]
+            [ConditionalFact]
             public void Setting_CommandTimeout_to_negative_value_throws()
             {
                 Assert.Throws<InvalidOperationException>(

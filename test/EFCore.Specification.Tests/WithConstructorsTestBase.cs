@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 using Xunit;
@@ -34,7 +33,7 @@ namespace Microsoft.EntityFrameworkCore
         {
         }
 
-        [Fact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual void Query_and_update_using_constructors_with_property_parameters()
         {
             TestHelpers.ExecuteWithStrategyInTransaction(
@@ -75,7 +74,7 @@ namespace Microsoft.EntityFrameworkCore
 
                     var posts = blogs[0].Posts.OrderBy(e => e.Title).ToList();
 
-                    Assert.Equal(1, posts.Count);
+                    Assert.Single(posts);
 
                     Assert.StartsWith("Baxter", posts[0].Title);
                     Assert.StartsWith("With dog", posts[0].Content);
@@ -95,7 +94,7 @@ namespace Microsoft.EntityFrameworkCore
                 });
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual void Query_with_keyless_type()
         {
             using (var context = CreateContext())
@@ -104,12 +103,12 @@ namespace Microsoft.EntityFrameworkCore
                 var blogs = context.Query<BlogQuery>().ToList();
 #pragma warning restore CS0618 // Type or member is obsolete
 
-                Assert.Equal(1, blogs.Count);
+                Assert.Single(blogs);
                 Assert.Equal("Puppies", blogs[0].Title);
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_context_injected()
         {
             using (var context = CreateContext())
@@ -128,7 +127,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_context_injected_into_property()
         {
             using (var context = CreateContext())
@@ -147,7 +146,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_context_injected_into_constructor_with_property()
         {
             HasContextPc<DbContext> entityWithBase;
@@ -195,7 +194,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Attaching_entity_sets_context()
         {
             int id1, id2, id3;
@@ -208,18 +207,9 @@ namespace Microsoft.EntityFrameworkCore
 
             using (var context = CreateContext())
             {
-                var entityWithBase = new HasContextProperty<DbContext>
-                {
-                    Id = id1
-                };
-                var entityWithDerived = new HasContextProperty<WithConstructorsContext>
-                {
-                    Id = id2
-                };
-                var entityWithOther = new HasContextProperty<OtherContext>
-                {
-                    Id = id3
-                };
+                var entityWithBase = new HasContextProperty<DbContext> { Id = id1 };
+                var entityWithDerived = new HasContextProperty<WithConstructorsContext> { Id = id2 };
+                var entityWithOther = new HasContextProperty<OtherContext> { Id = id3 };
 
                 context.Attach(entityWithBase);
                 context.Attach(entityWithDerived);
@@ -231,7 +221,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_EntityType_injected()
         {
             using (var context = CreateContext())
@@ -242,7 +232,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_EntityType_injected_into_property()
         {
             using (var context = CreateContext())
@@ -253,7 +243,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_EntityType_injected_into_constructor_with_property()
         {
             HasEntityTypePc entity;
@@ -279,7 +269,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Attaching_entity_sets_EntityType()
         {
             int id;
@@ -290,10 +280,7 @@ namespace Microsoft.EntityFrameworkCore
 
             using (var context = CreateContext())
             {
-                var entity = new HasEntityTypeProperty
-                {
-                    Id = id
-                };
+                var entity = new HasEntityTypeProperty { Id = id };
 
                 context.Attach(entity);
 
@@ -301,7 +288,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_StateManager_injected()
         {
             using (var context = CreateContext())
@@ -312,7 +299,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_StateManager_injected_into_property()
         {
             using (var context = CreateContext())
@@ -323,7 +310,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_StateManager_injected_into_constructor_with_property()
         {
             HasStateManagerPc entity;
@@ -349,7 +336,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Attaching_entity_sets_StateManager()
         {
             int id;
@@ -360,10 +347,7 @@ namespace Microsoft.EntityFrameworkCore
 
             using (var context = CreateContext())
             {
-                var entity = new HasStateManagerProperty
-                {
-                    Id = id
-                };
+                var entity = new HasStateManagerProperty { Id = id };
 
                 context.Attach(entity);
 
@@ -371,7 +355,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_loader_injected_for_reference()
         {
             using (var context = CreateContext())
@@ -383,7 +367,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_loader_injected_for_collections()
         {
             using (var context = CreateContext())
@@ -396,7 +380,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task Query_with_loader_injected_for_reference_async()
         {
             using (var context = CreateContext())
@@ -411,7 +395,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task Query_with_loader_injected_for_collections_async()
         {
             using (var context = CreateContext())
@@ -427,7 +411,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_POCO_loader_injected_for_reference()
         {
             using (var context = CreateContext())
@@ -439,7 +423,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_POCO_loader_injected_for_collections()
         {
             using (var context = CreateContext())
@@ -452,7 +436,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task Query_with_loader_delegate_injected_for_reference_async()
         {
             using (var context = CreateContext())
@@ -467,7 +451,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task Query_with_loader_delegate_injected_for_collections_async()
         {
             using (var context = CreateContext())
@@ -483,7 +467,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_loader_injected_into_property_for_reference()
         {
             using (var context = CreateContext())
@@ -495,7 +479,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_loader_injected_into_property_for_collections()
         {
             using (var context = CreateContext())
@@ -508,7 +492,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Attaching_entity_sets_lazy_loader()
         {
             int id, fk;
@@ -521,11 +505,7 @@ namespace Microsoft.EntityFrameworkCore
 
             using (var context = CreateContext())
             {
-                var post = new LazyPropertyPost
-                {
-                    Id = id,
-                    LazyPropertyBlogId = fk
-                };
+                var post = new LazyPropertyPost { Id = id, LazyPropertyBlogId = fk };
                 Assert.Null(post.GetLoader());
 
                 context.Attach(post);
@@ -537,8 +517,8 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
-        public virtual void Detatching_entity_resets_lazy_loader_so_it_can_be_reattached()
+        [ConditionalFact]
+        public virtual void Detaching_entity_resets_lazy_loader_so_it_can_be_reattached()
         {
             LazyPropertyPost post;
             using (var context = CreateContext())
@@ -565,7 +545,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_loader_injected_into_field_for_reference()
         {
             using (var context = CreateContext())
@@ -577,7 +557,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_loader_injected_into_field_for_collections()
         {
             using (var context = CreateContext())
@@ -590,7 +570,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Attaching_entity_sets_lazy_loader_field()
         {
             int id, fk;
@@ -603,11 +583,7 @@ namespace Microsoft.EntityFrameworkCore
 
             using (var context = CreateContext())
             {
-                var post = new LazyFieldPost
-                {
-                    Id = id,
-                    LazyFieldBlogId = fk
-                };
+                var post = new LazyFieldPost { Id = id, LazyFieldBlogId = fk };
                 Assert.Null(post.GetLoader());
 
                 context.Attach(post);
@@ -619,8 +595,8 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
-        public virtual void Detatching_entity_resets_lazy_loader_field_so_it_can_be_reattached()
+        [ConditionalFact]
+        public virtual void Detaching_entity_resets_lazy_loader_field_so_it_can_be_reattached()
         {
             LazyFieldPost post;
             using (var context = CreateContext())
@@ -647,7 +623,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Attaching_entity_sets_lazy_loader_delegate()
         {
             int id, fk;
@@ -660,11 +636,7 @@ namespace Microsoft.EntityFrameworkCore
 
             using (var context = CreateContext())
             {
-                var post = new LazyPcsPost
-                {
-                    Id = id,
-                    LazyPcsBlogId = fk
-                };
+                var post = new LazyPcsPost { Id = id, LazyPcsBlogId = fk };
                 Assert.Null(post.GetLoader());
 
                 context.Attach(post);
@@ -676,8 +648,8 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
-        public virtual void Detatching_entity_resets_lazy_loader_delegate_so_it_can_be_reattached()
+        [ConditionalFact]
+        public virtual void Detaching_entity_resets_lazy_loader_delegate_so_it_can_be_reattached()
         {
             LazyPcsPost post;
             using (var context = CreateContext())
@@ -704,7 +676,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_loader_delegate_injected_into_property_for_reference()
         {
             using (var context = CreateContext())
@@ -716,7 +688,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_loader_delgate_injected_into_property_for_collections()
         {
             using (var context = CreateContext())
@@ -729,7 +701,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task Query_with_loader_delegate_injected_into_property_for_reference_async()
         {
             using (var context = CreateContext())
@@ -744,7 +716,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task Query_with_loader_delegate_injected_into_property_for_collections_async()
         {
             using (var context = CreateContext())
@@ -760,7 +732,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_loader_injected_into_property_via_constructor_for_reference()
         {
             using (var context = CreateContext())
@@ -774,7 +746,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_loader_injected_into_property_via_constructor_for_collections()
         {
             using (var context = CreateContext())
@@ -789,7 +761,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_loader_delegate_injected_into_property_via_constructor_for_reference()
         {
             using (var context = CreateContext())
@@ -803,7 +775,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Query_with_loader_delegate_injected_into_property_via_constructor_for_collections()
         {
             using (var context = CreateContext())
@@ -929,7 +901,6 @@ namespace Microsoft.EntityFrameworkCore
             where TContext : DbContext
         {
             private TContext _context;
-            // ReSharper disable once ConvertToAutoProperty
             private bool _setterCalled;
 
             public HasContextPc()
@@ -958,7 +929,7 @@ namespace Microsoft.EntityFrameworkCore
                 }
             }
 
-            // ReSharper disable once ConvertToAutoProperty
+            // ReSharper disable once ConvertToAutoPropertyWithPrivateSetter
             public bool SetterCalled => _setterCalled;
 
             public TContext GetContext() => Context;
@@ -1059,8 +1030,8 @@ namespace Microsoft.EntityFrameworkCore
         protected class HasStateManagerPc
         {
             private IStateManager _stateManager;
-            // ReSharper disable once ConvertToAutoProperty
             private bool _setterCalled;
+            // ReSharper disable once ConvertToAutoProperty
 
             public HasStateManagerPc()
             {
@@ -1085,7 +1056,7 @@ namespace Microsoft.EntityFrameworkCore
                 }
             }
 
-            // ReSharper disable once ConvertToAutoProperty
+            // ReSharper disable once ConvertToAutoPropertyWithPrivateSetter
             public bool SetterCalled => _setterCalled;
 
             public IStateManager GetStateManager() => StateManager;
@@ -1178,7 +1149,9 @@ namespace Microsoft.EntityFrameworkCore
             private ICollection<LazyFieldPost> _lazyFieldPosts = new List<LazyFieldPost>();
 
 #pragma warning disable 649
+#pragma warning disable IDE0044 // Add readonly modifier
             private ILazyLoader _loader;
+#pragma warning restore IDE0044 // Add readonly modifier
 #pragma warning restore 649
 
             public int Id { get; set; }
@@ -1195,7 +1168,9 @@ namespace Microsoft.EntityFrameworkCore
             private LazyFieldBlog _lazyFieldBlog;
 
 #pragma warning disable 649
+#pragma warning disable IDE0044 // Add readonly modifier
             private ILazyLoader _loader;
+#pragma warning restore IDE0044 // Add readonly modifier
 #pragma warning restore 649
 
             public int Id { get; set; }
@@ -1623,11 +1598,12 @@ namespace Microsoft.EntityFrameworkCore
                         b.Property(e => e.Title);
                     });
 
-                modelBuilder.Entity<BlogQuery>(b =>
-                {
-                    b.HasNoKey();
-                    b.Property(e => e.Title);
-                });
+                modelBuilder.Entity<BlogQuery>(
+                    b =>
+                    {
+                        b.HasNoKey();
+                        b.Property(e => e.Title);
+                    });
 
                 modelBuilder.Entity<Post>(
                     b =>
@@ -1675,16 +1651,16 @@ namespace Microsoft.EntityFrameworkCore
                 var blogServiceProperty = modelBuilder.Entity<LazyFieldBlog>().Metadata.AddServiceProperty(
                     typeof(LazyFieldBlog).GetTypeInfo().GetRuntimeFields().Single(f => f.Name == "_loader"));
 
-                blogServiceProperty.SetParameterBinding(
+                blogServiceProperty.ParameterBinding =
                     (ServiceParameterBinding)bindingFactories.FindFactory(typeof(ILazyLoader), "_loader")
-                        .Bind(blogServiceProperty.DeclaringEntityType, typeof(ILazyLoader), "_loader"));
+                        .Bind(blogServiceProperty.DeclaringEntityType, typeof(ILazyLoader), "_loader");
 
                 var postServiceProperty = modelBuilder.Entity<LazyFieldPost>().Metadata.AddServiceProperty(
                     typeof(LazyFieldPost).GetTypeInfo().GetRuntimeFields().Single(f => f.Name == "_loader"));
 
-                postServiceProperty.SetParameterBinding(
+                postServiceProperty.ParameterBinding =
                     (ServiceParameterBinding)bindingFactories.FindFactory(typeof(ILazyLoader), "_loader")
-                        .Bind(postServiceProperty.DeclaringEntityType, typeof(ILazyLoader), "_loader"));
+                        .Bind(postServiceProperty.DeclaringEntityType, typeof(ILazyLoader), "_loader");
             }
 
             protected override void Seed(WithConstructorsContext context)

@@ -4,7 +4,6 @@
 using System.Linq;
 using Microsoft.EntityFrameworkCore.TestModels.Northwind;
 using Microsoft.EntityFrameworkCore.TestUtilities;
-using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
 using Xunit;
 
 // ReSharper disable InconsistentNaming
@@ -17,7 +16,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
         protected TFixture Fixture { get; }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public virtual void Entity_added_to_state_manager(bool useParam)
@@ -51,7 +50,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Applied_to_multiple_body_clauses()
         {
             using (var context = CreateContext())
@@ -60,11 +59,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                     = (from c in context.Set<Customer>().AsTracking()
                        from o in context.Set<Order>().AsTracking()
                        where c.CustomerID == o.CustomerID
-                       select new
-                       {
-                           c,
-                           o
-                       })
+                       select new { c, o })
                     .ToList();
 
                 Assert.Equal(830, customers.Count);
@@ -82,13 +77,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                        join o in context.Set<Order>().AsTracking()
                            on c.CustomerID equals o.CustomerID
                        where c.CustomerID == "ALFKI"
-                       select new
-                       {
-                           c.CustomerID,
-                           c,
-                           ocid = o.CustomerID,
-                           o
-                       })
+                       select new { c.CustomerID, c, ocid = o.CustomerID, o })
                     .ToList();
 
                 Assert.Equal(6, customers.Count);
@@ -106,11 +95,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                        join o in context.Set<Order>().AsTracking()
                            on c.CustomerID equals o.CustomerID
                        where c.CustomerID == "ALFKI"
-                       select new
-                       {
-                           c,
-                           o
-                       })
+                       select new { c, o })
                     .AsTracking()
                     .ToList();
 

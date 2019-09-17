@@ -1,12 +1,16 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System.Diagnostics;
 using JetBrains.Annotations;
 
 namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 {
     /// <summary>
-    ///     Extension methods for <see cref="IProperty" /> for relational database metadata.
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
     public static class RelationalPropertyExtensions
     {
@@ -17,6 +21,15 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
         ///     doing so can result in application failures when updating to a new Entity Framework Core release.
         /// </summary>
         public static IForeignKey FindSharedTableLink([NotNull] this IProperty property)
+            => property.FindSharedTableLink(property.DeclaringEntityType.GetTableName(), property.DeclaringEntityType.GetSchema());
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        public static IForeignKey FindSharedTableLink([NotNull] this IProperty property, string table, string schema)
         {
             var pk = property.FindContainingPrimaryKey();
             if (pk == null)
@@ -35,10 +48,9 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 }
 
                 var principalEntityType = fk.PrincipalEntityType;
-                var entityTypeAnnotations = fk.DeclaringEntityType.Relational();
-                var principalTypeAnnotations = principalEntityType.Relational();
-                if (entityTypeAnnotations.TableName == principalTypeAnnotations.TableName
-                    && entityTypeAnnotations.Schema == principalTypeAnnotations.Schema)
+                var declaringEntityType = fk.DeclaringEntityType;
+                if (table == principalEntityType.GetTableName()
+                    && schema == principalEntityType.GetSchema())
                 {
                     return fk;
                 }
@@ -46,5 +58,15 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 
             return null;
         }
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        [DebuggerStepThrough]
+        public static string GetConfiguredColumnType([NotNull] this IProperty property)
+            => (string)property[RelationalAnnotationNames.ColumnType];
     }
 }

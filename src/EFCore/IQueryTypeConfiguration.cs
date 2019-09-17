@@ -1,7 +1,8 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Microsoft.EntityFrameworkCore
@@ -24,6 +25,6 @@ namespace Microsoft.EntityFrameworkCore
         ///     Configures the query of type <typeparamref name="TQuery" />.
         /// </summary>
         /// <param name="builder"> The builder to be used to configure the query type. </param>
-        void Configure(QueryTypeBuilder<TQuery> builder);
+        void Configure([NotNull] QueryTypeBuilder<TQuery> builder);
     }
 }

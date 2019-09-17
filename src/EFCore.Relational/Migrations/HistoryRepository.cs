@@ -10,6 +10,7 @@ using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.Utilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,8 +26,8 @@ namespace Microsoft.EntityFrameworkCore.Migrations
     ///         Database providers must inherit from this class to implement provider-specific functionality.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Scoped"/>. This means that each
-    ///         <see cref="DbContext"/> instance will use its own instance of this service.
+    ///         The service lifetime is <see cref="ServiceLifetime.Scoped" />. This means that each
+    ///         <see cref="DbContext" /> instance will use its own instance of this service.
     ///         The implementation may depend on other services registered with any lifetime.
     ///         The implementation does not need to be thread-safe.
     ///     </para>
@@ -83,19 +84,19 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         ///     The name of the column that holds the Migration identifier.
         /// </summary>
         protected virtual string MigrationIdColumnName
-            => _migrationIdColumnName
-                ??= EnsureModel()
-                    .FindEntityType(typeof(HistoryRow))
-                    .FindProperty(nameof(HistoryRow.MigrationId))
-                    .Relational()
-                    .ColumnName;
+            => _migrationIdColumnName ??= EnsureModel()
+                .FindEntityType(typeof(HistoryRow))
+                .FindProperty(nameof(HistoryRow.MigrationId))
+                .GetColumnName();
 
         private IModel EnsureModel()
         {
             if (_model == null)
             {
-                var modelBuilder = new ModelBuilder(Dependencies.ConventionSetBuilder.CreateConventionSet());
+                var conventionSet = Dependencies.ConventionSetBuilder.CreateConventionSet();
+                ConventionSet.Remove(conventionSet.ModelInitializedConventions, typeof(DbSetFindingConvention));
 
+                var modelBuilder = new ModelBuilder(conventionSet);
                 modelBuilder.Entity<HistoryRow>(
                     x =>
                     {
@@ -103,7 +104,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
                         x.ToTable(TableName, TableSchema);
                     });
 
-                _model = modelBuilder.Model;
+                _model = modelBuilder.FinalizeModel();
             }
 
             return _model;
@@ -116,8 +117,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             => _productVersionColumnName ??= EnsureModel()
                 .FindEntityType(typeof(HistoryRow))
                 .FindProperty(nameof(HistoryRow.ProductVersion))
-                .Relational()
-                .ColumnName;
+                .GetColumnName();
 
         /// <summary>
         ///     Overridden by database providers to generate SQL that tests for existence of the history table.
@@ -131,7 +131,12 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         public virtual bool Exists()
             => Dependencies.DatabaseCreator.Exists()
                && InterpretExistsResult(
-                   Dependencies.RawSqlCommandBuilder.Build(ExistsSql).ExecuteScalar(Dependencies.Connection, null,  Dependencies.CommandLogger));
+                   Dependencies.RawSqlCommandBuilder.Build(ExistsSql).ExecuteScalar(
+                       new RelationalCommandParameterObject(
+                           Dependencies.Connection,
+                           null,
+                           Dependencies.CurrentContext.Context,
+                           Dependencies.CommandLogger)));
 
         /// <summary>
         ///     Checks whether or not the history table exists.
@@ -145,7 +150,12 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             => await Dependencies.DatabaseCreator.ExistsAsync(cancellationToken)
                && InterpretExistsResult(
                    await Dependencies.RawSqlCommandBuilder.Build(ExistsSql).ExecuteScalarAsync(
-                       Dependencies.Connection, null, Dependencies.CommandLogger, cancellationToken: cancellationToken));
+                       new RelationalCommandParameterObject(
+                           Dependencies.Connection,
+                           null,
+                           Dependencies.CurrentContext.Context,
+                           Dependencies.CommandLogger),
+                       cancellationToken));
 
         /// <summary>
         ///     Interprets the result of executing <see cref="ExistsSql" />.
@@ -203,7 +213,12 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             {
                 var command = Dependencies.RawSqlCommandBuilder.Build(GetAppliedMigrationsSql);
 
-                using (var reader = command.ExecuteReader(Dependencies.Connection, null, Dependencies.CommandLogger))
+                using (var reader = command.ExecuteReader(
+                    new RelationalCommandParameterObject(
+                        Dependencies.Connection,
+                        null,
+                        Dependencies.CurrentContext.Context,
+                        Dependencies.CommandLogger)))
                 {
                     while (reader.Read())
                     {
@@ -232,7 +247,13 @@ namespace Microsoft.EntityFrameworkCore.Migrations
             {
                 var command = Dependencies.RawSqlCommandBuilder.Build(GetAppliedMigrationsSql);
 
-                using (var reader = await command.ExecuteReaderAsync(Dependencies.Connection, null, Dependencies.CommandLogger, cancellationToken: cancellationToken))
+                await using (var reader = await command.ExecuteReaderAsync(
+                    new RelationalCommandParameterObject(
+                        Dependencies.Connection,
+                        null,
+                        Dependencies.CurrentContext.Context,
+                        Dependencies.CommandLogger),
+                    cancellationToken))
                 {
                     while (await reader.ReadAsync(cancellationToken))
                     {

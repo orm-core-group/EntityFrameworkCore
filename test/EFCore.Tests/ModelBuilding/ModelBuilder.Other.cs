@@ -7,9 +7,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -18,7 +16,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
 {
     public class ModelBuilderOtherTest
     {
-        [Fact]
+        [ConditionalFact]
         public virtual void HasOne_with_just_string_navigation_for_non_CLR_property_throws()
         {
             using (var context = new CustomModelBuildingContext(
@@ -34,7 +32,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void HasMany_with_just_string_navigation_for_non_CLR_property_throws()
         {
             using (var context = new CustomModelBuildingContext(
@@ -50,7 +48,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void HasMany_with_a_non_collection_just_string_navigation_CLR_property_throws()
         {
             using (var context = new CustomModelBuildingContext(
@@ -66,14 +64,30 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             }
         }
 
-        [Fact]
+        [ConditionalFact]
+        public virtual void HasMany_with_a_collection_navigation_CLR_property_to_derived_type_throws()
+        {
+            using (var context = new CustomModelBuildingContext(
+                Configure(),
+                b =>
+                {
+                    b.Entity<Dr>().HasMany<Dre>(d => d.Jrs);
+                }))
+            {
+                Assert.Equal(
+                    CoreStrings.NavigationCollectionWrongClrType(nameof(Dr.Jrs), nameof(Dr), "ICollection<DreJr>", nameof(Dre)),
+                    Assert.Throws<InvalidOperationException>(() => context.Model).Message);
+            }
+        }
+
+        [ConditionalFact]
         public virtual void OwnsOne_HasOne_with_just_string_navigation_for_non_CLR_property_throws()
         {
             using (var context = new CustomModelBuildingContext(
                 Configure(),
                 b =>
                 {
-                    b.Entity<Dr>().OwnsOne(e =>e.Dre).HasOne("Snoop");
+                    b.Entity<Dr>().OwnsOne(e => e.Dre).HasOne("Snoop");
                 }))
             {
                 Assert.Equal(
@@ -87,13 +101,19 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             public int Id { get; set; }
 
             public Dre Dre { get; set; }
+
+            public ICollection<DreJr> Jrs { get; set; }
         }
 
         protected class Dre
         {
         }
 
-        [Fact] //Issue#13108
+        protected class DreJr : Dre
+        {
+        }
+
+        [ConditionalFact] //Issue#13108
         public virtual void HasForeignKey_infers_type_for_shadow_property_when_not_specified()
         {
             using (var context = new CustomModelBuildingContext(
@@ -111,12 +131,11 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
                     b.Entity<ComplexCaseParent13108>().HasKey(c => c.Key);
                 }))
             {
-                var model = (Model)context.Model;
-                Assert.Equal(
-                    ConfigurationSource.Convention,
-                    model.FindEntityType(typeof(ComplexCaseChild13108))
-                        .GetProperties().Where(p => p.Name == "ParentKey").Single()
-                        .GetTypeConfigurationSource());
+                var model = (IConventionModel)context.Model;
+                var property = model
+                    .FindEntityType(typeof(ComplexCaseChild13108)).GetProperties().Single(p => p.Name == "ParentKey");
+                Assert.Equal(typeof(int), property.ClrType);
+                Assert.Equal(ConfigurationSource.Explicit, property.GetTypeConfigurationSource());
             }
         }
 
@@ -135,7 +154,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             public ICollection<ComplexCaseChild13108> Children { get; set; }
         }
 
-        [Fact] //Issue#12617
+        [ConditionalFact] //Issue#12617
         [UseCulture("de-DE")]
         public virtual void EntityType_name_is_stored_culture_invariantly()
         {
@@ -164,7 +183,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             public Entityß Navigationss { get; set; }
         }
 
-        [Fact] //Issue#13300
+        [ConditionalFact] //Issue#13300
         public virtual void Explicitly_set_shadow_FK_name_is_preserved_with_HasPrincipalKey()
         {
             using (var context = new CustomModelBuildingContext(
@@ -209,7 +228,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             public User13300 User { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Attribute_set_shadow_FK_name_is_preserved_with_HasPrincipalKey()
         {
             using (var context = new CustomModelBuildingContext(
@@ -255,7 +274,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             public User13694 User { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         protected virtual void Mapping_throws_for_non_ignored_array()
         {
             using (var context = new CustomModelBuildingContext(
@@ -269,7 +288,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         protected virtual void Mapping_ignores_ignored_array()
         {
             using (var context = new CustomModelBuildingContext(
@@ -282,7 +301,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         protected virtual void Mapping_throws_for_non_ignored_two_dimensional_array()
         {
             using (var context = new CustomModelBuildingContext(
@@ -296,7 +315,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         protected virtual void Mapping_ignores_ignored_two_dimensional_array()
         {
             using (var context = new CustomModelBuildingContext(
@@ -309,7 +328,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         protected virtual void Mapping_throws_for_non_ignored_three_dimensional_array()
         {
             using (var context = new CustomModelBuildingContext(
@@ -323,7 +342,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         protected virtual void Mapping_ignores_ignored_three_dimensional_array()
         {
             using (var context = new CustomModelBuildingContext(

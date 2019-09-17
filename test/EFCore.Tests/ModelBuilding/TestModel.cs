@@ -53,7 +53,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
 
             public ToastedBun ToastedBun { get; set; }
 
-            public Moostard Moostard { get; set; }
+            public Mustard Mustard { get; set; }
         }
 
         private class Tomato
@@ -74,7 +74,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             public Whoopper Whoopper { get; set; }
         }
 
-        private class Moostard
+        private class Mustard
         {
             public int Id1 { get; set; }
             public int Id2 { get; set; }
@@ -93,6 +93,9 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             public string Name { get; set; }
 
             public IEnumerable<Order> Orders { get; set; }
+
+            [NotMapped]
+            public ICollection<SpecialOrder> SomeOrders { get; set; }
 
             public CustomerDetails Details { get; set; }
         }
@@ -278,6 +281,26 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             public SelfRefManyToOne SelfRef1 { get; set; }
             public ICollection<SelfRefManyToOne> SelfRef2 { get; set; }
             public int SelfRefId { get; set; }
+        }
+
+        protected class User
+        {
+            [Required]
+            public Guid Id { get; set; }
+
+            [Required]
+            [MaxLength(150)]
+            public string Name { get; set; }
+
+            [Required]
+            public User CreatedBy { get; set; }
+
+            public User UpdatedBy { get; set; }
+
+            [Required]
+            public Guid CreatedById { get; set; }
+
+            public Guid? UpdatedById { get; set; }
         }
 
         protected class SelfRefManyToOneDerived : SelfRefManyToOne
@@ -649,7 +672,7 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding
             public Value Value { get; set; }
         }
 
-        protected class QueryType
+        protected class KeylessEntity
         {
             public int CustomerId { get; set; }
             public Customer Customer { get; set; }

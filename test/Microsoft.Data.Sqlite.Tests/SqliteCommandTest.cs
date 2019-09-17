@@ -9,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite.Properties;
 using Xunit;
-
 using static SQLitePCL.raw;
 
 namespace Microsoft.Data.Sqlite
@@ -341,6 +340,19 @@ namespace Microsoft.Data.Sqlite
         }
 
         [Fact]
+        public void ExecuteScalar_returns_null_when_non_query()
+        {
+            using (var connection = new SqliteConnection("Data Source=:memory:"))
+            {
+                var command = connection.CreateCommand();
+                command.CommandText = "CREATE TABLE Data (Value);";
+                connection.Open();
+
+                Assert.Null(command.ExecuteScalar());
+            }
+        }
+
+        [Fact]
         public void ExecuteScalar_returns_long_when_integer()
         {
             using (var connection = new SqliteConnection("Data Source=:memory:"))
@@ -535,9 +547,9 @@ namespace Microsoft.Data.Sqlite
                 {
                     otherConnection.Open();
 
-                    using (var transction = otherConnection.BeginTransaction())
+                    using (var transaction = otherConnection.BeginTransaction())
                     {
-                        command.Transaction = transction;
+                        command.Transaction = transaction;
 
                         var ex = Assert.Throws<InvalidOperationException>(() => command.ExecuteReader());
 
@@ -873,7 +885,8 @@ namespace Microsoft.Data.Sqlite
             using (var connection = new SqliteConnection("Data Source=:memory:"))
             {
                 connection.Open();
-                connection.ExecuteNonQuery(@"
+                connection.ExecuteNonQuery(
+                    @"
                     CREATE TABLE Test(Value);
                     INSERT INTO Test VALUES(1), (2);");
 

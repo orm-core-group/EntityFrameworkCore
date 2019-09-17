@@ -26,40 +26,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 {
     public partial class EntityTypeTest
     {
-        private readonly IMutableModel _model = BuildModel();
-
-        private class A
-        {
-            public static readonly PropertyInfo EProperty = typeof(A).GetProperty("E");
-            public static readonly PropertyInfo GProperty = typeof(A).GetProperty("G");
-
-            public string E { get; set; }
-            public string G { get; set; }
-        }
-
-        private class B : A
-        {
-            public static readonly PropertyInfo FProperty = typeof(B).GetProperty("F");
-            public static readonly PropertyInfo HProperty = typeof(B).GetProperty("H");
-
-            public string F { get; set; }
-            public string H { get; set; }
-        }
-
-        private class C : A
-        {
-            public static readonly PropertyInfo FProperty = typeof(C).GetProperty("F");
-            public static readonly PropertyInfo HProperty = typeof(C).GetProperty("H");
-
-            public string F { get; set; }
-            public string H { get; set; }
-        }
-
-        private class D : C
-        {
-        }
-
-        [Fact]
+        [ConditionalFact]
         public void Invalid_filter_expressions_throws()
         {
             var model = CreateModel();
@@ -79,7 +46,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityTypeA.SetQueryFilter(badExpression2)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Use_of_custom_IEntityType_throws()
         {
             var type = new FakeEntityType();
@@ -101,8 +68,6 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             public string DefiningNavigationName { get; }
             public IEntityType DefiningEntityType { get; }
             public LambdaExpression QueryFilter { get; }
-            public LambdaExpression DefiningQuery { get; }
-            public bool IsQueryType { get; }
             public IKey FindPrimaryKey() => throw new NotImplementedException();
             public IKey FindKey(IReadOnlyList<IProperty> properties) => throw new NotImplementedException();
             public IEnumerable<IKey> GetKeys() => throw new NotImplementedException();
@@ -120,7 +85,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             public IEnumerable<IDictionary<string, object>> GetSeedData() => throw new NotImplementedException();
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Display_name_is_prettified_CLR_name()
         {
             Assert.Equal("EntityTypeTest", CreateModel().AddEntityType(typeof(EntityTypeTest)).DisplayName());
@@ -128,13 +93,13 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal("List<Customer>", CreateModel().AddEntityType(typeof(List<Customer>)).DisplayName());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Display_name_is_entity_type_name_when_no_CLR_type()
             => Assert.Equal(
                 "Everything.Is+Awesome<When.We, re.Living<Our.Dream>>",
                 CreateModel().AddEntityType("Everything.Is+Awesome<When.We, re.Living<Our.Dream>>").DisplayName());
 
-        [Fact]
+        [ConditionalFact]
         public void Name_is_prettified_CLR_full_name()
         {
             Assert.Equal(
@@ -147,7 +112,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 CreateModel().AddEntityType(typeof(List<Customer>)).Name);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_set_reset_and_clear_primary_key()
         {
             var model = CreateModel();
@@ -185,7 +150,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(2, entityType.GetKeys().Count());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Setting_primary_key_throws_if_properties_from_different_type()
         {
             var model = CreateModel();
@@ -198,7 +163,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityType1.SetPrimaryKey(idProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_set_reset_and_clear_primary_key()
         {
             var model = CreateModel();
@@ -236,7 +201,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(2, entityType.GetKeys().Count());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_clear_the_primary_key_if_it_is_referenced_from_a_foreign_key()
         {
             var model = CreateModel();
@@ -249,13 +214,13 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 
             entityType.SetPrimaryKey(null);
 
-            Assert.Equal(1, entityType.GetKeys().Count());
+            Assert.Single(entityType.GetKeys());
             Assert.Same(customerPk, entityType.FindKey(idProperty));
             Assert.Null(entityType.FindPrimaryKey());
             Assert.Same(customerPk, fk.PrincipalKey);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_change_the_primary_key_if_it_is_referenced_from_a_foreign_key()
         {
             var model = CreateModel();
@@ -275,7 +240,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Same(customerPk, fk.PrincipalKey);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_and_get_a_key()
         {
             var model = CreateModel();
@@ -299,7 +264,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Contains(key2, entityType.GetKeys());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_key_throws_if_properties_from_different_type()
         {
             var model = CreateModel();
@@ -312,7 +277,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityType1.AddKey(idProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_key_throws_if_duplicated()
         {
             var model = CreateModel();
@@ -329,7 +294,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityType.AddKey(new[] { idProperty, nameProperty })).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_key_throws_if_duplicated_properties()
         {
             var model = CreateModel();
@@ -342,7 +307,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityType.AddKey(new[] { idProperty, idProperty })).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_key_throws_if_properties_were_removed()
         {
             var model = CreateModel();
@@ -355,7 +320,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityType.AddKey(new[] { idProperty })).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_key_throws_if_same_as_primary()
         {
             var model = CreateModel();
@@ -372,7 +337,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityType.AddKey(new[] { idProperty, nameProperty })).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_a_key_if_any_properties_are_part_of_derived_foreign_key()
         {
             var model = CreateModel();
@@ -380,14 +345,14 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             var idProperty = baseType.AddProperty(Customer.IdProperty);
             var fkProperty = baseType.AddProperty("fk", typeof(int));
             var key = baseType.AddKey(new[] { idProperty });
-            IMutableEntityType entityType = model.AddEntityType(typeof(Customer));
+            var entityType = model.AddEntityType(typeof(Customer));
             entityType.BaseType = baseType;
             entityType.AddForeignKey(new[] { fkProperty }, key, entityType);
 
             Assert.NotNull(baseType.AddKey(new[] { fkProperty }));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_key_with_value_generation_throws_if_any_properties_are_part_of_derived_foreign_key()
         {
             var model = CreateModel();
@@ -396,7 +361,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             var fkProperty = baseType.AddProperty("fk", typeof(int));
             fkProperty.ValueGenerated = ValueGenerated.OnAdd;
             var key = baseType.AddKey(new[] { idProperty });
-            IMutableEntityType entityType = model.AddEntityType(typeof(Customer));
+            var entityType = model.AddEntityType(typeof(Customer));
             entityType.BaseType = baseType;
             entityType.AddForeignKey(new[] { fkProperty }, key, entityType);
 
@@ -405,7 +370,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => baseType.AddKey(new[] { fkProperty })).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_remove_keys()
         {
             var model = CreateModel();
@@ -441,7 +406,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Empty(idProperty.GetContainingKeys());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Removing_a_key_throws_if_it_referenced_from_a_foreign_key_in_the_model()
         {
             var model = CreateModel();
@@ -458,7 +423,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => customerType.RemoveKey(customerKey.Properties)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Keys_are_ordered_by_property_count_then_property_names()
         {
             var model = CreateModel();
@@ -477,7 +442,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.True(new[] { k1, k2, k3, k4 }.SequenceEqual(customerType.GetKeys()));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Store_computed_values_are_ignored_before_and_after_save_by_default()
         {
             var model = CreateModel();
@@ -503,7 +468,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(PropertySaveBehavior.Save, nameProperty.GetAfterSaveBehavior());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Store_computed_values_are_ignored_after_save_by_default()
         {
             var model = CreateModel();
@@ -529,7 +494,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(PropertySaveBehavior.Throw, nameProperty.GetAfterSaveBehavior());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_a_foreign_key()
         {
             var model = CreateModel();
@@ -554,8 +519,8 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(new[] { fk1, fk2 }, orderType.GetForeignKeys().ToArray());
         }
 
-        [Fact]
-        public void Can_add_a_foreign_key_targetting_different_key()
+        [ConditionalFact]
+        public void Can_add_a_foreign_key_targeting_different_key()
         {
             var model = CreateModel();
             var customerType = model.AddEntityType(typeof(Customer));
@@ -579,8 +544,8 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(new[] { fk2, fk1 }, orderType.GetForeignKeys().ToArray());
         }
 
-        [Fact]
-        public void Can_add_a_foreign_key_targetting_different_entity_type()
+        [ConditionalFact]
+        public void Can_add_a_foreign_key_targeting_different_entity_type()
         {
             var model = CreateModel();
             var baseType = model.AddEntityType(typeof(BaseType));
@@ -604,7 +569,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(new[] { fk1, fk2 }, orderType.GetForeignKeys().ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_foreign_key_throws_if_duplicate()
         {
             var model = CreateModel();
@@ -624,7 +589,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => orderType.AddForeignKey(customerFk1, customerKey, customerType)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_foreign_key_throws_if_duplicated_properties()
         {
             var model = CreateModel();
@@ -646,7 +611,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => orderType.AddForeignKey(new[] { customerFk1, customerFk1 }, customerKey, customerType)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_foreign_key_throws_if_properties_from_different_type()
         {
             var model = CreateModel();
@@ -661,7 +626,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => entityType1.AddForeignKey(new[] { fkProperty }, entityType2.AddKey(idProperty), entityType2)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_foreign_key_throws_if_properties_were_removed()
         {
             var model = CreateModel();
@@ -676,7 +641,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityType.AddForeignKey(new[] { fkProperty }, key, entityType)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_a_foreign_key_if_any_properties_are_part_of_inherited_key()
         {
             var model = CreateModel();
@@ -684,14 +649,14 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             var idProperty = baseType.AddProperty(Customer.IdProperty);
             var idProperty2 = baseType.AddProperty("id2", typeof(int));
             var key = baseType.AddKey(new[] { idProperty, idProperty2 });
-            IMutableEntityType entityType = model.AddEntityType(typeof(Customer));
+            var entityType = model.AddEntityType(typeof(Customer));
             entityType.BaseType = baseType;
             var fkProperty = entityType.AddProperty("fk", typeof(int));
 
             Assert.NotNull(entityType.AddForeignKey(new[] { fkProperty, idProperty }, key, entityType));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_a_foreign_key_if_any_properties_are_part_of_inherited_key_with_value_generation()
         {
             var model = CreateModel();
@@ -700,14 +665,14 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             idProperty.ValueGenerated = ValueGenerated.OnAdd;
             var idProperty2 = baseType.AddProperty("id2", typeof(int));
             var key = baseType.AddKey(new[] { idProperty, idProperty2 });
-            IMutableEntityType entityType = model.AddEntityType(typeof(Customer));
+            var entityType = model.AddEntityType(typeof(Customer));
             entityType.BaseType = baseType;
             var fkProperty = entityType.AddProperty("fk", typeof(int));
 
             Assert.NotNull(entityType.AddForeignKey(new[] { fkProperty, idProperty }, key, entityType));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_foreign_key_throws_if_key_was_removed()
         {
             var model = CreateModel();
@@ -722,7 +687,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityType.AddForeignKey(new[] { fkProperty }, key, entityType)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_foreign_key_throws_if_related_entity_is_from_different_model()
         {
             var dependentEntityType = CreateModel().AddEntityType(typeof(Customer));
@@ -737,7 +702,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                         new[] { fkProperty }, principalEntityType.AddKey(idProperty), principalEntityType)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_or_add_a_foreign_key()
         {
             var model = CreateModel();
@@ -773,23 +738,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             return model;
         }
 
-        private IMutableEntityType DependentType => _model.FindEntityType(typeof(DependentEntity));
-
-        private IMutableEntityType PrincipalType => _model.FindEntityType(typeof(PrincipalEntity));
-
-        private class PrincipalEntity
-        {
-            public int PeeKay { get; set; }
-            public IEnumerable<DependentEntity> AnotherNav { get; set; }
-        }
-
-        private class DependentEntity
-        {
-            public PrincipalEntity Navigator { get; set; }
-            public PrincipalEntity AnotherNav { get; set; }
-        }
-
-        [Fact]
+        [ConditionalFact]
         public void Can_remove_foreign_keys()
         {
             var model = CreateModel();
@@ -826,7 +775,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Empty(orderType.GetForeignKeys());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_remove_a_foreign_key_if_it_is_referenced_from_a_navigation_in_the_model()
         {
             var model = CreateModel();
@@ -846,7 +795,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Empty(customerType.GetNavigations());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Foreign_keys_are_ordered_by_property_count_then_property_names()
         {
             var model = CreateModel();
@@ -872,7 +821,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.True(new[] { fk1, fk2, fk3, fk4 }.SequenceEqual(orderType.GetForeignKeys()));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_and_remove_navigations()
         {
             var model = CreateModel();
@@ -916,7 +865,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Empty(((IEntityType)customerType).GetNavigations());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_new_navigations_or_get_existing_navigations()
         {
             var model = CreateModel();
@@ -939,7 +888,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.True(customerNavigation.IsDependentToPrincipal());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_navigation_and_can_try_get_navigation()
         {
             var model = CreateModel();
@@ -957,7 +906,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Null(orderType.FindNavigation("Nose"));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_new_navigation_with_a_name_that_conflicts_with_a_property_throws()
         {
             var model = CreateModel();
@@ -968,7 +917,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             var foreignKeyProperty = orderType.AddProperty(Order.CustomerIdProperty);
             var customerForeignKey = orderType.AddForeignKey(foreignKeyProperty, customerKey, customerType);
 
-            orderType.AddProperty("Customer", null);
+            orderType.AddProperty("Customer");
 
             Assert.Equal(
                 CoreStrings.ConflictingPropertyOrNavigation("Customer", typeof(Order).Name, typeof(Order).Name),
@@ -976,7 +925,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => customerForeignKey.HasDependentToPrincipal("Customer")).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_new_navigation_with_a_name_that_conflicts_with_a_service_property_throws()
         {
             var model = CreateModel();
@@ -995,7 +944,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => customerForeignKey.HasDependentToPrincipal(nameof(Order.Customer))).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_a_navigation_to_shadow_entity()
         {
             var model = CreateModel();
@@ -1009,7 +958,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.NotNull(customerForeignKey.HasDependentToPrincipal("Customer"));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_navigation_on_non_shadow_entity_type_pointing_to_a_shadow_entity_type_throws()
         {
             var model = CreateModel();
@@ -1026,7 +975,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => customerForeignKey.HasDependentToPrincipal(Order.CustomerProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Collection_navigation_properties_must_be_IEnumerables_of_the_target_type()
         {
             var model = CreateModel();
@@ -1044,7 +993,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => customerForeignKey.HasPrincipalToDependent(Customer.NotCollectionOrdersProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Collection_navigation_properties_cannot_be_IEnumerables_of_derived_target_type()
         {
             var model = CreateModel();
@@ -1065,7 +1014,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => customerForeignKey.HasPrincipalToDependent(SpecialCustomer.DerivedOrdersProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Collection_navigation_properties_can_be_IEnumerables_of_base_target_type()
         {
             var model = CreateModel();
@@ -1087,7 +1036,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Same(ordersNavigation, customerForeignKey.PrincipalToDependent);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Reference_navigation_properties_must_be_of_the_target_type()
         {
             var model = CreateModel();
@@ -1104,7 +1053,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => customerForeignKey.HasDependentToPrincipal(Order.OrderCustomerProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Reference_navigation_properties_cannot_be_of_derived_type()
         {
             var model = CreateModel();
@@ -1122,7 +1071,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => customerForeignKey.HasDependentToPrincipal(SpecialOrder.DerivedCustomerProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Reference_navigation_properties_can_be_of_base_type()
         {
             var model = CreateModel();
@@ -1143,7 +1092,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Same(customerType, customerNavigation.GetTargetType());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_create_self_referencing_navigations()
         {
             var model = CreateModel();
@@ -1161,7 +1110,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Same(fk.DependentToPrincipal, navigationToPrincipal);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Throws_when_adding_same_self_referencing_navigation_twice()
         {
             var model = CreateModel();
@@ -1178,7 +1127,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => fk.HasDependentToPrincipal(SelfRef.SelfRef1Property)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Navigations_are_ordered_by_name()
         {
             var model = CreateModel();
@@ -1200,7 +1149,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.True(new[] { navigation1, navigation2 }.SequenceEqual(((IEntityType)customerType).GetNavigations()));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_retrieve_and_remove_indexes()
         {
             var model = CreateModel();
@@ -1208,7 +1157,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             var property1 = entityType.AddProperty(Order.IdProperty);
             var property2 = entityType.AddProperty(Order.CustomerIdProperty);
 
-            Assert.Equal(0, entityType.GetIndexes().Count());
+            Assert.Empty(entityType.GetIndexes());
             Assert.Null(entityType.RemoveIndex(new[] { property1 }));
             Assert.False(property1.IsIndex());
             Assert.Empty(property1.GetContainingIndexes());
@@ -1222,8 +1171,8 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 
             var index2 = entityType.AddIndex(new[] { property1, property2 });
 
-            Assert.NotNull(((Index)index1).Builder);
-            Assert.NotNull(((Index)index2).Builder);
+            Assert.NotNull(((IConventionIndex)index1).Builder);
+            Assert.NotNull(((IConventionIndex)index2).Builder);
             Assert.Equal(2, index2.Properties.Count);
             Assert.Same(index2, entityType.FindIndex(new[] { property1, property2 }));
             Assert.Same(property1, index2.Properties[0]);
@@ -1238,19 +1187,19 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Same(index1, entityType.RemoveIndex(index1.Properties));
             Assert.Null(entityType.RemoveIndex(index1.Properties));
 
-            Assert.Equal(1, entityType.GetIndexes().Count());
+            Assert.Single(entityType.GetIndexes());
             Assert.Same(index2, entityType.GetIndexes().Single());
 
             Assert.Same(index2, entityType.RemoveIndex(new[] { property1, property2 }));
 
             Assert.Null(((Index)index1).Builder);
             Assert.Null(((Index)index2).Builder);
-            Assert.Equal(0, entityType.GetIndexes().Count());
+            Assert.Empty(entityType.GetIndexes());
             Assert.False(property1.IsIndex());
             Assert.Empty(property1.GetContainingIndexes());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void AddIndex_throws_if_not_from_same_entity()
         {
             var model = CreateModel();
@@ -1266,7 +1215,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => entityType2.AddIndex(new[] { property1, property2 })).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void AddIndex_throws_if_duplicate()
         {
             var model = CreateModel();
@@ -1283,7 +1232,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => entityType.AddIndex(new[] { property1, property2 })).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_and_remove_properties()
         {
             var model = CreateModel();
@@ -1316,7 +1265,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Empty(entityType.GetProperties());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_new_properties_or_get_existing_properties_using_PropertyInfo_or_name()
         {
             var model = CreateModel();
@@ -1333,9 +1282,9 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Same(idProperty, entityType.FindProperty("Id"));
             Assert.False(idProperty.IsShadowProperty());
 
-            var nameProperty = entityType.AddProperty("Name", null);
+            var nameProperty = entityType.AddProperty("Name");
 
-            Assert.False(((IProperty)nameProperty).IsShadowProperty());
+            Assert.False(nameProperty.IsShadowProperty());
             Assert.Equal("Name", nameProperty.Name);
             Assert.Same(typeof(string), nameProperty.ClrType);
             Assert.Same(entityType, nameProperty.DeclaringEntityType);
@@ -1347,13 +1296,13 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.True(new[] { idProperty, nameProperty }.SequenceEqual(entityType.GetProperties()));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_new_properties_using_name_of_property_in_base_class()
         {
             var model = CreateModel();
             var entityType = model.AddEntityType(typeof(HiddenField));
 
-            var property = entityType.AddProperty("Raisin", null);
+            var property = entityType.AddProperty("Raisin");
 
             Assert.False(property.IsShadowProperty());
             Assert.Equal("Raisin", property.Name);
@@ -1363,13 +1312,13 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Null(property.FieldInfo);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_new_properties_using_name_of_field_in_base_class()
         {
             var model = CreateModel();
             var entityType = model.AddEntityType(typeof(HiddenField));
 
-            var property = entityType.AddProperty("_date", null);
+            var property = entityType.AddProperty("_date");
 
             Assert.False(property.IsShadowProperty());
             Assert.Equal("_date", property.Name);
@@ -1402,7 +1351,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void AddProperty_throws_if_shadow_entity_type()
         {
             var entityType = CreateModel().AddEntityType("Customer");
@@ -1414,7 +1363,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                         entityType.AddProperty(Customer.NameProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void AddProperty_throws_if_no_clr_property_or_field()
         {
             var entityType = CreateModel().AddEntityType(typeof(Customer));
@@ -1422,11 +1371,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(
                 CoreStrings.NoPropertyType("_foo", nameof(Customer)),
                 Assert.Throws<InvalidOperationException>(
-                    () =>
-                        entityType.AddProperty("_foo", null)).Message);
+                    () => entityType.AddProperty("_foo")).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void AddProperty_throws_if_clr_type_does_not_match()
         {
             var entityType = CreateModel().AddEntityType(typeof(Customer));
@@ -1439,7 +1387,30 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                         entityType.AddProperty(nameof(Customer.Name), typeof(int))).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
+        public void AddProperty_throws_if_name_does_not_match()
+        {
+            var entityType = CreateModel().AddEntityType(typeof(Customer));
+
+            Assert.Equal(
+                CoreStrings.PropertyWrongName(
+                    nameof(Customer.Id), nameof(Customer), nameof(Customer.Name)),
+                Assert.Throws<InvalidOperationException>(
+                    () =>
+                        entityType.AddProperty(nameof(Customer.Id), typeof(int), Customer.NameProperty)).Message);
+        }
+
+        [ConditionalFact]
+        public void AddProperty_ignores_clr_type_if_implicit()
+        {
+            var entityType = (IConventionEntityType)CreateModel().AddEntityType(typeof(Customer));
+
+            var property = entityType.AddProperty(nameof(Customer.Name), typeof(int), setTypeConfigurationSource: false);
+
+            Assert.Equal(typeof(string), property.ClrType);
+        }
+
+        [ConditionalFact]
         public void Cannot_remove_property_when_used_by_primary_key()
         {
             var model = CreateModel();
@@ -1453,7 +1424,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityType.RemoveProperty(property.Name)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Cannot_remove_property_when_used_by_non_primary_key()
         {
             var model = CreateModel();
@@ -1467,7 +1438,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityType.RemoveProperty(property.Name)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Cannot_remove_property_when_used_by_foreign_key()
         {
             var model = CreateModel();
@@ -1483,7 +1454,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => orderType.RemoveProperty(customerFk.Name)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Cannot_remove_property_when_used_by_an_index()
         {
             var model = CreateModel();
@@ -1497,7 +1468,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityType.RemoveProperty(property.Name)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Properties_are_ordered_by_name()
         {
             var model = CreateModel();
@@ -1509,7 +1480,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.True(new[] { property1, property2 }.SequenceEqual(entityType.GetProperties()));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Primary_key_properties_precede_others()
         {
             var model = CreateModel();
@@ -1523,7 +1494,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.True(new[] { pkProperty, aProperty }.SequenceEqual(entityType.GetProperties()));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Composite_primary_key_properties_are_listed_in_key_order()
         {
             var model = CreateModel();
@@ -1538,7 +1509,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.True(new[] { pkProperty1, pkProperty2, aProperty }.SequenceEqual(entityType.GetProperties()));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Properties_on_base_type_are_listed_before_derived_properties()
         {
             var model = CreateModel();
@@ -1555,7 +1526,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.True(new[] { property1, property2, property3, property4 }.SequenceEqual(childType.GetProperties()));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Properties_are_properly_ordered_when_primary_key_changes()
         {
             var model = CreateModel();
@@ -1573,7 +1544,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.True(new[] { aProperty, bProperty }.SequenceEqual(entityType.GetProperties()));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_property_and_can_try_get_property()
         {
             var model = CreateModel();
@@ -1588,7 +1559,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Null(entityType.FindProperty("Nose"));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Shadow_properties_have_CLR_flag_set_to_false()
         {
             var model = CreateModel();
@@ -1603,7 +1574,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.True(entityType.FindProperty("Mane_").IsShadowProperty());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_new_property_with_a_name_that_already_exists_throws()
         {
             var model = CreateModel();
@@ -1612,10 +1583,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 
             Assert.Equal(
                 CoreStrings.ConflictingPropertyOrNavigation("Id", typeof(Customer).Name, typeof(Customer).Name),
-                Assert.Throws<InvalidOperationException>(() => entityType.AddProperty("Id", null)).Message);
+                Assert.Throws<InvalidOperationException>(() => entityType.AddProperty("Id")).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_new_property_with_a_name_that_conflicts_with_a_navigation_throws()
         {
             var model = CreateModel();
@@ -1630,10 +1601,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 
             Assert.Equal(
                 CoreStrings.ConflictingPropertyOrNavigation("Customer", typeof(Order).Name, typeof(Order).Name),
-                Assert.Throws<InvalidOperationException>(() => orderType.AddProperty("Customer", null)).Message);
+                Assert.Throws<InvalidOperationException>(() => orderType.AddProperty("Customer")).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_new_property_with_a_name_that_conflicts_with_a_service_property_throws()
         {
             var model = CreateModel();
@@ -1651,7 +1622,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => orderType.AddServiceProperty(Order.CustomerProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_new_service_property_with_a_name_that_conflicts_with_a_property_throws()
         {
             var model = CreateModel();
@@ -1663,7 +1634,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityType.AddServiceProperty(Customer.OrdersProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_new_service_property_with_a_name_that_conflicts_with_a_navigation_throws()
         {
             var model = CreateModel();
@@ -1681,7 +1652,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => orderType.AddServiceProperty(Order.CustomerProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_new_service_property_with_a_name_that_already_exists_throws()
         {
             var model = CreateModel();
@@ -1693,7 +1664,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityType.AddServiceProperty(Customer.OrdersProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_new_service_property_with_a_type_that_already_exists_throws()
         {
             var model = CreateModel();
@@ -1710,7 +1681,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityType.AddServiceProperty(Customer.MoreOrdersProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_CLR_property_from_wrong_CLR_type_throws()
         {
             var model = CreateModel();
@@ -1721,7 +1692,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<ArgumentException>(() => entityType.AddProperty(Order.CustomerIdProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_a_CLR_property_to_shadow_type_throws()
         {
             var model = CreateModel();
@@ -1732,7 +1703,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityType.AddProperty(Order.CustomerIdProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_get_property_indexes()
         {
             var model = CreateModel();
@@ -1741,6 +1712,8 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             entityType.AddProperty(Customer.NameProperty);
             entityType.AddProperty("Id_", typeof(int));
             entityType.AddProperty("Mane_", typeof(int));
+
+            ((Model)entityType.Model).FinalizeModel();
 
             Assert.Equal(0, entityType.FindProperty("Id_").GetIndex());
             Assert.Equal(1, entityType.FindProperty("Mane_").GetIndex());
@@ -1753,151 +1726,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(2, entityType.ShadowPropertyCount());
         }
 
-        [Fact]
-        public void Indexes_are_rebuilt_when_more_properties_added_or_relevant_state_changes()
-        {
-            var entityType = BuildFullNotificationEntityModel().FindEntityType(typeof(FullNotificationEntity));
-            entityType.SetChangeTrackingStrategy(ChangeTrackingStrategy.ChangingAndChangedNotifications);
-
-            Assert.Equal(0, entityType.FindProperty("Id").GetIndex());
-            Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetIndex());
-            Assert.Equal(2, entityType.FindProperty("Name").GetIndex());
-            Assert.Equal(3, entityType.FindProperty("Token").GetIndex());
-            Assert.Equal(0, entityType.FindNavigation("CollectionNav").GetIndex());
-            Assert.Equal(1, entityType.FindNavigation("ReferenceNav").GetIndex());
-
-            Assert.Equal(-1, entityType.FindProperty("Id").GetShadowIndex());
-            Assert.Equal(-1, entityType.FindProperty("AnotherEntityId").GetShadowIndex());
-            Assert.Equal(-1, entityType.FindProperty("Name").GetShadowIndex());
-            Assert.Equal(-1, entityType.FindProperty("Token").GetShadowIndex());
-
-            Assert.Equal(0, entityType.FindProperty("Id").GetOriginalValueIndex());
-            Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetOriginalValueIndex());
-            Assert.Equal(-1, entityType.FindProperty("Name").GetOriginalValueIndex());
-            Assert.Equal(2, entityType.FindProperty("Token").GetOriginalValueIndex());
-
-            Assert.Equal(0, entityType.FindProperty("Id").GetRelationshipIndex());
-            Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetRelationshipIndex());
-            Assert.Equal(-1, entityType.FindProperty("Name").GetRelationshipIndex());
-            Assert.Equal(-1, entityType.FindProperty("Token").GetRelationshipIndex());
-            Assert.Equal(-1, entityType.FindNavigation("CollectionNav").GetRelationshipIndex());
-            Assert.Equal(2, entityType.FindNavigation("ReferenceNav").GetRelationshipIndex());
-
-            Assert.Equal(0, entityType.FindProperty("Id").GetStoreGeneratedIndex());
-            Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetStoreGeneratedIndex());
-            Assert.Equal(-1, entityType.FindProperty("Name").GetStoreGeneratedIndex());
-            Assert.Equal(-1, entityType.FindProperty("Token").GetStoreGeneratedIndex());
-            Assert.Equal(-1, entityType.FindNavigation("CollectionNav").GetStoreGeneratedIndex());
-            Assert.Equal(-1, entityType.FindNavigation("ReferenceNav").GetStoreGeneratedIndex());
-
-            Assert.Equal(0, entityType.ShadowPropertyCount());
-            Assert.Equal(3, entityType.OriginalValueCount());
-            Assert.Equal(3, entityType.RelationshipPropertyCount());
-            Assert.Equal(2, entityType.StoreGeneratedCount());
-
-            var gameProperty = entityType.AddProperty("Game", typeof(int));
-            gameProperty.IsConcurrencyToken = true;
-
-            var maneProperty = entityType.AddProperty("Mane", typeof(int));
-            maneProperty.IsConcurrencyToken = true;
-
-            Assert.Equal(0, entityType.FindProperty("Id").GetIndex());
-            Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetIndex());
-            Assert.Equal(2, entityType.FindProperty("Game").GetIndex());
-            Assert.Equal(3, entityType.FindProperty("Mane").GetIndex());
-            Assert.Equal(4, entityType.FindProperty("Name").GetIndex());
-            Assert.Equal(5, entityType.FindProperty("Token").GetIndex());
-            Assert.Equal(0, entityType.FindNavigation("CollectionNav").GetIndex());
-            Assert.Equal(1, entityType.FindNavigation("ReferenceNav").GetIndex());
-
-            Assert.Equal(-1, entityType.FindProperty("Id").GetShadowIndex());
-            Assert.Equal(-1, entityType.FindProperty("AnotherEntityId").GetShadowIndex());
-            Assert.Equal(0, entityType.FindProperty("Game").GetShadowIndex());
-            Assert.Equal(1, entityType.FindProperty("Mane").GetShadowIndex());
-            Assert.Equal(-1, entityType.FindProperty("Name").GetShadowIndex());
-            Assert.Equal(-1, entityType.FindProperty("Token").GetShadowIndex());
-
-            Assert.Equal(0, entityType.FindProperty("Id").GetOriginalValueIndex());
-            Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetOriginalValueIndex());
-            Assert.Equal(2, entityType.FindProperty("Game").GetOriginalValueIndex());
-            Assert.Equal(3, entityType.FindProperty("Mane").GetOriginalValueIndex());
-            Assert.Equal(-1, entityType.FindProperty("Name").GetOriginalValueIndex());
-            Assert.Equal(4, entityType.FindProperty("Token").GetOriginalValueIndex());
-
-            Assert.Equal(0, entityType.FindProperty("Id").GetRelationshipIndex());
-            Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetRelationshipIndex());
-            Assert.Equal(-1, entityType.FindProperty("Game").GetRelationshipIndex());
-            Assert.Equal(-1, entityType.FindProperty("Mane").GetRelationshipIndex());
-            Assert.Equal(-1, entityType.FindProperty("Name").GetRelationshipIndex());
-            Assert.Equal(-1, entityType.FindProperty("Token").GetRelationshipIndex());
-            Assert.Equal(-1, entityType.FindNavigation("CollectionNav").GetRelationshipIndex());
-            Assert.Equal(2, entityType.FindNavigation("ReferenceNav").GetRelationshipIndex());
-
-            Assert.Equal(0, entityType.FindProperty("Id").GetStoreGeneratedIndex());
-            Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetStoreGeneratedIndex());
-            Assert.Equal(-1, entityType.FindProperty("Game").GetStoreGeneratedIndex());
-            Assert.Equal(-1, entityType.FindProperty("Mane").GetStoreGeneratedIndex());
-            Assert.Equal(-1, entityType.FindProperty("Name").GetStoreGeneratedIndex());
-            Assert.Equal(-1, entityType.FindProperty("Token").GetStoreGeneratedIndex());
-            Assert.Equal(-1, entityType.FindNavigation("CollectionNav").GetStoreGeneratedIndex());
-            Assert.Equal(-1, entityType.FindNavigation("ReferenceNav").GetStoreGeneratedIndex());
-
-            Assert.Equal(2, entityType.ShadowPropertyCount());
-            Assert.Equal(5, entityType.OriginalValueCount());
-            Assert.Equal(3, entityType.RelationshipPropertyCount());
-            Assert.Equal(2, entityType.StoreGeneratedCount());
-
-            gameProperty.IsConcurrencyToken = false;
-            entityType.FindProperty("Name").IsConcurrencyToken = true;
-
-            Assert.Equal(0, entityType.FindProperty("Id").GetIndex());
-            Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetIndex());
-            Assert.Equal(2, entityType.FindProperty("Game").GetIndex());
-            Assert.Equal(3, entityType.FindProperty("Mane").GetIndex());
-            Assert.Equal(4, entityType.FindProperty("Name").GetIndex());
-            Assert.Equal(5, entityType.FindProperty("Token").GetIndex());
-            Assert.Equal(0, entityType.FindNavigation("CollectionNav").GetIndex());
-            Assert.Equal(1, entityType.FindNavigation("ReferenceNav").GetIndex());
-
-            Assert.Equal(-1, entityType.FindProperty("Id").GetShadowIndex());
-            Assert.Equal(-1, entityType.FindProperty("AnotherEntityId").GetShadowIndex());
-            Assert.Equal(0, entityType.FindProperty("Game").GetShadowIndex());
-            Assert.Equal(1, entityType.FindProperty("Mane").GetShadowIndex());
-            Assert.Equal(-1, entityType.FindProperty("Name").GetShadowIndex());
-            Assert.Equal(-1, entityType.FindProperty("Token").GetShadowIndex());
-
-            Assert.Equal(0, entityType.FindProperty("Id").GetOriginalValueIndex());
-            Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetOriginalValueIndex());
-            Assert.Equal(-1, entityType.FindProperty("Game").GetOriginalValueIndex());
-            Assert.Equal(2, entityType.FindProperty("Mane").GetOriginalValueIndex());
-            Assert.Equal(3, entityType.FindProperty("Name").GetOriginalValueIndex());
-            Assert.Equal(4, entityType.FindProperty("Token").GetOriginalValueIndex());
-
-            Assert.Equal(0, entityType.FindProperty("Id").GetRelationshipIndex());
-            Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetRelationshipIndex());
-            Assert.Equal(-1, entityType.FindProperty("Game").GetRelationshipIndex());
-            Assert.Equal(-1, entityType.FindProperty("Mane").GetRelationshipIndex());
-            Assert.Equal(-1, entityType.FindProperty("Name").GetRelationshipIndex());
-            Assert.Equal(-1, entityType.FindProperty("Token").GetRelationshipIndex());
-            Assert.Equal(-1, entityType.FindNavigation("CollectionNav").GetRelationshipIndex());
-            Assert.Equal(2, entityType.FindNavigation("ReferenceNav").GetRelationshipIndex());
-
-            Assert.Equal(0, entityType.FindProperty("Id").GetStoreGeneratedIndex());
-            Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetStoreGeneratedIndex());
-            Assert.Equal(-1, entityType.FindProperty("Game").GetStoreGeneratedIndex());
-            Assert.Equal(-1, entityType.FindProperty("Mane").GetStoreGeneratedIndex());
-            Assert.Equal(-1, entityType.FindProperty("Name").GetStoreGeneratedIndex());
-            Assert.Equal(-1, entityType.FindProperty("Token").GetStoreGeneratedIndex());
-            Assert.Equal(-1, entityType.FindNavigation("CollectionNav").GetStoreGeneratedIndex());
-            Assert.Equal(-1, entityType.FindNavigation("ReferenceNav").GetStoreGeneratedIndex());
-
-            Assert.Equal(2, entityType.ShadowPropertyCount());
-            Assert.Equal(5, entityType.OriginalValueCount());
-            Assert.Equal(3, entityType.RelationshipPropertyCount());
-            Assert.Equal(2, entityType.StoreGeneratedCount());
-        }
-
-        [Fact]
+        [ConditionalFact]
         public void Indexes_for_derived_types_are_calculated_correctly()
         {
             using (var context = new Levels())
@@ -1930,10 +1759,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Equal(-1, type.FindNavigation("Level1Collection").GetStoreGeneratedIndex());
                 Assert.Equal(-1, type.FindNavigation("Level1Reference").GetStoreGeneratedIndex());
 
-                Assert.Equal(3, type.PropertyCount());
+                Assert.Equal(4, type.PropertyCount());
                 Assert.Equal(2, type.NavigationCount());
-                Assert.Equal(1, type.ShadowPropertyCount());
-                Assert.Equal(3, type.OriginalValueCount());
+                Assert.Equal(2, type.ShadowPropertyCount());
+                Assert.Equal(4, type.OriginalValueCount());
                 Assert.Equal(4, type.RelationshipPropertyCount());
                 Assert.Equal(2, type.StoreGeneratedCount());
 
@@ -1942,8 +1771,8 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Equal(0, type.FindProperty("Id").GetIndex());
                 Assert.Equal(1, type.FindProperty("Level1ReferenceId").GetIndex());
                 Assert.Equal(2, type.FindProperty("Prop1").GetIndex());
-                Assert.Equal(3, type.FindProperty("Level2ReferenceId").GetIndex());
-                Assert.Equal(4, type.FindProperty("Prop2").GetIndex());
+                Assert.Equal(4, type.FindProperty("Level2ReferenceId").GetIndex());
+                Assert.Equal(5, type.FindProperty("Prop2").GetIndex());
                 Assert.Equal(0, type.FindNavigation("Level1Collection").GetIndex());
                 Assert.Equal(1, type.FindNavigation("Level1Reference").GetIndex());
                 Assert.Equal(2, type.FindNavigation("Level2Collection").GetIndex());
@@ -1952,14 +1781,14 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Equal(-1, type.FindProperty("Id").GetShadowIndex());
                 Assert.Equal(0, type.FindProperty("Level1ReferenceId").GetShadowIndex());
                 Assert.Equal(-1, type.FindProperty("Prop1").GetShadowIndex());
-                Assert.Equal(1, type.FindProperty("Level2ReferenceId").GetShadowIndex());
+                Assert.Equal(2, type.FindProperty("Level2ReferenceId").GetShadowIndex());
                 Assert.Equal(-1, type.FindProperty("Prop2").GetShadowIndex());
 
                 Assert.Equal(0, type.FindProperty("Id").GetOriginalValueIndex());
                 Assert.Equal(1, type.FindProperty("Level1ReferenceId").GetOriginalValueIndex());
                 Assert.Equal(2, type.FindProperty("Prop1").GetOriginalValueIndex());
-                Assert.Equal(3, type.FindProperty("Level2ReferenceId").GetOriginalValueIndex());
-                Assert.Equal(4, type.FindProperty("Prop2").GetOriginalValueIndex());
+                Assert.Equal(4, type.FindProperty("Level2ReferenceId").GetOriginalValueIndex());
+                Assert.Equal(5, type.FindProperty("Prop2").GetOriginalValueIndex());
 
                 Assert.Equal(0, type.FindProperty("Id").GetRelationshipIndex());
                 Assert.Equal(1, type.FindProperty("Level1ReferenceId").GetRelationshipIndex());
@@ -1981,10 +1810,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Equal(-1, type.FindNavigation("Level2Collection").GetStoreGeneratedIndex());
                 Assert.Equal(-1, type.FindNavigation("Level2Reference").GetStoreGeneratedIndex());
 
-                Assert.Equal(5, type.PropertyCount());
+                Assert.Equal(6, type.PropertyCount());
                 Assert.Equal(4, type.NavigationCount());
-                Assert.Equal(2, type.ShadowPropertyCount());
-                Assert.Equal(5, type.OriginalValueCount());
+                Assert.Equal(3, type.ShadowPropertyCount());
+                Assert.Equal(6, type.OriginalValueCount());
                 Assert.Equal(7, type.RelationshipPropertyCount());
                 Assert.Equal(3, type.StoreGeneratedCount());
 
@@ -1993,10 +1822,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Equal(0, type.FindProperty("Id").GetIndex());
                 Assert.Equal(1, type.FindProperty("Level1ReferenceId").GetIndex());
                 Assert.Equal(2, type.FindProperty("Prop1").GetIndex());
-                Assert.Equal(3, type.FindProperty("Level2ReferenceId").GetIndex());
-                Assert.Equal(4, type.FindProperty("Prop2").GetIndex());
-                Assert.Equal(5, type.FindProperty("Level3ReferenceId").GetIndex());
-                Assert.Equal(6, type.FindProperty("Prop3").GetIndex());
+                Assert.Equal(4, type.FindProperty("Level2ReferenceId").GetIndex());
+                Assert.Equal(5, type.FindProperty("Prop2").GetIndex());
+                Assert.Equal(6, type.FindProperty("Level3ReferenceId").GetIndex());
+                Assert.Equal(7, type.FindProperty("Prop3").GetIndex());
                 Assert.Equal(0, type.FindNavigation("Level1Collection").GetIndex());
                 Assert.Equal(1, type.FindNavigation("Level1Reference").GetIndex());
                 Assert.Equal(2, type.FindNavigation("Level2Collection").GetIndex());
@@ -2007,18 +1836,18 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Equal(-1, type.FindProperty("Id").GetShadowIndex());
                 Assert.Equal(0, type.FindProperty("Level1ReferenceId").GetShadowIndex());
                 Assert.Equal(-1, type.FindProperty("Prop1").GetShadowIndex());
-                Assert.Equal(1, type.FindProperty("Level2ReferenceId").GetShadowIndex());
+                Assert.Equal(2, type.FindProperty("Level2ReferenceId").GetShadowIndex());
                 Assert.Equal(-1, type.FindProperty("Prop2").GetShadowIndex());
-                Assert.Equal(2, type.FindProperty("Level3ReferenceId").GetShadowIndex());
+                Assert.Equal(3, type.FindProperty("Level3ReferenceId").GetShadowIndex());
                 Assert.Equal(-1, type.FindProperty("Prop3").GetShadowIndex());
 
                 Assert.Equal(0, type.FindProperty("Id").GetOriginalValueIndex());
                 Assert.Equal(1, type.FindProperty("Level1ReferenceId").GetOriginalValueIndex());
                 Assert.Equal(2, type.FindProperty("Prop1").GetOriginalValueIndex());
-                Assert.Equal(3, type.FindProperty("Level2ReferenceId").GetOriginalValueIndex());
-                Assert.Equal(4, type.FindProperty("Prop2").GetOriginalValueIndex());
-                Assert.Equal(5, type.FindProperty("Level3ReferenceId").GetOriginalValueIndex());
-                Assert.Equal(6, type.FindProperty("Prop3").GetOriginalValueIndex());
+                Assert.Equal(4, type.FindProperty("Level2ReferenceId").GetOriginalValueIndex());
+                Assert.Equal(5, type.FindProperty("Prop2").GetOriginalValueIndex());
+                Assert.Equal(6, type.FindProperty("Level3ReferenceId").GetOriginalValueIndex());
+                Assert.Equal(7, type.FindProperty("Prop3").GetOriginalValueIndex());
 
                 Assert.Equal(0, type.FindProperty("Id").GetRelationshipIndex());
                 Assert.Equal(1, type.FindProperty("Level1ReferenceId").GetRelationshipIndex());
@@ -2048,10 +1877,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Equal(-1, type.FindNavigation("Level3Collection").GetStoreGeneratedIndex());
                 Assert.Equal(-1, type.FindNavigation("Level3Reference").GetStoreGeneratedIndex());
 
-                Assert.Equal(7, type.PropertyCount());
+                Assert.Equal(8, type.PropertyCount());
                 Assert.Equal(6, type.NavigationCount());
-                Assert.Equal(3, type.ShadowPropertyCount());
-                Assert.Equal(7, type.OriginalValueCount());
+                Assert.Equal(4, type.ShadowPropertyCount());
+                Assert.Equal(8, type.OriginalValueCount());
                 Assert.Equal(10, type.RelationshipPropertyCount());
                 Assert.Equal(4, type.StoreGeneratedCount());
             }
@@ -2069,32 +1898,12 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 modelBuilder.Entity<Level1>().HasOne(e => e.Level1Reference).WithMany(e => e.Level1Collection);
                 modelBuilder.Entity<Level2>().HasOne(e => e.Level2Reference).WithMany(e => e.Level2Collection);
                 modelBuilder.Entity<Level3>().HasOne(e => e.Level3Reference).WithMany(e => e.Level3Collection);
+
+                modelBuilder.Entity<Level1>().HasDiscriminator<string>("Z");
             }
         }
 
-        private class Level1
-        {
-            public int Id { get; set; }
-            public int Prop1 { get; set; }
-            public Level1 Level1Reference { get; set; }
-            public ICollection<Level1> Level1Collection { get; set; }
-        }
-
-        private class Level2 : Level1
-        {
-            public int Prop2 { get; set; }
-            public Level2 Level2Reference { get; set; }
-            public ICollection<Level2> Level2Collection { get; set; }
-        }
-
-        private class Level3 : Level2
-        {
-            public int Prop3 { get; set; }
-            public Level3 Level3Reference { get; set; }
-            public ICollection<Level3> Level3Collection { get; set; }
-        }
-
-        [Fact]
+        [ConditionalFact]
         public void Indexes_are_ordered_by_property_count_then_property_names()
         {
             var model = CreateModel();
@@ -2108,13 +1917,15 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             var i3 = customerType.AddIndex(new[] { idProperty, nameProperty });
             var i1 = customerType.AddIndex(idProperty);
 
+            model.FinalizeModel();
+
             Assert.True(new[] { i1, i2, i3, i4 }.SequenceEqual(customerType.GetIndexes()));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_inheritance_to_weak_entity_types_throws()
         {
-            IMutableModel model = CreateModel();
+            var model = CreateModel();
             var customerType = model.AddEntityType(typeof(Customer));
             var baseType = model.AddEntityType(typeof(BaseType), nameof(Customer.Orders), customerType);
             var orderType = model.AddEntityType(typeof(Order), nameof(Customer.Orders), customerType);
@@ -2130,10 +1941,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => derivedType.BaseType = orderType).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_non_delegated_inheritance_to_delegated_identity_definition_entity_types_throws()
         {
-            IMutableModel model = CreateModel();
+            var model = CreateModel();
             var customerType = model.AddEntityType(typeof(Customer));
             var baseType = model.AddEntityType(typeof(BaseType));
             var orderType = model.AddEntityType(typeof(Order), nameof(Customer.Orders), customerType);
@@ -2150,7 +1961,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => derivedType.BaseType = orderType).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Change_tracking_from_model_is_used_by_default_regardless_of_CLR_type()
         {
             var model = BuildFullNotificationEntityModel();
@@ -2163,10 +1974,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(ChangeTrackingStrategy.ChangedNotifications, entityType.GetChangeTrackingStrategy());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Change_tracking_from_model_is_used_by_default_for_shadow_entities()
         {
-            IMutableModel model = CreateModel();
+            var model = CreateModel();
             var entityType = model.AddEntityType("Z'ha'dum");
 
             Assert.Equal(ChangeTrackingStrategy.Snapshot, entityType.GetChangeTrackingStrategy());
@@ -2176,7 +1987,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(ChangeTrackingStrategy.ChangedNotifications, entityType.GetChangeTrackingStrategy());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Change_tracking_can_be_set_to_anything_for_full_notification_entities()
         {
             var model = BuildFullNotificationEntityModel();
@@ -2199,10 +2010,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(ChangeTrackingStrategy.ChangingAndChangedNotificationsWithOriginalValues, entityType.GetChangeTrackingStrategy());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Change_tracking_can_be_set_to_snapshot_or_changed_only_for_changed_only_entities()
         {
-            IMutableModel model = CreateModel();
+            var model = CreateModel();
             model.SetChangeTrackingStrategy(ChangeTrackingStrategy.ChangingAndChangedNotifications);
             var entityType = model.AddEntityType(typeof(ChangedOnlyEntity));
 
@@ -2229,10 +2040,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     .Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Change_tracking_can_be_set_to_snapshot_only_for_non_notifying_entities()
         {
-            IMutableModel model = CreateModel();
+            var model = CreateModel();
             model.SetChangeTrackingStrategy(ChangeTrackingStrategy.ChangingAndChangedNotifications);
             var entityType = model.AddEntityType(typeof(Customer));
 
@@ -2255,15 +2066,216 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 CoreStrings.ChangeTrackingInterfaceMissing(
                     "Customer", "ChangingAndChangedNotificationsWithOriginalValues", "INotifyPropertyChanged"),
                 Assert.Throws<InvalidOperationException>(
-                        () => entityType.SetChangeTrackingStrategy(ChangeTrackingStrategy.ChangingAndChangedNotificationsWithOriginalValues))
+                        () => entityType.SetChangeTrackingStrategy(
+                            ChangeTrackingStrategy.ChangingAndChangedNotificationsWithOriginalValues))
                     .Message);
         }
 
-        [Fact]
+        [ConditionalFact]
+        public void Entity_type_with_deeply_nested_owned_weak_types_builds_correctly()
+        {
+            using (var context = new RejectionContext(nameof(RejectionContext)))
+            {
+                var entityTypes = context.Model.GetEntityTypes();
+
+                Assert.Equal(
+                    new[]
+                    {
+                        "Application",
+                        "ApplicationVersion",
+                        "Rejection",
+                        "Application.Attitude#Attitude",
+                        "ApplicationVersion.Attitude#Attitude",
+                        "Rejection.FirstTest#FirstTest",
+                        "Application.Attitude#Attitude.FirstTest#FirstTest",
+                        "ApplicationVersion.Attitude#Attitude.FirstTest#FirstTest",
+                        "Rejection.FirstTest#FirstTest.Tester#SpecialistStaff",
+                        "Application.Attitude#Attitude.FirstTest#FirstTest.Tester#SpecialistStaff",
+                        "ApplicationVersion.Attitude#Attitude.FirstTest#FirstTest.Tester#SpecialistStaff"
+                    }, entityTypes.Select(e => e.DisplayName()).ToList());
+            }
+        }
+
+        //
+        //          ApplicationVersion             Application
+        //            |            |                   |
+        //         Attitude`     Rejection          Attitude``
+        //            |            |                   |
+        //         FirstTest`    FirstTest``       FirstTest```
+        //            |            |                   |
+        // SpecialistStaff`    SpecialistStaff``   SpecialistStaff```
+        //
+        // ApplicationVersion   = ApplicationVersion
+        // Attitude`            = ApplicationVersion.Attitude#Attitude
+        // FirstTest`           = Application.Attitude#Attitude.FirstTest#FirstTest
+        // SpecialistStaff`     = ApplicationVersion.Attitude#Attitude.FirstTest#FirstTest.Tester#SpecialistStaff
+        //
+        // Rejection            = Rejection
+        // FirstTest``          = Rejection.FirstTest#FirstTest
+        // SpecialistStaff``    = Rejection.FirstTest#FirstTest.Tester#SpecialistStaff
+        //
+        // Application          = Application
+        // Attitude``           = Application.Attitude#Attitude
+        // FistTest```          = ApplicationVersion.Attitude#Attitude.FirstTest#FirstTest
+        // SpecialistStaff```   = Application.Attitude#Attitude.FirstTest#FirstTest.Tester#SpecialistStaff
+        //
+
+        private class Application
+        {
+            public Guid Id { get; protected set; }
+            public Attitude Attitude { get; set; }
+            public Rejection Rejection { get; set; }
+        }
+
+        private class ApplicationVersion
+        {
+            public Guid Id { get; protected set; }
+            public Attitude Attitude { get; set; }
+        }
+
+        private class Rejection
+        {
+            public FirstTest FirstTest { get; set; }
+        }
+
+        private class Attitude
+        {
+            public FirstTest FirstTest { get; set; }
+        }
+
+        private class FirstTest
+        {
+            public SpecialistStaff Tester { get; set; }
+        }
+
+        private class SpecialistStaff
+        {
+        }
+
+        private class RejectionContext : DbContext
+        {
+            private readonly string _databaseName;
+
+            public RejectionContext(string databaseName)
+            {
+                _databaseName = databaseName;
+            }
+
+            protected internal override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+                => optionsBuilder.UseInMemoryDatabase(_databaseName);
+
+            protected internal override void OnModelCreating(ModelBuilder modelBuilder)
+            {
+                List<string> GetTypeNames()
+                    => modelBuilder.Model.GetEntityTypes().Select(e => e.DisplayName()).ToList();
+
+                modelBuilder.Entity<Application>(
+                    entity =>
+                    {
+                        entity.OwnsOne(
+                            x => x.Attitude,
+                            amb =>
+                            {
+                                amb.OwnsOne(
+                                    x => x.FirstTest, mb =>
+                                    {
+                                        mb.OwnsOne(a => a.Tester);
+                                    });
+                            });
+
+                        entity.OwnsOne(
+                            x => x.Rejection,
+                            amb =>
+                            {
+                                amb.OwnsOne(
+                                    x => x.FirstTest, mb =>
+                                    {
+                                        mb.OwnsOne(a => a.Tester);
+                                    });
+                            });
+                    });
+
+                Assert.Equal(
+                    new[]
+                    {
+                        "Application",
+                        "Attitude",
+                        "Rejection",
+                        "Attitude.FirstTest#FirstTest", // FirstTest is weak
+                        "Rejection.FirstTest#FirstTest", // FirstTest is weak
+                        "Attitude.FirstTest#FirstTest.Tester#SpecialistStaff", // SpecialistStaff is weak
+                        "Rejection.FirstTest#FirstTest.Tester#SpecialistStaff" // SpecialistStaff is weak
+                    }, GetTypeNames());
+
+                modelBuilder.Entity<ApplicationVersion>(
+                    entity =>
+                    {
+                        Assert.Equal(
+                            new[]
+                            {
+                                "Application",
+                                "ApplicationVersion",
+                                "Attitude",
+                                "Rejection",
+                                "Attitude.FirstTest#FirstTest",
+                                "Rejection.FirstTest#FirstTest",
+                                "Attitude.FirstTest#FirstTest.Tester#SpecialistStaff",
+                                "Rejection.FirstTest#FirstTest.Tester#SpecialistStaff"
+                            }, GetTypeNames());
+
+                        entity.OwnsOne(
+                            x => x.Attitude,
+                            amb =>
+                            {
+                                var typeNames = GetTypeNames();
+                                Assert.Equal(
+                                    new[]
+                                    {
+                                        "Application",
+                                        "ApplicationVersion",
+                                        "Rejection",
+                                        "Application.Attitude#Attitude", // Attitude becomes weak
+                                        "ApplicationVersion.Attitude#Attitude", // Attitude becomes weak
+                                        "Rejection.FirstTest#FirstTest",
+                                        "Application.Attitude#Attitude.FirstTest#FirstTest", // Attitude becomes weak
+                                        "ApplicationVersion.Attitude#Attitude.FirstTest#FirstTest", // Attitude becomes weak
+                                        "Rejection.FirstTest#FirstTest.Tester#SpecialistStaff",
+                                        "Application.Attitude#Attitude.FirstTest#FirstTest.Tester#SpecialistStaff", // Attitude becomes weak
+                                        "ApplicationVersion.Attitude#Attitude.FirstTest#FirstTest.Tester#SpecialistStaff" // Attitude becomes weak
+                                    }, typeNames);
+
+                                amb.OwnsOne(
+                                    x => x.FirstTest, mb =>
+                                    {
+                                        mb.OwnsOne(a => a.Tester);
+                                    });
+                            });
+                    });
+
+                Assert.Equal(
+                    new[]
+                    {
+                        "Application",
+                        "ApplicationVersion",
+                        "Rejection",
+                        "Application.Attitude#Attitude",
+                        "ApplicationVersion.Attitude#Attitude",
+                        "Rejection.FirstTest#FirstTest",
+                        "Application.Attitude#Attitude.FirstTest#FirstTest",
+                        "ApplicationVersion.Attitude#Attitude.FirstTest#FirstTest",
+                        "Rejection.FirstTest#FirstTest.Tester#SpecialistStaff",
+                        "Application.Attitude#Attitude.FirstTest#FirstTest.Tester#SpecialistStaff",
+                        "ApplicationVersion.Attitude#Attitude.FirstTest#FirstTest.Tester#SpecialistStaff"
+                    }, GetTypeNames());
+            }
+        }
+
+        [ConditionalFact]
         public void All_properties_have_original_value_indexes_when_using_snapshot_change_tracking()
         {
             var entityType = BuildFullNotificationEntityModel().FindEntityType(typeof(FullNotificationEntity));
             entityType.SetChangeTrackingStrategy(ChangeTrackingStrategy.Snapshot);
+            ((Model)entityType.Model).FinalizeModel();
 
             Assert.Equal(0, entityType.FindProperty("Id").GetOriginalValueIndex());
             Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetOriginalValueIndex());
@@ -2273,11 +2285,12 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(4, entityType.OriginalValueCount());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void All_relationship_properties_have_relationship_indexes_when_using_snapshot_change_tracking()
         {
             var entityType = BuildFullNotificationEntityModel().FindEntityType(typeof(FullNotificationEntity));
             entityType.SetChangeTrackingStrategy(ChangeTrackingStrategy.Snapshot);
+            ((Model)entityType.Model).FinalizeModel();
 
             Assert.Equal(0, entityType.FindProperty("Id").GetRelationshipIndex());
             Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetRelationshipIndex());
@@ -2289,11 +2302,12 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(4, entityType.RelationshipPropertyCount());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void All_properties_have_original_value_indexes_when_using_changed_only_tracking()
         {
             var entityType = BuildFullNotificationEntityModel().FindEntityType(typeof(FullNotificationEntity));
             entityType.SetChangeTrackingStrategy(ChangeTrackingStrategy.ChangedNotifications);
+            ((Model)entityType.Model).FinalizeModel();
 
             Assert.Equal(0, entityType.FindProperty("Id").GetOriginalValueIndex());
             Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetOriginalValueIndex());
@@ -2303,11 +2317,12 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(4, entityType.OriginalValueCount());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Collections_dont_have_relationship_indexes_when_using_changed_only_change_tracking()
         {
             var entityType = BuildFullNotificationEntityModel().FindEntityType(typeof(FullNotificationEntity));
             entityType.SetChangeTrackingStrategy(ChangeTrackingStrategy.ChangedNotifications);
+            ((Model)entityType.Model).FinalizeModel();
 
             Assert.Equal(0, entityType.FindProperty("Id").GetRelationshipIndex());
             Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetRelationshipIndex());
@@ -2319,11 +2334,12 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(3, entityType.RelationshipPropertyCount());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Only_concurrency_and_key_properties_have_original_value_indexes_when_using_full_notifications()
         {
             var entityType = BuildFullNotificationEntityModel().FindEntityType(typeof(FullNotificationEntity));
             entityType.SetChangeTrackingStrategy(ChangeTrackingStrategy.ChangingAndChangedNotifications);
+            ((Model)entityType.Model).FinalizeModel();
 
             Assert.Equal(0, entityType.FindProperty("Id").GetOriginalValueIndex());
             Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetOriginalValueIndex());
@@ -2333,11 +2349,12 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(3, entityType.OriginalValueCount());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Collections_dont_have_relationship_indexes_when_using_full_notifications()
         {
             var entityType = BuildFullNotificationEntityModel().FindEntityType(typeof(FullNotificationEntity));
             entityType.SetChangeTrackingStrategy(ChangeTrackingStrategy.ChangingAndChangedNotifications);
+            ((Model)entityType.Model).FinalizeModel();
 
             Assert.Equal(0, entityType.FindProperty("Id").GetRelationshipIndex());
             Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetRelationshipIndex());
@@ -2349,11 +2366,12 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(3, entityType.RelationshipPropertyCount());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void All_properties_have_original_value_indexes_when_full_notifications_with_original_values()
         {
             var entityType = BuildFullNotificationEntityModel().FindEntityType(typeof(FullNotificationEntity));
             entityType.SetChangeTrackingStrategy(ChangeTrackingStrategy.ChangingAndChangedNotificationsWithOriginalValues);
+            ((Model)entityType.Model).FinalizeModel();
 
             Assert.Equal(0, entityType.FindProperty("Id").GetOriginalValueIndex());
             Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetOriginalValueIndex());
@@ -2363,11 +2381,12 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(4, entityType.OriginalValueCount());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Collections_dont_have_relationship_indexes_when_full_notifications_with_original_values()
         {
             var entityType = BuildFullNotificationEntityModel().FindEntityType(typeof(FullNotificationEntity));
             entityType.SetChangeTrackingStrategy(ChangeTrackingStrategy.ChangingAndChangedNotificationsWithOriginalValues);
+            ((Model)entityType.Model).FinalizeModel();
 
             Assert.Equal(0, entityType.FindProperty("Id").GetRelationshipIndex());
             Assert.Equal(1, entityType.FindProperty("AnotherEntityId").GetRelationshipIndex());
@@ -2377,6 +2396,77 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(2, entityType.FindNavigation("ReferenceNav").GetRelationshipIndex());
 
             Assert.Equal(3, entityType.RelationshipPropertyCount());
+        }
+
+        private readonly IMutableModel _model = BuildModel();
+
+        private IMutableEntityType DependentType => _model.FindEntityType(typeof(DependentEntity));
+
+        private IMutableEntityType PrincipalType => _model.FindEntityType(typeof(PrincipalEntity));
+
+        private class PrincipalEntity
+        {
+            public int PeeKay { get; set; }
+            public IEnumerable<DependentEntity> AnotherNav { get; set; }
+        }
+
+        private class DependentEntity
+        {
+            public PrincipalEntity Navigator { get; set; }
+            public PrincipalEntity AnotherNav { get; set; }
+        }
+
+        private class A
+        {
+            public static readonly PropertyInfo EProperty = typeof(A).GetProperty("E");
+            public static readonly PropertyInfo GProperty = typeof(A).GetProperty("G");
+
+            public string E { get; set; }
+            public string G { get; set; }
+        }
+
+        private class B : A
+        {
+            public static readonly PropertyInfo FProperty = typeof(B).GetProperty("F");
+            public static readonly PropertyInfo HProperty = typeof(B).GetProperty("H");
+
+            public string F { get; set; }
+            public string H { get; set; }
+        }
+
+        private class C : A
+        {
+            public static readonly PropertyInfo FProperty = typeof(C).GetProperty("F");
+            public static readonly PropertyInfo HProperty = typeof(C).GetProperty("H");
+
+            public string F { get; set; }
+            public string H { get; set; }
+        }
+
+        private class D : C
+        {
+        }
+
+        private class Level1
+        {
+            public int Id { get; set; }
+            public int Prop1 { get; set; }
+            public Level1 Level1Reference { get; set; }
+            public ICollection<Level1> Level1Collection { get; set; }
+        }
+
+        private class Level2 : Level1
+        {
+            public int Prop2 { get; set; }
+            public Level2 Level2Reference { get; set; }
+            public ICollection<Level2> Level2Collection { get; set; }
+        }
+
+        private class Level3 : Level2
+        {
+            public int Prop3 { get; set; }
+            public Level3 Level3Reference { get; set; }
+            public ICollection<Level3> Level3Collection { get; set; }
         }
 
         private class BaseType
@@ -2396,6 +2486,8 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             public Guid Unique { get; set; }
             public string Name { get; set; }
             public string Mane { get; set; }
+            public object this[string name] => null;
+
             public ICollection<Order> Orders { get; set; }
             public ICollection<Order> MoreOrders { get; set; }
 

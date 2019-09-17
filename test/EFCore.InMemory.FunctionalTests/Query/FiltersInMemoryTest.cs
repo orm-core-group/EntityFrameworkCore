@@ -5,8 +5,7 @@ using Xunit.Abstractions;
 
 namespace Microsoft.EntityFrameworkCore.Query
 {
-    //issue #15264
-    internal class FiltersInMemoryTest : FiltersTestBase<NorthwindQueryInMemoryFixture<NorthwindFiltersCustomizer>>
+    public class FiltersInMemoryTest : FiltersTestBase<NorthwindQueryInMemoryFixture<NorthwindFiltersCustomizer>>
     {
         public FiltersInMemoryTest(NorthwindQueryInMemoryFixture<NorthwindFiltersCustomizer> fixture, ITestOutputHelper testOutputHelper)
             : base(fixture)

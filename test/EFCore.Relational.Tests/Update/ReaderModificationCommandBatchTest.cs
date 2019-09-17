@@ -24,7 +24,7 @@ namespace Microsoft.EntityFrameworkCore.Update
 {
     public class ReaderModificationCommandBatchTest
     {
-        [Fact]
+        [ConditionalFact]
         public void AddCommand_adds_command_if_possible()
         {
             var command = new ModificationCommand("T1", null, new ParameterNameGenerator().GenerateNext, true, null);
@@ -41,7 +41,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.Equal("..", batch.CommandText);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void AddCommand_does_not_add_command_if_not_possible()
         {
             var command = new ModificationCommand("T1", null, new ParameterNameGenerator().GenerateNext, true, null);
@@ -57,7 +57,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.Equal(".", batch.CommandText);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void AddCommand_does_not_add_command_if_resulting_sql_is_invalid()
         {
             var command = new ModificationCommand("T1", null, new ParameterNameGenerator().GenerateNext, true, null);
@@ -73,7 +73,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.Equal(".", batch.CommandText);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void UpdateCommandText_compiles_inserts()
         {
             var entry = CreateEntry(EntityState.Added);
@@ -92,7 +92,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.Equal(1, fakeSqlGenerator.AppendInsertOperationCalls);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void UpdateCommandText_compiles_updates()
         {
             var entry = CreateEntry(EntityState.Modified, generateKeyValues: true);
@@ -111,7 +111,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.Equal(1, fakeSqlGenerator.AppendUpdateOperationCalls);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void UpdateCommandText_compiles_deletes()
         {
             var entry = CreateEntry(EntityState.Deleted);
@@ -130,7 +130,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.Equal(1, fakeSqlGenerator.AppendDeleteOperationCalls);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void UpdateCommandText_compiles_multiple_commands()
         {
             var entry = CreateEntry(EntityState.Added);
@@ -149,7 +149,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.Equal(1, fakeSqlGenerator.AppendBatchHeaderCalls);
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task ExecuteAsync_executes_batch_commands_and_consumes_reader()
         {
             var entry = CreateEntry(EntityState.Added);
@@ -170,7 +170,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.Equal(1, dbDataReader.GetInt32Count);
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task ExecuteAsync_saves_store_generated_values()
         {
             var entry = CreateEntry(EntityState.Added, generateKeyValues: true);
@@ -181,10 +181,7 @@ namespace Microsoft.EntityFrameworkCore.Update
 
             var connection = CreateConnection(
                 CreateFakeDataReader(
-                    new[] { "Col1" }, new List<object[]>
-                    {
-                        new object[] { 42 }
-                    }));
+                    new[] { "Col1" }, new List<object[]> { new object[] { 42 } }));
 
             var batch = new ModificationCommandBatchFake();
             batch.AddCommand(command);
@@ -195,7 +192,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.Equal("Test", entry[entry.EntityType.FindProperty("Name")]);
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task ExecuteAsync_saves_store_generated_values_on_non_key_columns()
         {
             var entry = CreateEntry(
@@ -207,10 +204,7 @@ namespace Microsoft.EntityFrameworkCore.Update
 
             var connection = CreateConnection(
                 CreateFakeDataReader(
-                    new[] { "Col1", "Col2" }, new List<object[]>
-                    {
-                        new object[] { 42, "FortyTwo" }
-                    }));
+                    new[] { "Col1", "Col2" }, new List<object[]> { new object[] { 42, "FortyTwo" } }));
 
             var batch = new ModificationCommandBatchFake();
             batch.AddCommand(command);
@@ -221,7 +215,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.Equal("FortyTwo", entry[entry.EntityType.FindProperty("Name")]);
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task ExecuteAsync_saves_store_generated_values_when_updating()
         {
             var entry = CreateEntry(
@@ -232,10 +226,7 @@ namespace Microsoft.EntityFrameworkCore.Update
 
             var connection = CreateConnection(
                 CreateFakeDataReader(
-                    new[] { "Col2" }, new List<object[]>
-                    {
-                        new object[] { "FortyTwo" }
-                    }));
+                    new[] { "Col2" }, new List<object[]> { new object[] { "FortyTwo" } }));
 
             var batch = new ModificationCommandBatchFake();
             batch.AddCommand(command);
@@ -246,7 +237,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.Equal("FortyTwo", entry[entry.EntityType.FindProperty("Name")]);
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Exception_not_thrown_for_more_than_one_row_returned_for_single_command()
         {
             var entry = CreateEntry(EntityState.Added, generateKeyValues: true);
@@ -258,11 +249,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             var connection = CreateConnection(
                 CreateFakeDataReader(
                     new[] { "Col1" },
-                    new List<object[]>
-                    {
-                        new object[] { 42 },
-                        new object[] { 43 }
-                    }));
+                    new List<object[]> { new object[] { 42 }, new object[] { 43 } }));
 
             var batch = new ModificationCommandBatchFake();
             batch.AddCommand(command);
@@ -272,7 +259,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.Equal(42, entry[entry.EntityType.FindProperty("Id")]);
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Exception_thrown_if_rows_returned_for_command_without_store_generated_values_is_not_1()
         {
             var entry = CreateEntry(EntityState.Added);
@@ -282,10 +269,7 @@ namespace Microsoft.EntityFrameworkCore.Update
 
             var connection = CreateConnection(
                 CreateFakeDataReader(
-                    new[] { "Col1" }, new List<object[]>
-                    {
-                        new object[] { 42 }
-                    }));
+                    new[] { "Col1" }, new List<object[]> { new object[] { 42 } }));
 
             var batch = new ModificationCommandBatchFake();
             batch.AddCommand(command);
@@ -296,7 +280,7 @@ namespace Microsoft.EntityFrameworkCore.Update
                     async () => await batch.ExecuteAsync(connection))).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Exception_thrown_if_no_rows_returned_for_command_with_store_generated_values()
         {
             var entry = CreateEntry(EntityState.Added, generateKeyValues: true);
@@ -317,7 +301,7 @@ namespace Microsoft.EntityFrameworkCore.Update
                     async () => await batch.ExecuteAsync(connection))).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void CreateStoreCommand_creates_parameters_for_each_ModificationCommand()
         {
             var entry = CreateEntry(EntityState.Added, generateKeyValues: true);
@@ -338,7 +322,6 @@ namespace Microsoft.EntityFrameworkCore.Update
                         new ColumnModification(
                             entry,
                             property,
-                            property.TestProvider(),
                             parameterNameGenerator.GenerateNext,
                             false, true, false, false, false, true)
                     }));
@@ -354,7 +337,6 @@ namespace Microsoft.EntityFrameworkCore.Update
                         new ColumnModification(
                             entry,
                             property,
-                            property.TestProvider(),
                             parameterNameGenerator.GenerateNext,
                             false, true, false, false, false, true)
                     }));
@@ -370,7 +352,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.Equal(1, storeCommand.ParameterValues["p1"]);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void PopulateParameters_creates_parameter_for_write_ModificationCommand()
         {
             var entry = CreateEntry(EntityState.Added, generateKeyValues: true);
@@ -390,7 +372,6 @@ namespace Microsoft.EntityFrameworkCore.Update
                         new ColumnModification(
                             entry,
                             property,
-                            property.TestProvider(),
                             parameterNameGenerator.GenerateNext,
                             false, true, false, false, false, true)
                     }));
@@ -404,7 +385,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.Equal(1, storeCommand.ParameterValues["p0"]);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void PopulateParameters_creates_parameter_for_condition_ModificationCommand()
         {
             var entry = CreateEntry(EntityState.Added, generateKeyValues: true);
@@ -424,7 +405,6 @@ namespace Microsoft.EntityFrameworkCore.Update
                         new ColumnModification(
                             entry,
                             property,
-                            property.TestProvider(),
                             parameterNameGenerator.GenerateNext,
                             false, false, false, true, false, true)
                     }));
@@ -438,7 +418,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.Equal(1, storeCommand.ParameterValues["p0"]);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void PopulateParameters_creates_parameter_for_write_and_condition_ModificationCommand()
         {
             var entry = CreateEntry(EntityState.Added, generateKeyValues: true);
@@ -458,7 +438,6 @@ namespace Microsoft.EntityFrameworkCore.Update
                         new ColumnModification(
                             entry,
                             property,
-                            property.TestProvider(),
                             parameterNameGenerator.GenerateNext,
                             false, true, false, true, false, true)
                     }));
@@ -472,7 +451,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.Equal(1, storeCommand.ParameterValues["p0"]);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void PopulateParameters_does_not_create_parameter_for_read_ModificationCommand()
         {
             var entry = CreateEntry(EntityState.Added, generateKeyValues: true);
@@ -492,7 +471,6 @@ namespace Microsoft.EntityFrameworkCore.Update
                         new ColumnModification(
                             entry,
                             property,
-                            property.TestProvider(),
                             parameterNameGenerator.GenerateNext,
                             true, false, false, false, false, true)
                     }));
@@ -516,17 +494,17 @@ namespace Microsoft.EntityFrameworkCore.Update
 
             var key = entityType.AddProperty("Id", typeof(int));
             key.ValueGenerated = generateKeyValues ? ValueGenerated.OnAdd : ValueGenerated.Never;
-            key.Relational().ColumnName = "Col1";
+            key.SetColumnName("Col1");
             entityType.SetPrimaryKey(key);
 
             var nonKey = entityType.AddProperty("Name", typeof(string));
-            nonKey.Relational().ColumnName = "Col2";
+            nonKey.SetColumnName("Col2");
             nonKey.ValueGenerated = computeNonKeyValue ? ValueGenerated.OnAddOrUpdate : ValueGenerated.Never;
 
             GenerateMapping(key);
             GenerateMapping(nonKey);
 
-            return model;
+            return model.FinalizeModel();
         }
 
         private static void GenerateMapping(IMutableProperty property)
@@ -544,19 +522,12 @@ namespace Microsoft.EntityFrameworkCore.Update
             var model = BuildModel(generateKeyValues, computeNonKeyValue);
 
             return RelationalTestHelpers.Instance.CreateInternalEntry(
-                model, entityState, new T1
-                {
-                    Id = 1,
-                    Name = computeNonKeyValue ? null : "Test"
-                });
+                model, entityState, new T1 { Id = 1, Name = computeNonKeyValue ? null : "Test" });
         }
 
         private static FakeDbDataReader CreateFakeDataReader(string[] columnNames = null, IList<object[]> results = null)
         {
-            results ??= new List<object[]>
-            {
-                new object[] { 1 }
-            };
+            results ??= new List<object[]> { new object[] { 1 } };
             columnNames ??= new[] { "RowsAffected" };
 
             return new FakeDbDataReader(columnNames, results);
@@ -594,6 +565,7 @@ namespace Microsoft.EntityFrameworkCore.Update
                         new RelationalValueBufferFactoryDependencies(
                             typeMappingSource,
                             new CoreSingletonOptions())),
+                    new CurrentDbContext(new FakeDbContext()),
                     logger);
             }
 
@@ -617,6 +589,10 @@ namespace Microsoft.EntityFrameworkCore.Update
 
             public RawSqlCommand CreateStoreCommandBase()
                 => CreateStoreCommand();
+        }
+
+        private class FakeDbContext : DbContext
+        {
         }
 
         private const string ConnectionString = "Fake Connection String";

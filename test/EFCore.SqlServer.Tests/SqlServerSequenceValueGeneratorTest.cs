@@ -7,7 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal;
 using Microsoft.EntityFrameworkCore.SqlServer.Update.Internal;
@@ -23,51 +23,51 @@ namespace Microsoft.EntityFrameworkCore
 {
     public class SqlServerSequenceValueGeneratorTest
     {
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task Generates_sequential_int_values(bool async) => await Generates_sequential_values<int>(async);
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task Generates_sequential_long_values(bool async) => await Generates_sequential_values<long>(async);
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task Generates_sequential_short_values(bool async) => await Generates_sequential_values<short>(async);
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task Generates_sequential_byte_values(bool async) => await Generates_sequential_values<byte>(async);
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task Generates_sequential_uint_values(bool async) => await Generates_sequential_values<uint>(async);
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task Generates_sequential_ulong_values(bool async) => await Generates_sequential_values<ulong>(async);
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task Generates_sequential_ushort_values(bool async) => await Generates_sequential_values<ushort>(async);
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task Generates_sequential_sbyte_values(bool async) => await Generates_sequential_values<sbyte>(async);
 
-        public async Task Generates_sequential_values<TValue>(bool async)
+        private async Task Generates_sequential_values<TValue>(bool async)
         {
             const int blockSize = 4;
 
-            var sequence = new Model().SqlServer().GetOrAddSequence("Foo");
+            var sequence = ((IMutableModel)new Model()).AddSequence("Foo");
             sequence.IncrementBy = blockSize;
             var state = new SqlServerSequenceValueGeneratorState(sequence);
 
@@ -94,7 +94,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Multiple_threads_can_use_the_same_generator_state()
         {
             const int threadCount = 50;
@@ -122,7 +122,7 @@ namespace Microsoft.EntityFrameworkCore
 
             var serviceProvider = SqlServerTestHelpers.Instance.CreateServiceProvider();
 
-            var sequence = new Model().SqlServer().GetOrAddSequence("Foo");
+            var sequence = ((IMutableModel)new Model()).AddSequence("Foo");
             sequence.IncrementBy = blockSize;
             var state = new SqlServerSequenceValueGeneratorState(sequence);
 
@@ -169,10 +169,10 @@ namespace Microsoft.EntityFrameworkCore
             return generatedValues;
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Does_not_generate_temp_values()
         {
-            var sequence = new Model().SqlServer().GetOrAddSequence("Foo");
+            var sequence = ((IMutableModel)new Model()).AddSequence("Foo");
             sequence.IncrementBy = 4;
             var state = new SqlServerSequenceValueGeneratorState(sequence);
 
@@ -194,7 +194,7 @@ namespace Microsoft.EntityFrameworkCore
 
         private static ISqlServerConnection CreateConnection(IServiceProvider serviceProvider = null)
         {
-            serviceProvider = serviceProvider ?? SqlServerTestHelpers.Instance.CreateServiceProvider();
+            serviceProvider ??= SqlServerTestHelpers.Instance.CreateServiceProvider();
 
             return SqlServerTestHelpers.Instance.CreateContextServices(serviceProvider).GetRequiredService<ISqlServerConnection>();
         }
@@ -235,48 +235,33 @@ namespace Microsoft.EntityFrameworkCore
 
                 public IReadOnlyDictionary<string, object> ParameterValues => throw new NotImplementedException();
 
-                public int ExecuteNonQuery(
-                    IRelationalConnection connection,
-                    IReadOnlyDictionary<string, object> parameterValues,
-                    IDiagnosticsLogger<DbLoggerCategory.Database.Command> logger)
+                public int ExecuteNonQuery(RelationalCommandParameterObject parameterObject)
                 {
                     throw new NotImplementedException();
                 }
 
                 public Task<int> ExecuteNonQueryAsync(
-                    IRelationalConnection connection,
-                    IReadOnlyDictionary<string, object> parameterValues,
-                    IDiagnosticsLogger<DbLoggerCategory.Database.Command> logger,
+                    RelationalCommandParameterObject parameterObject,
                     CancellationToken cancellationToken = default)
                 {
                     throw new NotImplementedException();
                 }
 
-                public object ExecuteScalar(
-                    IRelationalConnection connection,
-                    IReadOnlyDictionary<string, object> parameterValues,
-                    IDiagnosticsLogger<DbLoggerCategory.Database.Command> logger)
+                public object ExecuteScalar(RelationalCommandParameterObject parameterObject)
                     => Interlocked.Add(ref _commandBuilder._current, _commandBuilder._blockSize);
 
                 public Task<object> ExecuteScalarAsync(
-                    IRelationalConnection connection,
-                    IReadOnlyDictionary<string, object> parameterValues,
-                    IDiagnosticsLogger<DbLoggerCategory.Database.Command> logger,
+                    RelationalCommandParameterObject parameterObject,
                     CancellationToken cancellationToken = default)
                     => Task.FromResult<object>(Interlocked.Add(ref _commandBuilder._current, _commandBuilder._blockSize));
 
-                public RelationalDataReader ExecuteReader(
-                    IRelationalConnection connection,
-                    IReadOnlyDictionary<string, object> parameterValues,
-                    IDiagnosticsLogger<DbLoggerCategory.Database.Command> logger)
+                public RelationalDataReader ExecuteReader(RelationalCommandParameterObject parameterObject)
                 {
                     throw new NotImplementedException();
                 }
 
                 public Task<RelationalDataReader> ExecuteReaderAsync(
-                    IRelationalConnection connection,
-                    IReadOnlyDictionary<string, object> parameterValues,
-                    IDiagnosticsLogger<DbLoggerCategory.Database.Command> logger,
+                    RelationalCommandParameterObject parameterObject,
                     CancellationToken cancellationToken = default)
                 {
                     throw new NotImplementedException();

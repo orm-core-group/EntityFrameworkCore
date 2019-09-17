@@ -14,31 +14,31 @@ namespace Microsoft.EntityFrameworkCore
 {
     public partial class DbContextTest
     {
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_existing_entities_to_context_to_be_deleted()
         {
             return TrackEntitiesTest((c, e) => c.Remove(e), (c, e) => c.Remove(e), EntityState.Deleted);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_new_entities_to_context_with_graph_method()
         {
             return TrackEntitiesTest((c, e) => c.Add(e), (c, e) => c.Add(e), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_new_entities_to_context_with_graph_method_async()
         {
             return TrackEntitiesTest((c, e) => c.AddAsync(e), (c, e) => c.AddAsync(e), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_existing_entities_to_context_to_be_attached_with_graph_method()
         {
             return TrackEntitiesTest((c, e) => c.Attach(e), (c, e) => c.Attach(e), EntityState.Unchanged);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_existing_entities_to_context_to_be_updated_with_graph_method()
         {
             return TrackEntitiesTest((c, e) => c.Update(e), (c, e) => c.Update(e), EntityState.Modified);
@@ -58,34 +58,11 @@ namespace Microsoft.EntityFrameworkCore
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var relatedDependent = new Product
-                {
-                    Id = 1,
-                    Name = "Marmite",
-                    Price = 7.99m
-                };
-                var principal = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages",
-                    Products = new List<Product>
-                    {
-                        relatedDependent
-                    }
-                };
+                var relatedDependent = new Product { Id = 1, Name = "Marmite", Price = 7.99m };
+                var principal = new Category { Id = 1, Name = "Beverages", Products = new List<Product> { relatedDependent } };
 
-                var relatedPrincipal = new Category
-                {
-                    Id = 2,
-                    Name = "Foods"
-                };
-                var dependent = new Product
-                {
-                    Id = 2,
-                    Name = "Bovril",
-                    Price = 4.99m,
-                    Category = relatedPrincipal
-                };
+                var relatedPrincipal = new Category { Id = 2, Name = "Foods" };
+                var dependent = new Product { Id = 2, Name = "Bovril", Price = 4.99m, Category = relatedPrincipal };
 
                 var principalEntry = await categoryAdder(context, principal);
                 var dependentEntry = await productAdder(context, dependent);
@@ -115,31 +92,31 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_new_entities_to_context()
         {
             return TrackMultipleEntitiesTest((c, e) => c.AddRange(e[0], e[1]), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_new_entities_to_context_async()
         {
             return TrackMultipleEntitiesTest((c, e) => c.AddRangeAsync(e[0], e[1]), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_existing_entities_to_context_to_be_attached()
         {
             return TrackMultipleEntitiesTest((c, e) => c.AttachRange(e[0], e[1]), EntityState.Unchanged);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_existing_entities_to_context_to_be_updated()
         {
             return TrackMultipleEntitiesTest((c, e) => c.UpdateRange(e[0], e[1]), EntityState.Modified);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_existing_entities_to_context_to_be_deleted()
         {
             return TrackMultipleEntitiesTest((c, e) => c.RemoveRange(e[0], e[1]), EntityState.Deleted);
@@ -162,34 +139,11 @@ namespace Microsoft.EntityFrameworkCore
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var relatedDependent = new Product
-                {
-                    Id = 1,
-                    Name = "Marmite",
-                    Price = 7.99m
-                };
-                var principal = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages",
-                    Products = new List<Product>
-                    {
-                        relatedDependent
-                    }
-                };
+                var relatedDependent = new Product { Id = 1, Name = "Marmite", Price = 7.99m };
+                var principal = new Category { Id = 1, Name = "Beverages", Products = new List<Product> { relatedDependent } };
 
-                var relatedPrincipal = new Category
-                {
-                    Id = 2,
-                    Name = "Foods"
-                };
-                var dependent = new Product
-                {
-                    Id = 2,
-                    Name = "Bovril",
-                    Price = 4.99m,
-                    Category = relatedPrincipal
-                };
+                var relatedPrincipal = new Category { Id = 2, Name = "Foods" };
+                var dependent = new Product { Id = 2, Name = "Bovril", Price = 4.99m, Category = relatedPrincipal };
 
                 await adder(context, new object[] { principal, dependent });
 
@@ -201,7 +155,8 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Same(principal, context.Entry(principal).Entity);
                 Assert.Equal(expectedState, context.Entry(principal).State);
                 Assert.Same(relatedPrincipal, context.Entry(relatedPrincipal).Entity);
-                Assert.Equal(expectedState == EntityState.Deleted ? EntityState.Unchanged : expectedState, context.Entry(relatedPrincipal).State);
+                Assert.Equal(
+                    expectedState == EntityState.Deleted ? EntityState.Unchanged : expectedState, context.Entry(relatedPrincipal).State);
 
                 Assert.Same(relatedDependent, context.Entry(relatedDependent).Entity);
                 Assert.Equal(expectedState, context.Entry(relatedDependent).State);
@@ -210,31 +165,31 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_existing_entities_with_default_value_to_context_to_be_deleted()
         {
             return TrackEntitiesDefaultValueTest((c, e) => c.Remove(e), (c, e) => c.Remove(e), EntityState.Deleted);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_new_entities_with_default_value_to_context_with_graph_method()
         {
             return TrackEntitiesDefaultValueTest((c, e) => c.Add(e), (c, e) => c.Add(e), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_new_entities_with_default_value_to_context_with_graph_method_async()
         {
             return TrackEntitiesDefaultValueTest((c, e) => c.AddAsync(e), (c, e) => c.AddAsync(e), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_existing_entities_with_default_value_to_context_to_be_attached_with_graph_method()
         {
             return TrackEntitiesDefaultValueTest((c, e) => c.Attach(e), (c, e) => c.Attach(e), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_existing_entities_with_default_value_to_context_to_be_updated_with_graph_method()
         {
             return TrackEntitiesDefaultValueTest((c, e) => c.Update(e), (c, e) => c.Update(e), EntityState.Added);
@@ -255,17 +210,8 @@ namespace Microsoft.EntityFrameworkCore
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var category1 = new Category
-                {
-                    Id = 0,
-                    Name = "Beverages"
-                };
-                var product1 = new Product
-                {
-                    Id = 0,
-                    Name = "Marmite",
-                    Price = 7.99m
-                };
+                var category1 = new Category { Id = 0, Name = "Beverages" };
+                var product1 = new Product { Id = 0, Name = "Marmite", Price = 7.99m };
 
                 var categoryEntry1 = await categoryAdder(context, category1);
                 var productEntry1 = await productAdder(context, product1);
@@ -284,32 +230,32 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_new_entities_with_default_values_to_context()
         {
             return TrackMultipleEntitiesDefaultValuesTest((c, e) => c.AddRange(e[0]), (c, e) => c.AddRange(e[0]), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_new_entities_with_default_values_to_context_async()
         {
             return TrackMultipleEntitiesDefaultValuesTest(
                 (c, e) => c.AddRangeAsync(e[0]), (c, e) => c.AddRangeAsync(e[0]), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_existing_entities_with_default_values_to_context_to_be_attached()
         {
             return TrackMultipleEntitiesDefaultValuesTest((c, e) => c.AttachRange(e[0]), (c, e) => c.AttachRange(e[0]), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_existing_entities_with_default_values_to_context_to_be_updated()
         {
             return TrackMultipleEntitiesDefaultValuesTest((c, e) => c.UpdateRange(e[0]), (c, e) => c.UpdateRange(e[0]), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_existing_entities_with_default_values_to_context_to_be_deleted()
         {
             return TrackMultipleEntitiesDefaultValuesTest(
@@ -339,17 +285,8 @@ namespace Microsoft.EntityFrameworkCore
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var category1 = new Category
-                {
-                    Id = 0,
-                    Name = "Beverages"
-                };
-                var product1 = new Product
-                {
-                    Id = 0,
-                    Name = "Marmite",
-                    Price = 7.99m
-                };
+                var category1 = new Category { Id = 0, Name = "Beverages" };
+                var product1 = new Product { Id = 0, Name = "Marmite", Price = 7.99m };
 
                 await categoryAdder(context, new[] { category1 });
                 await productAdder(context, new[] { product1 });
@@ -365,13 +302,13 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_no_new_entities_to_context()
         {
             TrackNoEntitiesTest(c => c.AddRange(), c => c.AddRange());
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Can_add_no_new_entities_to_context_async()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
@@ -382,19 +319,19 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_no_existing_entities_to_context_to_be_attached()
         {
             TrackNoEntitiesTest(c => c.AttachRange(), c => c.AttachRange());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_no_existing_entities_to_context_to_be_updated()
         {
             TrackNoEntitiesTest(c => c.UpdateRange(), c => c.UpdateRange());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_no_existing_entities_to_context_to_be_deleted()
         {
             TrackNoEntitiesTest(c => c.RemoveRange(), c => c.RemoveRange());
@@ -410,31 +347,31 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_existing_entities_to_context_to_be_deleted_non_generic()
         {
             return TrackEntitiesTestNonGeneric((c, e) => c.Remove(e), (c, e) => c.Remove(e), EntityState.Deleted);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_new_entities_to_context_non_generic_graph()
         {
             return TrackEntitiesTestNonGeneric((c, e) => c.AddAsync(e), (c, e) => c.AddAsync(e), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_new_entities_to_context_non_generic_graph_async()
         {
             return TrackEntitiesTestNonGeneric((c, e) => c.Add(e), (c, e) => c.Add(e), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_existing_entities_to_context_to_be_attached_non_generic_graph()
         {
             return TrackEntitiesTestNonGeneric((c, e) => c.Attach(e), (c, e) => c.Attach(e), EntityState.Unchanged);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_existing_entities_to_context_to_be_updated_non_generic_graph()
         {
             return TrackEntitiesTestNonGeneric((c, e) => c.Update(e), (c, e) => c.Update(e), EntityState.Modified);
@@ -454,34 +391,11 @@ namespace Microsoft.EntityFrameworkCore
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var relatedDependent = new Product
-                {
-                    Id = 1,
-                    Name = "Marmite",
-                    Price = 7.99m
-                };
-                var principal = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages",
-                    Products = new List<Product>
-                    {
-                        relatedDependent
-                    }
-                };
+                var relatedDependent = new Product { Id = 1, Name = "Marmite", Price = 7.99m };
+                var principal = new Category { Id = 1, Name = "Beverages", Products = new List<Product> { relatedDependent } };
 
-                var relatedPrincipal = new Category
-                {
-                    Id = 2,
-                    Name = "Foods"
-                };
-                var dependent = new Product
-                {
-                    Id = 2,
-                    Name = "Bovril",
-                    Price = 4.99m,
-                    Category = relatedPrincipal
-                };
+                var relatedPrincipal = new Category { Id = 2, Name = "Foods" };
+                var dependent = new Product { Id = 2, Name = "Bovril", Price = 4.99m, Category = relatedPrincipal };
 
                 var principalEntry = await categoryAdder(context, principal);
                 var dependentEntry = await productAdder(context, dependent);
@@ -511,31 +425,31 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_existing_entities_to_context_to_be_deleted_Enumerable()
         {
             return TrackMultipleEntitiesTestEnumerable((c, e) => c.RemoveRange(e), EntityState.Deleted);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_new_entities_to_context_Enumerable_graph()
         {
             return TrackMultipleEntitiesTestEnumerable((c, e) => c.AddRange(e), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_new_entities_to_context_Enumerable_graph_async()
         {
             return TrackMultipleEntitiesTestEnumerable((c, e) => c.AddRangeAsync(e), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_existing_entities_to_context_to_be_attached_Enumerable_graph()
         {
             return TrackMultipleEntitiesTestEnumerable((c, e) => c.AttachRange(e), EntityState.Unchanged);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_existing_entities_to_context_to_be_updated_Enumerable_graph()
         {
             return TrackMultipleEntitiesTestEnumerable((c, e) => c.UpdateRange(e), EntityState.Modified);
@@ -558,34 +472,11 @@ namespace Microsoft.EntityFrameworkCore
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var relatedDependent = new Product
-                {
-                    Id = 1,
-                    Name = "Marmite",
-                    Price = 7.99m
-                };
-                var principal = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages",
-                    Products = new List<Product>
-                    {
-                        relatedDependent
-                    }
-                };
+                var relatedDependent = new Product { Id = 1, Name = "Marmite", Price = 7.99m };
+                var principal = new Category { Id = 1, Name = "Beverages", Products = new List<Product> { relatedDependent } };
 
-                var relatedPrincipal = new Category
-                {
-                    Id = 2,
-                    Name = "Foods"
-                };
-                var dependent = new Product
-                {
-                    Id = 2,
-                    Name = "Bovril",
-                    Price = 4.99m,
-                    Category = relatedPrincipal
-                };
+                var relatedPrincipal = new Category { Id = 2, Name = "Foods" };
+                var dependent = new Product { Id = 2, Name = "Bovril", Price = 4.99m, Category = relatedPrincipal };
 
                 await adder(context, new object[] { principal, dependent });
 
@@ -597,7 +488,8 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Same(principal, context.Entry(principal).Entity);
                 Assert.Equal(expectedState, context.Entry(principal).State);
                 Assert.Same(relatedPrincipal, context.Entry(relatedPrincipal).Entity);
-                Assert.Equal(expectedState == EntityState.Deleted ? EntityState.Unchanged : expectedState, context.Entry(relatedPrincipal).State);
+                Assert.Equal(
+                    expectedState == EntityState.Deleted ? EntityState.Unchanged : expectedState, context.Entry(relatedPrincipal).State);
 
                 Assert.Same(relatedDependent, context.Entry(relatedDependent).Entity);
                 Assert.Equal(expectedState, context.Entry(relatedDependent).State);
@@ -606,31 +498,31 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_existing_entities_with_default_value_to_context_to_be_deleted_non_generic()
         {
             return TrackEntitiesDefaultValuesTestNonGeneric((c, e) => c.Remove(e), (c, e) => c.Remove(e), EntityState.Deleted);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_new_entities_with_default_value_to_context_non_generic_graph()
         {
             return TrackEntitiesDefaultValuesTestNonGeneric((c, e) => c.Add(e), (c, e) => c.Add(e), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_new_entities_with_default_value_to_context_non_generic_graph_async()
         {
             return TrackEntitiesDefaultValuesTestNonGeneric((c, e) => c.AddAsync(e), (c, e) => c.AddAsync(e), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_existing_entities_with_default_value_to_context_to_be_attached_non_generic_graph()
         {
             return TrackEntitiesDefaultValuesTestNonGeneric((c, e) => c.Attach(e), (c, e) => c.Attach(e), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_existing_entities_with_default_value_to_context_to_be_updated_non_generic_graph()
         {
             return TrackEntitiesDefaultValuesTestNonGeneric((c, e) => c.Update(e), (c, e) => c.Update(e), EntityState.Added);
@@ -651,17 +543,8 @@ namespace Microsoft.EntityFrameworkCore
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var category1 = new Category
-                {
-                    Id = 0,
-                    Name = "Beverages"
-                };
-                var product1 = new Product
-                {
-                    Id = 0,
-                    Name = "Marmite",
-                    Price = 7.99m
-                };
+                var category1 = new Category { Id = 0, Name = "Beverages" };
+                var product1 = new Product { Id = 0, Name = "Marmite", Price = 7.99m };
 
                 var categoryEntry1 = await categoryAdder(context, category1);
                 var productEntry1 = await productAdder(context, product1);
@@ -680,34 +563,34 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_existing_entities_with_default_values_to_context_to_be_deleted_Enumerable()
         {
             return TrackMultipleEntitiesDefaultValueTestEnumerable(
                 (c, e) => c.RemoveRange(e), (c, e) => c.RemoveRange(e), EntityState.Deleted);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_new_entities_with_default_values_to_context_Enumerable_graph()
         {
             return TrackMultipleEntitiesDefaultValueTestEnumerable((c, e) => c.AddRange(e), (c, e) => c.AddRange(e), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_new_entities_with_default_values_to_context_Enumerable_graph_async()
         {
             return TrackMultipleEntitiesDefaultValueTestEnumerable(
                 (c, e) => c.AddRangeAsync(e), (c, e) => c.AddRangeAsync(e), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_existing_entities_with_default_values_to_context_to_be_attached_Enumerable_graph()
         {
             return TrackMultipleEntitiesDefaultValueTestEnumerable(
                 (c, e) => c.AttachRange(e), (c, e) => c.AttachRange(e), EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public Task Can_add_multiple_existing_entities_with_default_values_to_context_to_be_updated_Enumerable_graph()
         {
             return TrackMultipleEntitiesDefaultValueTestEnumerable(
@@ -737,28 +620,13 @@ namespace Microsoft.EntityFrameworkCore
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var category1 = new Category
-                {
-                    Id = 0,
-                    Name = "Beverages"
-                };
-                var product1 = new Product
-                {
-                    Id = 0,
-                    Name = "Marmite",
-                    Price = 7.99m
-                };
+                var category1 = new Category { Id = 0, Name = "Beverages" };
+                var product1 = new Product { Id = 0, Name = "Marmite", Price = 7.99m };
 
                 await categoryAdder(
-                    context, new List<Category>
-                    {
-                        category1
-                    });
+                    context, new List<Category> { category1 });
                 await productAdder(
-                    context, new List<Product>
-                    {
-                        product1
-                    });
+                    context, new List<Product> { product1 });
 
                 Assert.Same(category1, context.Entry(category1).Entity);
                 Assert.Same(product1, context.Entry(product1).Entity);
@@ -771,19 +639,19 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_no_existing_entities_to_context_to_be_deleted_Enumerable()
         {
             TrackNoEntitiesTestEnumerable((c, e) => c.RemoveRange(e), (c, e) => c.RemoveRange(e));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_no_new_entities_to_context_Enumerable_graph()
         {
             TrackNoEntitiesTestEnumerable((c, e) => c.AddRange(e), (c, e) => c.AddRange(e));
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Can_add_no_new_entities_to_context_Enumerable_graph_async()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
@@ -794,13 +662,13 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_no_existing_entities_to_context_to_be_attached_Enumerable_graph()
         {
             TrackNoEntitiesTestEnumerable((c, e) => c.AttachRange(e), (c, e) => c.AttachRange(e));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_add_no_existing_entities_to_context_to_be_updated_Enumerable_graph()
         {
             TrackNoEntitiesTestEnumerable((c, e) => c.UpdateRange(e), (c, e) => c.UpdateRange(e));
@@ -818,7 +686,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Theory]
+        [ConditionalTheory]
         [InlineData(false, false, true)]
         [InlineData(false, false, false)]
         [InlineData(false, true, false)]
@@ -829,14 +697,8 @@ namespace Microsoft.EntityFrameworkCore
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var gu1 = new TheGu
-                {
-                    ShirtColor = "Red"
-                };
-                var gu2 = new TheGu
-                {
-                    ShirtColor = "Still Red"
-                };
+                var gu1 = new TheGu { ShirtColor = "Red" };
+                var gu2 = new TheGu { ShirtColor = "Still Red" };
 
                 if (attachFirst)
                 {
@@ -878,7 +740,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Can_use_Remove_to_change_entity_state()
         {
             await ChangeStateWithMethod((c, e) => c.Remove(e), EntityState.Detached, EntityState.Deleted);
@@ -888,7 +750,7 @@ namespace Microsoft.EntityFrameworkCore
             await ChangeStateWithMethod((c, e) => c.Remove(e), EntityState.Added, EntityState.Detached);
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Can_use_graph_Add_to_change_entity_state()
         {
             await ChangeStateWithMethod((c, e) => c.Add(e), EntityState.Detached, EntityState.Added);
@@ -898,7 +760,7 @@ namespace Microsoft.EntityFrameworkCore
             await ChangeStateWithMethod((c, e) => c.Add(e), EntityState.Added, EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Can_use_graph_Add_to_change_entity_state_async()
         {
             await ChangeStateWithMethod((c, e) => c.AddAsync(e), EntityState.Detached, EntityState.Added);
@@ -908,7 +770,7 @@ namespace Microsoft.EntityFrameworkCore
             await ChangeStateWithMethod((c, e) => c.AddAsync(e), EntityState.Added, EntityState.Added);
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Can_use_graph_Attach_to_change_entity_state()
         {
             await ChangeStateWithMethod((c, e) => c.Attach(e), EntityState.Detached, EntityState.Unchanged);
@@ -918,7 +780,7 @@ namespace Microsoft.EntityFrameworkCore
             await ChangeStateWithMethod((c, e) => c.Attach(e), EntityState.Added, EntityState.Unchanged);
         }
 
-        [Fact]
+        [ConditionalFact]
         public async Task Can_use_graph_Update_to_change_entity_state()
         {
             await ChangeStateWithMethod((c, e) => c.Update(e), EntityState.Detached, EntityState.Modified);
@@ -948,11 +810,7 @@ namespace Microsoft.EntityFrameworkCore
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var entity = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
+                var entity = new Category { Id = 1, Name = "Beverages" };
                 var entry = context.Entry(entity);
 
                 entry.State = initialState;
@@ -963,27 +821,14 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_attach_with_inconsistent_FK_principal_first_fully_fixed_up()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite",
-                    Category = category
-                };
-                category.Products = new List<Product>
-                {
-                    product
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite", Category = category };
+                category.Products = new List<Product> { product };
 
                 context.Entry(category).State = EntityState.Unchanged;
 
@@ -1005,27 +850,14 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_attach_with_inconsistent_FK_dependent_first_fully_fixed_up()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite",
-                    Category = category
-                };
-                category.Products = new List<Product>
-                {
-                    product
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite", Category = category };
+                category.Products = new List<Product> { product };
 
                 context.Attach(product);
 
@@ -1045,23 +877,13 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_attach_with_inconsistent_FK_principal_first_collection_not_fixed_up()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite",
-                    Category = category
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite", Category = category };
                 category.Products = new List<Product>();
 
                 context.Attach(category);
@@ -1082,23 +904,13 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_attach_with_inconsistent_FK_dependent_first_collection_not_fixed_up()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite",
-                    Category = category
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite", Category = category };
                 category.Products = new List<Product>();
 
                 context.Attach(product);
@@ -1119,26 +931,14 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_attach_with_inconsistent_FK_principal_first_reference_not_fixed_up()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite"
-                };
-                category.Products = new List<Product>
-                {
-                    product
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite" };
+                category.Products = new List<Product> { product };
 
                 context.Entry(category).State = EntityState.Unchanged;
 
@@ -1158,26 +958,14 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_attach_with_inconsistent_FK_dependent_first_reference_not_fixed_up()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite"
-                };
-                category.Products = new List<Product>
-                {
-                    product
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite" };
+                category.Products = new List<Product> { product };
 
                 context.Attach(product);
 
@@ -1197,27 +985,14 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_set_set_to_Unchanged_with_inconsistent_FK_principal_first_fully_fixed_up()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite",
-                    Category = category
-                };
-                category.Products = new List<Product>
-                {
-                    product
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite", Category = category };
+                category.Products = new List<Product> { product };
 
                 context.Entry(category).State = EntityState.Unchanged;
 
@@ -1239,27 +1014,14 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_set_set_to_Unchanged_with_inconsistent_FK_dependent_first_fully_fixed_up()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite",
-                    Category = category
-                };
-                category.Products = new List<Product>
-                {
-                    product
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite", Category = category };
+                category.Products = new List<Product> { product };
 
                 context.Entry(product).State = EntityState.Unchanged;
 
@@ -1279,23 +1041,13 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_set_set_to_Unchanged_with_inconsistent_FK_principal_first_collection_not_fixed_up()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite",
-                    Category = category
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite", Category = category };
                 category.Products = new List<Product>();
 
                 context.Entry(category).State = EntityState.Unchanged;
@@ -1316,23 +1068,13 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_set_set_to_Unchanged_with_inconsistent_FK_dependent_first_collection_not_fixed_up()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite",
-                    Category = category
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite", Category = category };
                 category.Products = new List<Product>();
 
                 context.Entry(product).State = EntityState.Unchanged;
@@ -1353,26 +1095,14 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_set_set_to_Unchanged_with_inconsistent_FK_principal_first_reference_not_fixed_up()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite"
-                };
-                category.Products = new List<Product>
-                {
-                    product
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite" };
+                category.Products = new List<Product> { product };
 
                 context.Entry(category).State = EntityState.Unchanged;
 
@@ -1392,26 +1122,14 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_set_set_to_Unchanged_with_inconsistent_FK_dependent_first_reference_not_fixed_up()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite"
-                };
-                category.Products = new List<Product>
-                {
-                    product
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite" };
+                category.Products = new List<Product> { product };
 
                 context.Entry(product).State = EntityState.Unchanged;
 
@@ -1431,34 +1149,17 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_attach_with_inconsistent_FK_principal_first_fully_fixed_up_with_tracked_FK_match()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
                 var category7 = context.Attach(
-                    new Category
-                    {
-                        Id = 7,
-                        Products = new List<Product>()
-                    }).Entity;
+                    new Category { Id = 7, Products = new List<Product>() }).Entity;
 
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite",
-                    Category = category
-                };
-                category.Products = new List<Product>
-                {
-                    product
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite", Category = category };
+                category.Products = new List<Product> { product };
 
                 context.Entry(category).State = EntityState.Unchanged;
 
@@ -1481,42 +1182,28 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_attach_with_inconsistent_FK_dependent_first_fully_fixed_up_with_tracked_FK_match()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
                 var category7 = context.Attach(
-                    new Category
-                    {
-                        Id = 7,
-                        Products = new List<Product>()
-                    }).Entity;
+                    new Category { Id = 7, Products = new List<Product>() }).Entity;
 
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite",
-                    Category = category
-                };
-                category.Products = new List<Product>
-                {
-                    product
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite", Category = category };
+
+                category.Products = new List<Product> { product };
 
                 context.Attach(product);
 
-                Assert.Equal(7, product.CategoryId);
+                Assert.Equal(1, product.CategoryId);
                 Assert.Same(product, category.Products.Single());
-                Assert.Same(category7, product.Category);
-                Assert.Same(product, category7.Products.Single());
-                Assert.Equal(EntityState.Detached, context.Entry(category).State);
+                Assert.Same(category, product.Category);
+                Assert.Empty(category7.Products);
+                Assert.Equal(EntityState.Unchanged, context.Entry(category7).State);
+                Assert.Equal(EntityState.Unchanged, context.Entry(category).State);
                 Assert.Equal(EntityState.Unchanged, context.Entry(product).State);
 
                 context.Attach(category);
@@ -1524,35 +1211,25 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Equal(1, product.CategoryId);
                 Assert.Same(product, category.Products.Single());
                 Assert.Same(category, product.Category);
+                Assert.Empty(category7.Products);
+                Assert.Equal(EntityState.Unchanged, context.Entry(category7).State);
                 Assert.Equal(EntityState.Unchanged, context.Entry(category).State);
                 Assert.Equal(EntityState.Unchanged, context.Entry(product).State);
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_attach_with_inconsistent_FK_principal_first_collection_not_fixed_up_with_tracked_FK_match()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
                 var category7 = context.Attach(
-                    new Category
-                    {
-                        Id = 7,
-                        Products = new List<Product>()
-                    }).Entity;
+                    new Category { Id = 7, Products = new List<Product>() }).Entity;
 
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite",
-                    Category = category
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite", Category = category };
+
                 category.Products = new List<Product>();
 
                 context.Attach(category);
@@ -1560,94 +1237,70 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Equal(7, product.CategoryId);
                 Assert.Empty(category.Products);
                 Assert.Same(category, product.Category);
-                Assert.Empty(category7.Products);
+                Assert.Empty(category.Products);
+                Assert.Equal(EntityState.Unchanged, context.Entry(category7).State);
                 Assert.Equal(EntityState.Unchanged, context.Entry(category).State);
                 Assert.Equal(EntityState.Detached, context.Entry(product).State);
 
                 context.Attach(product);
 
-                Assert.Equal(7, product.CategoryId);
-                Assert.Empty(category.Products);
-                Assert.Same(category7, product.Category);
-                Assert.Same(product, category7.Products.Single());
+                Assert.Equal(1, product.CategoryId);
+                Assert.Same(product, category.Products.Single());
+                Assert.Same(category, product.Category);
+                Assert.Empty(category7.Products);
+                Assert.Equal(EntityState.Unchanged, context.Entry(category7).State);
                 Assert.Equal(EntityState.Unchanged, context.Entry(category).State);
                 Assert.Equal(EntityState.Unchanged, context.Entry(product).State);
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_attach_with_inconsistent_FK_dependent_first_collection_not_fixed_up_with_tracked_FK_match()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
                 var category7 = context.Attach(
-                    new Category
-                    {
-                        Id = 7,
-                        Products = new List<Product>()
-                    }).Entity;
+                    new Category { Id = 7, Products = new List<Product>() }).Entity;
 
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite",
-                    Category = category
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite", Category = category };
+
                 category.Products = new List<Product>();
 
                 context.Attach(product);
 
-                Assert.Equal(7, product.CategoryId);
-                Assert.Empty(category.Products);
-                Assert.Same(category7, product.Category);
-                Assert.Same(product, category7.Products.Single());
-                Assert.Equal(EntityState.Detached, context.Entry(category).State);
+                Assert.Equal(1, product.CategoryId);
+                Assert.Same(product, category.Products.Single());
+                Assert.Same(category, product.Category);
+                Assert.Empty(category7.Products);
+                Assert.Equal(EntityState.Unchanged, context.Entry(category7).State);
+                Assert.Equal(EntityState.Unchanged, context.Entry(category).State);
                 Assert.Equal(EntityState.Unchanged, context.Entry(product).State);
 
                 context.Attach(category);
 
-                Assert.Equal(7, product.CategoryId);
-                Assert.Empty(category.Products);
-                Assert.Same(category7, product.Category);
-                Assert.Same(product, category7.Products.Single());
+                Assert.Equal(1, product.CategoryId);
+                Assert.Same(product, category.Products.Single());
+                Assert.Same(category, product.Category);
+                Assert.Empty(category7.Products);
+                Assert.Equal(EntityState.Unchanged, context.Entry(category7).State);
                 Assert.Equal(EntityState.Unchanged, context.Entry(category).State);
                 Assert.Equal(EntityState.Unchanged, context.Entry(product).State);
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_attach_with_inconsistent_FK_principal_first_reference_not_fixed_up_with_tracked_FK_match()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
                 var category7 = context.Attach(
-                    new Category
-                    {
-                        Id = 7,
-                        Products = new List<Product>()
-                    }).Entity;
+                    new Category { Id = 7, Products = new List<Product>() }).Entity;
 
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite"
-                };
-                category.Products = new List<Product>
-                {
-                    product
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite" };
+                category.Products = new List<Product> { product };
 
                 context.Entry(category).State = EntityState.Unchanged;
 
@@ -1669,33 +1322,17 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_attach_with_inconsistent_FK_dependent_first_reference_not_fixed_up_with_tracked_FK_match()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
                 var category7 = context.Attach(
-                    new Category
-                    {
-                        Id = 7,
-                        Products = new List<Product>()
-                    }).Entity;
+                    new Category { Id = 7, Products = new List<Product>() }).Entity;
 
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite"
-                };
-                category.Products = new List<Product>
-                {
-                    product
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite" };
+                category.Products = new List<Product> { product };
 
                 context.Attach(product);
 
@@ -1716,34 +1353,17 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_set_set_to_Unchanged_with_inconsistent_FK_principal_first_fully_fixed_up_with_tracked_FK_match()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
                 var category7 = context.Attach(
-                    new Category
-                    {
-                        Id = 7,
-                        Products = new List<Product>()
-                    }).Entity;
+                    new Category { Id = 7, Products = new List<Product>() }).Entity;
 
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite",
-                    Category = category
-                };
-                category.Products = new List<Product>
-                {
-                    product
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite", Category = category };
+                category.Products = new List<Product> { product };
 
                 context.Entry(category).State = EntityState.Unchanged;
 
@@ -1765,41 +1385,27 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_set_set_to_Unchanged_with_inconsistent_FK_dependent_first_fully_fixed_up_with_tracked_FK_match()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
                 var category7 = context.Attach(
-                    new Category
-                    {
-                        Id = 7,
-                        Products = new List<Product>()
-                    }).Entity;
+                    new Category { Id = 7, Products = new List<Product>() }).Entity;
 
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite",
-                    Category = category
-                };
-                category.Products = new List<Product>
-                {
-                    product
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite", Category = category };
+
+                category.Products = new List<Product> { product };
 
                 context.Entry(product).State = EntityState.Unchanged;
 
                 Assert.Equal(7, product.CategoryId);
                 Assert.Same(product, category.Products.Single());
-                Assert.Same(category7, product.Category);
-                Assert.Same(product, category7.Products.Single());
+                Assert.Same(category, product.Category);
+                Assert.Empty(category7.Products);
+                Assert.Equal(EntityState.Unchanged, context.Entry(category7).State);
                 Assert.Equal(EntityState.Detached, context.Entry(category).State);
                 Assert.Equal(EntityState.Unchanged, context.Entry(product).State);
 
@@ -1808,35 +1414,23 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Equal(1, product.CategoryId);
                 Assert.Same(product, category.Products.Single());
                 Assert.Same(category, product.Category);
+                Assert.Empty(category7.Products);
+                Assert.Equal(EntityState.Unchanged, context.Entry(category7).State);
                 Assert.Equal(EntityState.Unchanged, context.Entry(category).State);
                 Assert.Equal(EntityState.Unchanged, context.Entry(product).State);
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_set_set_to_Unchanged_with_inconsistent_FK_principal_first_collection_not_fixed_up_with_tracked_FK_match()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
                 var category7 = context.Attach(
-                    new Category
-                    {
-                        Id = 7,
-                        Products = new List<Product>()
-                    }).Entity;
+                    new Category { Id = 7, Products = new List<Product>() }).Entity;
 
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite",
-                    Category = category
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite", Category = category };
                 category.Products = new List<Product>();
 
                 context.Entry(category).State = EntityState.Unchanged;
@@ -1850,88 +1444,63 @@ namespace Microsoft.EntityFrameworkCore
 
                 context.Entry(product).State = EntityState.Unchanged;
 
-                Assert.Equal(7, product.CategoryId);
-                Assert.Empty(category.Products);
-                Assert.Same(category7, product.Category);
-                Assert.Same(product, category7.Products.Single());
+                Assert.Equal(1, product.CategoryId);
+                Assert.Same(product, category.Products.Single());
+                Assert.Same(category, product.Category);
+                Assert.Empty(category7.Products);
+                Assert.Equal(EntityState.Unchanged, context.Entry(category7).State);
                 Assert.Equal(EntityState.Unchanged, context.Entry(category).State);
                 Assert.Equal(EntityState.Unchanged, context.Entry(product).State);
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_set_set_to_Unchanged_with_inconsistent_FK_dependent_first_collection_not_fixed_up_with_tracked_FK_match()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
                 var category7 = context.Attach(
-                    new Category
-                    {
-                        Id = 7,
-                        Products = new List<Product>()
-                    }).Entity;
+                    new Category { Id = 7, Products = new List<Product>() }).Entity;
 
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite",
-                    Category = category
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite", Category = category };
+
                 category.Products = new List<Product>();
 
                 context.Entry(product).State = EntityState.Unchanged;
 
                 Assert.Equal(7, product.CategoryId);
                 Assert.Empty(category.Products);
-                Assert.Same(category7, product.Category);
-                Assert.Same(product, category7.Products.Single());
+                Assert.Same(category, product.Category);
+                Assert.Empty(category7.Products);
                 Assert.Equal(EntityState.Detached, context.Entry(category).State);
                 Assert.Equal(EntityState.Unchanged, context.Entry(product).State);
+                Assert.Equal(EntityState.Unchanged, context.Entry(category7).State);
 
                 context.Entry(category).State = EntityState.Unchanged;
 
-                Assert.Equal(7, product.CategoryId);
-                Assert.Empty(category.Products);
-                Assert.Same(category7, product.Category);
-                Assert.Same(product, category7.Products.Single());
+                Assert.Equal(1, product.CategoryId);
+                Assert.Same(product, category.Products.Single());
+                Assert.Same(category, product.Category);
+                Assert.Empty(category7.Products);
+                Assert.Equal(EntityState.Unchanged, context.Entry(category7).State);
                 Assert.Equal(EntityState.Unchanged, context.Entry(category).State);
                 Assert.Equal(EntityState.Unchanged, context.Entry(product).State);
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_set_set_to_Unchanged_with_inconsistent_FK_principal_first_reference_not_fixed_up_with_tracked_FK_match()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
                 var category7 = context.Attach(
-                    new Category
-                    {
-                        Id = 7,
-                        Products = new List<Product>()
-                    }).Entity;
+                    new Category { Id = 7, Products = new List<Product>() }).Entity;
 
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite"
-                };
-                category.Products = new List<Product>
-                {
-                    product
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite" };
+                category.Products = new List<Product> { product };
 
                 context.Entry(category).State = EntityState.Unchanged;
 
@@ -1953,33 +1522,17 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact] // Issue #1246
+        [ConditionalFact] // Issue #1246
         public void Can_set_set_to_Unchanged_with_inconsistent_FK_dependent_first_reference_not_fixed_up_with_tracked_FK_match()
         {
             using (var context = new EarlyLearningCenter(InMemoryTestHelpers.Instance.CreateServiceProvider()))
             {
                 var category7 = context.Attach(
-                    new Category
-                    {
-                        Id = 7,
-                        Products = new List<Product>()
-                    }).Entity;
+                    new Category { Id = 7, Products = new List<Product>() }).Entity;
 
-                var category = new Category
-                {
-                    Id = 1,
-                    Name = "Beverages"
-                };
-                var product = new Product
-                {
-                    Id = 1,
-                    CategoryId = 7,
-                    Name = "Marmite"
-                };
-                category.Products = new List<Product>
-                {
-                    product
-                };
+                var category = new Category { Id = 1, Name = "Beverages" };
+                var product = new Product { Id = 1, CategoryId = 7, Name = "Marmite" };
+                category.Products = new List<Product> { product };
 
                 context.Entry(product).State = EntityState.Unchanged;
 

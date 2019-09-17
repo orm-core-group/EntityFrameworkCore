@@ -22,7 +22,7 @@ namespace Microsoft.EntityFrameworkCore
             //TestSqlLoggerFactory.SetTestOutputHelper(testOutputHelper);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_update_just_dependents()
         {
             using (CreateTestStore(OnModelCreating))
@@ -49,19 +49,54 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_query_shared()
         {
             using (CreateTestStore(OnModelCreating))
             {
                 using (var context = CreateContext())
                 {
-                    Assert.Equal(4, context.Set<Operator>().ToList().Count);
+                    Assert.Equal(5, context.Set<Operator>().ToList().Count);
                 }
             }
         }
 
-        [Fact]
+        [ConditionalFact]
+        public virtual void Can_query_shared_nonhierarchy()
+        {
+            using (CreateTestStore(
+                modelBuilder =>
+                {
+                    OnModelCreating(modelBuilder);
+                    modelBuilder.Ignore<LicensedOperator>();
+                }))
+            {
+                using (var context = CreateContext())
+                {
+                    Assert.Equal(5, context.Set<Operator>().ToList().Count);
+                }
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Can_query_shared_nonhierarchy_with_nonshared_dependent()
+        {
+            using (CreateTestStore(
+                modelBuilder =>
+                {
+                    OnModelCreating(modelBuilder);
+                    modelBuilder.Ignore<LicensedOperator>();
+                    modelBuilder.Entity<OperatorDetails>().ToTable("OperatorDetails");
+                }))
+            {
+                using (var context = CreateContext())
+                {
+                    Assert.Equal(5, context.Set<Operator>().ToList().Count);
+                }
+            }
+        }
+
+        [ConditionalFact]
         public virtual void Can_query_shared_derived_hierarchy()
         {
             using (CreateTestStore(OnModelCreating))
@@ -73,7 +108,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_query_shared_derived_nonhierarchy()
         {
             using (CreateTestStore(
@@ -90,7 +125,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_query_shared_derived_nonhierarchy_all_required()
         {
             using (CreateTestStore(
@@ -98,11 +133,12 @@ namespace Microsoft.EntityFrameworkCore
                 {
                     OnModelCreating(modelBuilder);
                     modelBuilder.Ignore<SolidFuelTank>();
-                    modelBuilder.Entity<FuelTank>(eb =>
-                    {
-                        eb.Property(t => t.Capacity).IsRequired();
-                        eb.Property(t => t.FuelType).IsRequired();
-                    });
+                    modelBuilder.Entity<FuelTank>(
+                        eb =>
+                        {
+                            eb.Property(t => t.Capacity).IsRequired();
+                            eb.Property(t => t.FuelType).IsRequired();
+                        });
                 }))
             {
                 using (var context = CreateContext())
@@ -112,13 +148,13 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_use_with_redundant_relationships()
         {
             Test_roundtrip(OnModelCreating);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_use_with_chained_relationships()
         {
             Test_roundtrip(
@@ -129,7 +165,7 @@ namespace Microsoft.EntityFrameworkCore
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_use_with_fanned_relationships()
         {
             Test_roundtrip(
@@ -151,7 +187,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Inserting_dependent_with_just_one_parent_throws()
         {
             using (CreateTestStore(OnModelCreating))
@@ -163,19 +199,10 @@ namespace Microsoft.EntityFrameworkCore
                         {
                             Name = "Fuel transport",
                             SeatingCapacity = 1,
-                            Operator = new LicensedOperator
-                            {
-                                Name = "Jack Jackson",
-                                LicenseType = "Class A CDC"
-                            }
+                            Operator = new LicensedOperator { Name = "Jack Jackson", LicenseType = "Class A CDC" }
                         });
                     context.Add(
-                        new FuelTank
-                        {
-                            Capacity = "10000 l",
-                            FuelType = "Gas",
-                            VehicleName = "Fuel transport"
-                        });
+                        new FuelTank { Capacity = "10000 l", FuelType = "Gas", VehicleName = "Fuel transport" });
 
                     Assert.Equal(
                         RelationalStrings.SharedRowEntryCountMismatchSensitive(
@@ -185,7 +212,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact(Skip = "issue #15318")]
+        [ConditionalFact]
         public virtual void Can_change_dependent_instance_non_derived()
         {
             using (CreateTestStore(
@@ -210,18 +237,11 @@ namespace Microsoft.EntityFrameworkCore
                 {
                     var bike = context.Vehicles.Include(v => v.Operator).Single(v => v.Name == "Trek Pro Fit Madone 6 Series");
 
-                    bike.Operator = new Operator
-                    {
-                        Name = "Chris Horner"
-                    };
+                    bike.Operator = new Operator { Name = "Chris Horner" };
 
                     context.ChangeTracker.DetectChanges();
 
-                    bike.Operator = new LicensedOperator
-                    {
-                        Name = "repairman",
-                        LicenseType = "Repair"
-                    };
+                    bike.Operator = new LicensedOperator { Name = "repairman", LicenseType = "Repair" };
 
                     TestSqlLoggerFactory.Clear();
                     context.SaveChanges();
@@ -238,7 +258,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_change_principal_instance_non_derived()
         {
             using (CreateTestStore(
@@ -263,12 +283,7 @@ namespace Microsoft.EntityFrameworkCore
                 {
                     var bike = context.Vehicles.Single(v => v.Name == "Trek Pro Fit Madone 6 Series");
 
-                    var newBike = new Vehicle
-                    {
-                        Name = "Trek Pro Fit Madone 6 Series",
-                        Operator = bike.Operator,
-                        SeatingCapacity = 2
-                    };
+                    var newBike = new Vehicle { Name = "Trek Pro Fit Madone 6 Series", Operator = bike.Operator, SeatingCapacity = 2 };
 
                     context.Remove(bike);
                     context.Add(newBike);
@@ -289,7 +304,7 @@ namespace Microsoft.EntityFrameworkCore
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_change_principal_and_dependent_instance_non_derived()
         {
             using (CreateTestStore(
@@ -317,11 +332,7 @@ namespace Microsoft.EntityFrameworkCore
                     var newBike = new Vehicle
                     {
                         Name = "Trek Pro Fit Madone 6 Series",
-                        Operator = new LicensedOperator
-                        {
-                            Name = "repairman",
-                            LicenseType = "Repair"
-                        },
+                        Operator = new LicensedOperator { Name = "repairman", LicenseType = "Repair" },
                         SeatingCapacity = 2
                     };
 
@@ -353,9 +364,6 @@ namespace Microsoft.EntityFrameworkCore
         protected void AssertSql(params string[] expected)
             => TestSqlLoggerFactory.AssertBaseline(expected);
 
-        protected void AssertContainsSql(params string[] expected)
-            => TestSqlLoggerFactory.AssertBaseline(expected, assertOrder: false);
-
         protected virtual void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Vehicle>(
@@ -368,6 +376,7 @@ namespace Microsoft.EntityFrameworkCore
 
             modelBuilder.Entity<Engine>().ToTable("Vehicles");
             modelBuilder.Entity<Operator>().ToTable("Vehicles");
+            modelBuilder.Entity<OperatorDetails>().ToTable("Vehicles");
             modelBuilder.Entity<FuelTank>().ToTable("Vehicles");
         }
 

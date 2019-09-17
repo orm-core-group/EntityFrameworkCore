@@ -10,11 +10,8 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.EntityFrameworkCore.Query.Internal;
-using Microsoft.EntityFrameworkCore.Query.ResultOperators.Internal;
+using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.TestUtilities;
-using Remotion.Linq;
-using Remotion.Linq.Clauses;
 using Xunit;
 
 // ReSharper disable InconsistentNaming
@@ -22,20 +19,19 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
 {
     public class CoreEventIdTest : EventIdTestBase
     {
-        [Fact]
+        [ConditionalFact]
         public void Every_eventId_has_a_logger_method_and_logs_when_level_enabled()
         {
             var propertyInfo = typeof(DateTime).GetTypeInfo().GetDeclaredProperty(nameof(DateTime.Now));
             var entityType = new Model(new ConventionSet()).AddEntityType(typeof(object), ConfigurationSource.Convention);
             var property = entityType.AddProperty("A", typeof(int), ConfigurationSource.Convention, ConfigurationSource.Convention);
             var otherEntityType = new EntityType(typeof(object), entityType.Model, ConfigurationSource.Convention);
-            var otherProperty = otherEntityType.AddProperty("A", typeof(int), ConfigurationSource.Convention, ConfigurationSource.Convention);
+            var otherProperty = otherEntityType.AddProperty(
+                "A", typeof(int), ConfigurationSource.Convention, ConfigurationSource.Convention);
             var otherKey = otherEntityType.AddKey(otherProperty, ConfigurationSource.Convention);
             var foreignKey = new ForeignKey(new[] { property }, otherKey, entityType, otherEntityType, ConfigurationSource.Convention);
             var navigation = new Navigation("N", propertyInfo, null, foreignKey);
-            var queryModel = new QueryModel(
-                new MainFromClause("A", typeof(object), Expression.Constant("A")), new SelectClause(Expression.Constant("A")));
-            var includeResultOperator = new IncludeResultOperator(new[] { "Foo" }, Expression.Constant("A"));
+            entityType.Model.FinalizeModel();
             var options = new DbContextOptionsBuilder()
                 .UseInternalServiceProvider(InMemoryFixture.DefaultServiceProvider)
                 .UseInMemoryDatabase("D").Options;
@@ -45,9 +41,8 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
                 { typeof(Type), () => typeof(object) },
                 { typeof(DbContext), () => new DbContext(options) },
                 { typeof(DbContextOptions), () => options },
-                { typeof(QueryModel), () => queryModel },
                 { typeof(string), () => "Fake" },
-                { typeof(IExpressionPrinter), () => new ExpressionPrinter() },
+                { typeof(ExpressionPrinter), () => new ExpressionPrinter() },
                 { typeof(Expression), () => Expression.Constant("A") },
                 { typeof(IEntityType), () => entityType },
                 { typeof(IKey), () => new Key(new[] { property }, ConfigurationSource.Convention) },
@@ -55,9 +50,11 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
                 { typeof(IServiceProvider), () => new FakeServiceProvider() },
                 { typeof(ICollection<IServiceProvider>), () => new List<IServiceProvider>() },
                 { typeof(IReadOnlyList<IPropertyBase>), () => new[] { property } },
-                { typeof(IEnumerable<Tuple<MemberInfo, Type>>), () => new[] { new Tuple<MemberInfo, Type>(propertyInfo, typeof(object)) } },
+                {
+                    typeof(IEnumerable<Tuple<MemberInfo, Type>>),
+                    () => new[] { new Tuple<MemberInfo, Type>(propertyInfo, typeof(object)) }
+                },
                 { typeof(MemberInfo), () => propertyInfo },
-                { typeof(IncludeResultOperator), () => includeResultOperator },
                 { typeof(IReadOnlyList<Exception>), () => new[] { new Exception() } },
                 { typeof(IProperty), () => property },
                 { typeof(INavigation), () => navigation },

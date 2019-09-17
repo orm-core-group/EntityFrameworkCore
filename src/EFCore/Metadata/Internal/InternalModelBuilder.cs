@@ -2,14 +2,13 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.EntityFrameworkCore.Metadata.Conventions.Internal;
+using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 
 namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 {
@@ -73,39 +72,49 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 ? Metadata.FindEntityType(type.Name)
                 : Metadata.FindEntityType(clrType);
 
-            using (Metadata.ConventionDispatcher.StartBatch())
+            if (shouldBeOwned == false
+                && (ShouldBeOwnedType(type)
+                    || entityType != null && entityType.IsOwned()))
             {
-                if (shouldBeOwned == false
-                    && (ShouldBeOwnedType(type)
-                        || (entityType != null && entityType.IsOwned())))
-                {
-                    throw new InvalidOperationException(
-                        CoreStrings.ClashingOwnedEntityType(
-                            clrType == null ? type.Name : clrType.ShortDisplayName()));
-                }
+                throw new InvalidOperationException(
+                    CoreStrings.ClashingOwnedEntityType(
+                        clrType == null ? type.Name : clrType.ShortDisplayName()));
+            }
 
-                if (shouldBeOwned == true
-                    && entityType != null
-                    && !entityType.IsOwned()
+            if (shouldBeOwned == true
+                && entityType != null)
+            {
+                if (!entityType.IsOwned()
                     && configurationSource == ConfigurationSource.Explicit
                     && entityType.GetConfigurationSource() == ConfigurationSource.Explicit)
                 {
                     throw new InvalidOperationException(CoreStrings.ClashingNonOwnedEntityType(entityType.DisplayName()));
                 }
 
-                if (entityType != null)
+                foreach (var derivedType in entityType.GetDerivedTypes())
                 {
-                    entityType.UpdateConfigurationSource(configurationSource);
-                    return entityType.Builder;
+                    if (!derivedType.IsOwned()
+                        && configurationSource == ConfigurationSource.Explicit
+                        && derivedType.GetConfigurationSource() == ConfigurationSource.Explicit)
+                    {
+                        throw new InvalidOperationException(
+                            CoreStrings.ClashingNonOwnedDerivedEntityType(entityType.DisplayName(), derivedType.DisplayName()));
+                    }
                 }
-
-                Metadata.RemoveIgnored(type.Name);
-                entityType = clrType == null
-                    ? Metadata.AddEntityType(type.Name, configurationSource)
-                    : Metadata.AddEntityType(clrType, configurationSource);
             }
 
-            return entityType.Builder;
+            if (entityType != null)
+            {
+                entityType.UpdateConfigurationSource(configurationSource);
+                return entityType.Builder;
+            }
+
+            Metadata.RemoveIgnored(type.Name);
+            entityType = clrType == null
+                ? Metadata.AddEntityType(type.Name, configurationSource)
+                : Metadata.AddEntityType(clrType, configurationSource);
+
+            return entityType?.Builder;
         }
 
         /// <summary>
@@ -166,10 +175,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                         return null;
                     }
 
-                    batch = ModelBuilder.Metadata.ConventionDispatcher.StartBatch();
+                    batch = ModelBuilder.Metadata.ConventionDispatcher.DelayConventions();
                     entityTypeSnapshot = InternalEntityTypeBuilder.DetachAllMembers(entityType);
 
-                    RemoveEntityType(entityType, configurationSource);
+                    HasNoEntityType(entityType, configurationSource);
                 }
 
                 if (clrType == null)
@@ -253,7 +262,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
         }
 
         private bool ShouldBeOwnedType(in TypeIdentity type)
-            => type.Type != null && Metadata.ShouldBeOwned(type.Type);
+            => type.Type != null && Metadata.IsOwned(type.Type);
 
         /// <summary>
         ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -323,11 +332,11 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 return null;
             }
 
-            using (Metadata.ConventionDispatcher.StartBatch())
+            using (Metadata.ConventionDispatcher.DelayConventions())
             {
                 foreach (var entityType in Metadata.GetEntityTypes(name).ToList())
                 {
-                    RemoveEntityType(entityType, configurationSource);
+                    HasNoEntityType(entityType, configurationSource);
 
                     if (entityType.HasClrType())
                     {
@@ -399,27 +408,27 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
         ///     any release. You should only use it directly in your code with extreme caution and knowing that
         ///     doing so can result in application failures when updating to a new Entity Framework Core release.
         /// </summary>
-        public virtual bool RemoveEntityType([NotNull] EntityType entityType, ConfigurationSource configurationSource)
+        public virtual InternalModelBuilder HasNoEntityType([NotNull] EntityType entityType, ConfigurationSource configurationSource)
         {
             var entityTypeConfigurationSource = entityType.GetConfigurationSource();
             if (!configurationSource.Overrides(entityTypeConfigurationSource))
             {
-                return false;
+                return null;
             }
 
-            using (Metadata.ConventionDispatcher.StartBatch())
+            using (Metadata.ConventionDispatcher.DelayConventions())
             {
                 var entityTypeBuilder = entityType.Builder;
                 foreach (var foreignKey in entityType.GetDeclaredForeignKeys().ToList())
                 {
-                    var removed = entityTypeBuilder.RemoveForeignKey(foreignKey, configurationSource);
-                    Debug.Assert(removed.HasValue);
+                    var removed = entityTypeBuilder.HasNoRelationship(foreignKey, configurationSource);
+                    Debug.Assert(removed != null);
                 }
 
                 foreach (var foreignKey in entityType.GetDeclaredReferencingForeignKeys().ToList())
                 {
-                    var removed = foreignKey.DeclaringEntityType.Builder.RemoveForeignKey(foreignKey, configurationSource);
-                    Debug.Assert(removed.HasValue);
+                    var removed = foreignKey.DeclaringEntityType.Builder.HasNoRelationship(foreignKey, configurationSource);
+                    Debug.Assert(removed != null);
                 }
 
                 foreach (var directlyDerivedType in entityType.GetDirectlyDerivedTypes().ToList())
@@ -431,47 +440,13 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 
                 foreach (var definedType in Metadata.GetEntityTypes().Where(e => e.DefiningEntityType == entityType).ToList())
                 {
-                    RemoveEntityType(definedType, configurationSource);
+                    HasNoEntityType(definedType, configurationSource);
                 }
 
                 Metadata.RemoveEntityType(entityType);
             }
 
-            return true;
-        }
-
-        /// <summary>
-        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-        ///     any release. You should only use it directly in your code with extreme caution and knowing that
-        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
-        /// </summary>
-        public virtual void RemoveEntityTypesUnreachableByNavigations(ConfigurationSource configurationSource)
-        {
-            var rootEntityTypes = GetRoots(configurationSource);
-            using (Metadata.ConventionDispatcher.StartBatch())
-            {
-                foreach (var orphan in new ModelNavigationsGraphAdapter(Metadata).GetUnreachableVertices(rootEntityTypes))
-                {
-                    RemoveEntityType(orphan, configurationSource);
-                }
-            }
-        }
-
-        private IReadOnlyList<EntityType> GetRoots(ConfigurationSource configurationSource)
-        {
-            var roots = new List<EntityType>();
-            // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var entityType in Metadata.GetEntityTypes())
-            {
-                var currentConfigurationSource = entityType.GetConfigurationSource();
-                if (currentConfigurationSource.Overrides(configurationSource))
-                {
-                    roots.Add(entityType);
-                }
-            }
-
-            return roots;
+            return this;
         }
 
         /// <summary>
@@ -534,14 +509,38 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             => configurationSource.Overrides(Metadata.GetPropertyAccessModeConfigurationSource())
                || Metadata.GetPropertyAccessMode() == propertyAccessMode;
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         IConventionModel IConventionModelBuilder.Metadata => Metadata;
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         IConventionEntityTypeBuilder IConventionModelBuilder.Entity(string name, bool? shouldBeOwned, bool fromDataAnnotation)
             => Entity(name, fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention, shouldBeOwned);
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         IConventionEntityTypeBuilder IConventionModelBuilder.Entity(Type type, bool? shouldBeOwned, bool fromDataAnnotation)
             => Entity(type, fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention, shouldBeOwned);
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         IConventionEntityTypeBuilder IConventionModelBuilder.Entity(
             string name, string definingNavigationName, IConventionEntityType definingEntityType, bool fromDataAnnotation)
             => Entity(
@@ -550,6 +549,12 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 (EntityType)definingEntityType,
                 fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention);
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         IConventionEntityTypeBuilder IConventionModelBuilder.Entity(
             Type type, string definingNavigationName, IConventionEntityType definingEntityType, bool fromDataAnnotation)
             => Entity(
@@ -558,41 +563,117 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 (EntityType)definingEntityType,
                 fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention);
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         IConventionOwnedEntityTypeBuilder IConventionModelBuilder.Owned(Type type, bool fromDataAnnotation)
             => Owned(type, fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention);
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         bool IConventionModelBuilder.IsIgnored(Type type, bool fromDataAnnotation)
             => IsIgnored(type, fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention);
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         bool IConventionModelBuilder.IsIgnored(string name, bool fromDataAnnotation)
             => IsIgnored(name, fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention);
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         IConventionModelBuilder IConventionModelBuilder.Ignore(Type type, bool fromDataAnnotation)
             => Ignore(type, fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention);
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         IConventionModelBuilder IConventionModelBuilder.Ignore(string name, bool fromDataAnnotation)
             => Ignore(name, fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention);
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        IConventionModelBuilder IConventionModelBuilder.HasNoEntityType(IConventionEntityType entityType, bool fromDataAnnotation)
+            => HasNoEntityType(
+                (EntityType)entityType, fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention);
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         bool IConventionModelBuilder.CanIgnore(Type type, bool fromDataAnnotation)
             => CanIgnore(type, fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention);
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         bool IConventionModelBuilder.CanIgnore(string name, bool fromDataAnnotation)
             => CanIgnore(name, fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention);
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         IConventionModelBuilder IConventionModelBuilder.HasChangeTrackingStrategy(
             ChangeTrackingStrategy? changeTrackingStrategy, bool fromDataAnnotation)
             => UseChangeTrackingStrategy(
                 changeTrackingStrategy, fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention);
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         bool IConventionModelBuilder.CanSetChangeTrackingStrategy(ChangeTrackingStrategy? changeTrackingStrategy, bool fromDataAnnotation)
             => CanSetChangeTrackingStrategy(
                 changeTrackingStrategy, fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention);
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         IConventionModelBuilder IConventionModelBuilder.UsePropertyAccessMode(
             PropertyAccessMode? propertyAccessMode, bool fromDataAnnotation)
             => UsePropertyAccessMode(
                 propertyAccessMode, fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention);
 
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
         bool IConventionModelBuilder.CanSetPropertyAccessMode(PropertyAccessMode? propertyAccessMode, bool fromDataAnnotation)
             => CanSetPropertyAccessMode(
                 propertyAccessMode, fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention);

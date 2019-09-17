@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Internal;
 
 namespace Microsoft.EntityFrameworkCore.TestUtilities
 {
@@ -10,5 +9,6 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
         where TCategory : LoggerCategory<TCategory>, new()
         where TDefinitions : LoggingDefinitions, new()
     {
+        public IInterceptors Interceptors { get; }
     }
 }

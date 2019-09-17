@@ -5,7 +5,6 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.TestModels.GearsOfWarModel;
-using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
 using Xunit;
 
 // ReSharper disable InconsistentNaming
@@ -21,7 +20,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
         protected GearsOfWarContext CreateContext() => Fixture.CreateContext();
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'GroupBy([s], Result(_IncludeAsync(queryContext, [s], new [] {}, (queryContext, entity, included, ct) => { ... }, ct)))'")]
+        [ConditionalFact(Skip = "Issue#17068")]
         public virtual async Task Include_with_group_by_on_entity_qsre()
         {
             using (var ctx = CreateContext())
@@ -39,7 +38,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'GroupBy([g], Result(_IncludeAsync(queryContext, [g], new [] {}, (queryContext, entity, included, ct) => { ... }, ct)))'")]
+        [ConditionalFact(Skip = "Issue#17068")]
         public virtual async Task Include_with_group_by_on_entity_qsre_with_composite_key()
         {
             using (var ctx = CreateContext())
@@ -57,7 +56,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'GroupBy([l.Commander.DefeatedBy], Result(_IncludeAsync(queryContext, [<generated>_1], new [] {}, (queryContext, entity, included, ct) => { ... }, ct)))'")]
+        [ConditionalFact(Skip = "Issue#17068")]
         public virtual async Task Include_with_group_by_on_entity_navigation()
         {
             using (var ctx = CreateContext())
@@ -75,7 +74,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "Issue #14935. Cannot eval 'GroupBy(1, Result(_IncludeAsync(queryContext, [s], new [] {}, (queryContext, entity, included, ct) => { ... }, ct)))'")]
+        [ConditionalFact(Skip = "Issue#17068")]
         public virtual async Task Include_groupby_constant()
         {
             using (var ctx = CreateContext())
@@ -83,7 +82,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 var query = ctx.Squads.Include(s => s.Members).GroupBy(s => 1);
                 var result = await query.ToListAsync();
 
-                Assert.Equal(1, result.Count);
+                Assert.Single(result);
                 var bucket = result[0].ToList();
                 Assert.Equal(2, bucket.Count);
                 Assert.NotNull(bucket[0].Members);
@@ -91,7 +90,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task Cast_to_derived_type_causes_client_eval()
         {
             using (var context = CreateContext())
@@ -111,7 +110,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact(Skip = "QueryIssue")]
+        [ConditionalFact]
         public virtual async Task GroupBy_Select_sum()
         {
             using (var ctx = CreateContext())

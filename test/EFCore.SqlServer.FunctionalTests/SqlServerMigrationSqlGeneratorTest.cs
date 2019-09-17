@@ -4,6 +4,7 @@
 using System;
 using System.IO;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.EntityFrameworkCore.SqlServer.Internal;
@@ -16,42 +17,202 @@ namespace Microsoft.EntityFrameworkCore
 {
     public class SqlServerMigrationSqlGeneratorTest : MigrationSqlGeneratorTestBase
     {
+        public override void CreateTableOperation()
+        {
+            base.CreateTableOperation();
+
+            AssertSql(
+                @"CREATE TABLE [dbo].[People] (
+    [Id] int NOT NULL,
+    [EmployerId] int NULL,
+    [SSN] char(11) NULL,
+    PRIMARY KEY ([Id]),
+    UNIQUE ([SSN]),
+    CHECK (SSN > 0),
+    FOREIGN KEY ([EmployerId]) REFERENCES [Companies] ([Id])
+);
+EXEC sp_addextendedproperty 'MS_Description', N'Table comment', 'SCHEMA', N'dbo', 'TABLE', N'People';
+EXEC sp_addextendedproperty 'MS_Description', N'Employer ID comment', 'SCHEMA', N'dbo', 'TABLE', N'People', 'COLUMN', N'EmployerId';
+");
+        }
+
+        [ConditionalFact]
+        public void CreateTableOperation_default_schema_with_comments()
+        {
+            Generate(
+                new CreateTableOperation
+                {
+                    Name = "People",
+                    Columns =
+                    {
+                        new AddColumnOperation
+                        {
+                            Name = "Id",
+                            Table = "People",
+                            ClrType = typeof(int),
+                            IsNullable = false,
+                            Comment = "ID comment"
+                        },
+                        new AddColumnOperation
+                        {
+                            Name = "Name",
+                            Table = "People",
+                            ClrType = typeof(string),
+                            IsNullable = false,
+                            Comment = "Name comment"
+                        }
+                    },
+                    Comment = "Table comment"
+                });
+
+            AssertSql(
+                @"CREATE TABLE [People] (
+    [Id] int NOT NULL,
+    [Name] nvarchar(max) NOT NULL
+);
+DECLARE @defaultSchema AS sysname;
+SET @defaultSchema = SCHEMA_NAME();
+EXEC sp_addextendedproperty 'MS_Description', N'Table comment', 'SCHEMA', @defaultSchema, 'TABLE', N'People';
+EXEC sp_addextendedproperty 'MS_Description', N'ID comment', 'SCHEMA', @defaultSchema, 'TABLE', N'People', 'COLUMN', N'Id';
+EXEC sp_addextendedproperty 'MS_Description', N'Name comment', 'SCHEMA', @defaultSchema, 'TABLE', N'People', 'COLUMN', N'Name';
+");
+        }
+
+        [ConditionalFact]
+        public void CreateTableOperation_default_schema_with_column_comments()
+        {
+            Generate(
+                new CreateTableOperation
+                {
+                    Name = "People",
+                    Columns =
+                    {
+                        new AddColumnOperation
+                        {
+                            Name = "Id",
+                            Table = "People",
+                            ClrType = typeof(int),
+                            IsNullable = false,
+                            Comment = "ID comment"
+                        },
+                        new AddColumnOperation
+                        {
+                            Name = "Name",
+                            Table = "People",
+                            ClrType = typeof(string),
+                            IsNullable = false,
+                            Comment = "Name comment"
+                        }
+                    }
+                });
+
+            AssertSql(
+                @"CREATE TABLE [People] (
+    [Id] int NOT NULL,
+    [Name] nvarchar(max) NOT NULL
+);
+DECLARE @defaultSchema AS sysname;
+SET @defaultSchema = SCHEMA_NAME();
+EXEC sp_addextendedproperty 'MS_Description', N'ID comment', 'SCHEMA', @defaultSchema, 'TABLE', N'People', 'COLUMN', N'Id';
+EXEC sp_addextendedproperty 'MS_Description', N'Name comment', 'SCHEMA', @defaultSchema, 'TABLE', N'People', 'COLUMN', N'Name';
+");
+        }
+
+        public override void CreateTableOperation_no_key()
+        {
+            base.CreateTableOperation_no_key();
+
+            AssertSql(
+                @"CREATE TABLE [Anonymous] (
+    [Value] int NOT NULL
+);
+");
+        }
+
         public override void CreateIndexOperation_with_filter_where_clause()
         {
             base.CreateIndexOperation_with_filter_where_clause();
 
-            Assert.Equal(
-                "CREATE INDEX [IX_People_Name] ON [People] ([Name]) WHERE [Name] IS NOT NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"CREATE INDEX [IX_People_Name] ON [People] ([Name]) WHERE [Name] IS NOT NULL;
+");
         }
 
         public override void CreateIndexOperation_with_filter_where_clause_and_is_unique()
         {
             base.CreateIndexOperation_with_filter_where_clause_and_is_unique();
 
-            Assert.Equal(
-                "CREATE UNIQUE INDEX [IX_People_Name] ON [People] ([Name]) WHERE [Name] IS NOT NULL AND <> '';" + EOL,
-                Sql);
+            AssertSql(
+                @"CREATE UNIQUE INDEX [IX_People_Name] ON [People] ([Name]) WHERE [Name] IS NOT NULL AND <> '';
+");
         }
 
-        [Fact]
+        [ConditionalFact]
+        public void AlterTableOperation_with_new_comment()
+        {
+            Generate(
+                new AlterTableOperation { Name = "People", Schema = "dbo", Comment = "My Comment" });
+
+            AssertSql(
+                @"EXEC sp_addextendedproperty 'MS_Description', N'My Comment', 'SCHEMA', N'dbo', 'TABLE', N'People';
+");
+        }
+
+        [ConditionalFact]
+        public void AlterTableOperation_with_different_comment_to_existing()
+        {
+            Generate(
+                modelBuilder => modelBuilder
+                    .HasAnnotation(CoreAnnotationNames.ProductVersion, "1.1.0")
+                    .Entity(
+                        "Person", x =>
+                        {
+                            x.HasComment("My Comment");
+                        }),
+                new AlterTableOperation
+                {
+                    Schema = "dbo", Name = "People", Comment = "My Comment 2", OldTable = new TableOperation { Comment = "My Comment" }
+                });
+
+            AssertSql(
+                @"EXEC sp_dropextendedproperty 'MS_Description', 'SCHEMA', N'dbo', 'TABLE', N'People';
+EXEC sp_addextendedproperty 'MS_Description', N'My Comment 2', 'SCHEMA', N'dbo', 'TABLE', N'People';
+");
+        }
+
+        [ConditionalFact]
+        public void AlterTableOperation_removing_comment()
+        {
+            Generate(
+                modelBuilder => modelBuilder
+                    .HasAnnotation(CoreAnnotationNames.ProductVersion, "1.1.0")
+                    .Entity(
+                        "Person", x =>
+                        {
+                            x.HasComment("My Comment");
+                        }),
+                new AlterTableOperation { Schema = "dbo", Name = "People", OldTable = new TableOperation { Comment = "My Comment" } });
+
+            AssertSql(
+                @"EXEC sp_dropextendedproperty 'MS_Description', 'SCHEMA', N'dbo', 'TABLE', N'People';
+");
+        }
+
+        [ConditionalFact]
         public virtual void AddColumnOperation_with_computedSql()
         {
             Generate(
                 new AddColumnOperation
                 {
-                    Table = "People",
-                    Name = "FullName",
-                    ClrType = typeof(string),
-                    ComputedColumnSql = "FirstName + ' ' + LastName"
+                    Table = "People", Name = "FullName", ClrType = typeof(string), ComputedColumnSql = "FirstName + ' ' + LastName"
                 });
 
-            Assert.Equal(
-                "ALTER TABLE [People] ADD [FullName] AS FirstName + ' ' + LastName;" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [People] ADD [FullName] AS FirstName + ' ' + LastName;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public void AddColumnOperation_with_computed_column_SQL()
         {
             Generate(
@@ -65,13 +226,33 @@ namespace Microsoft.EntityFrameworkCore
                     ComputedColumnSql = "CURRENT_TIMESTAMP"
                 });
 
-            Assert.Equal(
-                "ALTER TABLE [People] ADD [Birthday] AS CURRENT_TIMESTAMP;" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [People] ADD [Birthday] AS CURRENT_TIMESTAMP;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void AddColumnOperation_identity()
+        {
+            Generate(
+                new AddColumnOperation
+                {
+                    Table = "People",
+                    Name = "Id",
+                    ClrType = typeof(int),
+                    ColumnType = "int",
+                    DefaultValue = 0,
+                    IsNullable = false,
+                    [SqlServerAnnotationNames.Identity] = "1, 1"
+                });
+
+            AssertSql(
+                @"ALTER TABLE [People] ADD [Id] int NOT NULL IDENTITY;
+");
+        }
+
+        [ConditionalFact]
+        public virtual void AddColumnOperation_identity_legacy()
         {
             Generate(
                 new AddColumnOperation
@@ -86,11 +267,12 @@ namespace Microsoft.EntityFrameworkCore
                         SqlServerValueGenerationStrategy.IdentityColumn
                 });
 
-            Assert.Equal(
-                "ALTER TABLE [People] ADD [Id] int NOT NULL IDENTITY;" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [People] ADD [Id] int NOT NULL IDENTITY;
+");
         }
-        [Fact]
+
+        [ConditionalFact]
         public virtual void AddColumnOperation_identity_seed_increment()
         {
             Generate(
@@ -102,90 +284,127 @@ namespace Microsoft.EntityFrameworkCore
                     ColumnType = "int",
                     DefaultValue = 0,
                     IsNullable = false,
-                    [SqlServerAnnotationNames.ValueGenerationStrategy] =
-                        SqlServerValueGenerationStrategy.IdentityColumn,
-                    [SqlServerAnnotationNames.IdentitySeed] = 100,
-                    [SqlServerAnnotationNames.IdentityIncrement] = 5
+                    [SqlServerAnnotationNames.Identity] = "100,5"
                 });
 
-            Assert.Equal(
-                "ALTER TABLE [People] ADD [Id] int NOT NULL IDENTITY(100,5);" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [People] ADD [Id] int NOT NULL IDENTITY(100,5);
+");
         }
 
         public override void AddColumnOperation_without_column_type()
         {
             base.AddColumnOperation_without_column_type();
 
-            Assert.Equal(
-                "ALTER TABLE [People] ADD [Alias] nvarchar(max) NOT NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [People] ADD [Alias] nvarchar(max) NOT NULL;
+");
         }
 
         public override void AddColumnOperation_with_unicode_no_model()
         {
             base.AddColumnOperation_with_unicode_no_model();
 
-            Assert.Equal(
-                "ALTER TABLE [Person] ADD [Name] varchar(max) NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [Person] ADD [Name] varchar(max) NULL;
+");
         }
 
         public override void AddColumnOperation_with_maxLength()
         {
             base.AddColumnOperation_with_maxLength();
 
-            Assert.Equal(
-                "ALTER TABLE [Person] ADD [Name] nvarchar(30) NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [Person] ADD [Name] nvarchar(30) NULL;
+");
+        }
+
+        [ConditionalFact]
+        public virtual void AddColumnOperation_datetime_with_defaultValue()
+        {
+            Generate(
+                new AddColumnOperation
+                {
+                    Table = "People",
+                    Schema = "dbo",
+                    Name = "Birthday",
+                    ClrType = typeof(DateTime),
+                    ColumnType = "datetime",
+                    IsNullable = false,
+                    DefaultValue = new DateTime(2019, 1, 1)
+                });
+
+            AssertSql(
+                @"ALTER TABLE [dbo].[People] ADD [Birthday] datetime NOT NULL DEFAULT '2019-01-01T00:00:00.000';
+");
+        }
+
+        [ConditionalFact]
+        public virtual void AddColumnOperation_smalldatetime_with_defaultValue()
+        {
+            Generate(
+                new AddColumnOperation
+                {
+                    Table = "People",
+                    Schema = "dbo",
+                    Name = "Birthday",
+                    ClrType = typeof(DateTime),
+                    ColumnType = "smalldatetime",
+                    IsNullable = false,
+                    DefaultValue = new DateTime(2019, 1, 1)
+                });
+
+            AssertSql(
+                @"ALTER TABLE [dbo].[People] ADD [Birthday] smalldatetime NOT NULL DEFAULT '2019-01-01T00:00:00';
+");
         }
 
         public override void AddColumnOperation_with_maxLength_overridden()
         {
             base.AddColumnOperation_with_maxLength_overridden();
 
-            Assert.Equal(
-                "ALTER TABLE [Person] ADD [Name] nvarchar(32) NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [Person] ADD [Name] nvarchar(32) NULL;
+");
         }
 
         public override void AddColumnOperation_with_maxLength_on_derived()
         {
             base.AddColumnOperation_with_maxLength_on_derived();
 
-            Assert.Equal(
-                "ALTER TABLE [Person] ADD [Name] nvarchar(30) NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [Person] ADD [Name] nvarchar(30) NULL;
+");
         }
 
         public override void AddColumnOperation_with_ansi()
         {
             base.AddColumnOperation_with_ansi();
 
-            Assert.Equal(
-                "ALTER TABLE [Person] ADD [Name] varchar(max) NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [Person] ADD [Name] varchar(max) NULL;
+");
         }
 
         public override void AddColumnOperation_with_unicode_overridden()
         {
             base.AddColumnOperation_with_unicode_overridden();
 
-            Assert.Equal(
-                "ALTER TABLE [Person] ADD [Name] nvarchar(max) NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [Person] ADD [Name] nvarchar(max) NULL;
+");
         }
 
         public override void AddColumnOperation_with_shared_column()
         {
             base.AddColumnOperation_with_shared_column();
 
-            Assert.Equal(
-                "ALTER TABLE [Base] ADD [Foo] nvarchar(max) NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [Base] ADD [Foo] nvarchar(max) NULL;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void AddColumnOperation_with_rowversion_overridden()
         {
             Generate(
@@ -199,12 +418,12 @@ namespace Microsoft.EntityFrameworkCore
                     IsNullable = true
                 });
 
-            Assert.Equal(
-                "ALTER TABLE [Person] ADD [RowVersion] rowversion NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [Person] ADD [RowVersion] rowversion NULL;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void AddColumnOperation_with_rowversion_no_model()
         {
             Generate(
@@ -217,62 +436,108 @@ namespace Microsoft.EntityFrameworkCore
                     IsNullable = true
                 });
 
-            Assert.Equal(
-                "ALTER TABLE [Person] ADD [RowVersion] rowversion NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [Person] ADD [RowVersion] rowversion NULL;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
+        public virtual void AddColumnOperation_with_comment()
+        {
+            Generate(
+                new AddColumnOperation { Table = "People", Name = "FullName", ClrType = typeof(string), Comment = "My comment" });
+
+            AssertSql(
+                @"ALTER TABLE [People] ADD [FullName] nvarchar(max) NOT NULL;
+DECLARE @defaultSchema AS sysname;
+SET @defaultSchema = SCHEMA_NAME();
+EXEC sp_addextendedproperty 'MS_Description', N'My comment', 'SCHEMA', @defaultSchema, 'TABLE', N'People', 'COLUMN', N'FullName';
+");
+        }
+
+        [ConditionalFact]
+        public virtual void AddColumnOperation_with_comment_non_default_schema()
+        {
+            Generate(
+                new AddColumnOperation
+                {
+                    Schema = "my",
+                    Table = "People",
+                    Name = "FullName",
+                    ClrType = typeof(string),
+                    Comment = "My comment"
+                });
+
+            AssertSql(
+                @"ALTER TABLE [my].[People] ADD [FullName] nvarchar(max) NOT NULL;
+EXEC sp_addextendedproperty 'MS_Description', N'My comment', 'SCHEMA', N'my', 'TABLE', N'People', 'COLUMN', N'FullName';
+");
+        }
+
+        [ConditionalFact]
         public virtual void AddPrimaryKeyOperation_nonclustered()
         {
             Generate(
-                new AddPrimaryKeyOperation
-                {
-                    Table = "People",
-                    Columns = new[] { "Id" },
-                    [SqlServerAnnotationNames.Clustered] = false
-                });
+                new AddPrimaryKeyOperation { Table = "People", Columns = new[] { "Id" }, [SqlServerAnnotationNames.Clustered] = false });
 
-            Assert.Equal(
-                "ALTER TABLE [People] ADD PRIMARY KEY NONCLUSTERED ([Id]);" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [People] ADD PRIMARY KEY NONCLUSTERED ([Id]);
+");
         }
 
         public override void AlterColumnOperation()
         {
             base.AlterColumnOperation();
 
-            Assert.Equal(
-                "DECLARE @var0 sysname;" + EOL +
-                "SELECT @var0 = [d].[name]" + EOL +
-                "FROM [sys].[default_constraints] [d]" + EOL +
-                "INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]"
-                + EOL +
-                "WHERE ([d].[parent_object_id] = OBJECT_ID(N'[dbo].[People]') AND [c].[name] = N'LuckyNumber');" + EOL +
-                "IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [dbo].[People] DROP CONSTRAINT [' + @var0 + '];');" + EOL +
-                "ALTER TABLE [dbo].[People] ALTER COLUMN [LuckyNumber] int NOT NULL;" + EOL +
-                "ALTER TABLE [dbo].[People] ADD DEFAULT 7 FOR [LuckyNumber];" + EOL,
-                Sql);
+            AssertSql(
+                @"DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[dbo].[People]') AND [c].[name] = N'LuckyNumber');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [dbo].[People] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [dbo].[People] ALTER COLUMN [LuckyNumber] int NOT NULL;
+ALTER TABLE [dbo].[People] ADD DEFAULT 7 FOR [LuckyNumber];
+");
         }
 
         public override void AlterColumnOperation_without_column_type()
         {
             base.AlterColumnOperation_without_column_type();
 
-            Assert.Equal(
-                "DECLARE @var0 sysname;" + EOL +
-                "SELECT @var0 = [d].[name]" + EOL +
-                "FROM [sys].[default_constraints] [d]" + EOL +
-                "INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]"
-                + EOL +
-                "WHERE ([d].[parent_object_id] = OBJECT_ID(N'[People]') AND [c].[name] = N'LuckyNumber');" + EOL +
-                "IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [People] DROP CONSTRAINT [' + @var0 + '];');" + EOL +
-                "ALTER TABLE [People] ALTER COLUMN [LuckyNumber] int NOT NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[People]') AND [c].[name] = N'LuckyNumber');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [People] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [People] ALTER COLUMN [LuckyNumber] int NOT NULL;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void AlterColumnOperation_with_identity()
+        {
+            Generate(
+                new AlterColumnOperation
+                {
+                    Table = "People", Name = "Id", ClrType = typeof(int), [SqlServerAnnotationNames.Identity] = "1, 1"
+                });
+
+            AssertSql(
+                @"DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[People]') AND [c].[name] = N'Id');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [People] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [People] ALTER COLUMN [Id] int NOT NULL;
+");
+        }
+
+        [ConditionalFact]
+        public virtual void AlterColumnOperation_with_identity_legacy()
         {
             Generate(
                 new AlterColumnOperation
@@ -284,44 +549,39 @@ namespace Microsoft.EntityFrameworkCore
                         SqlServerValueGenerationStrategy.IdentityColumn
                 });
 
-            Assert.Equal(
-                "DECLARE @var0 sysname;" + EOL +
-                "SELECT @var0 = [d].[name]" + EOL +
-                "FROM [sys].[default_constraints] [d]" + EOL +
-                "INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]"
-                + EOL +
-                "WHERE ([d].[parent_object_id] = OBJECT_ID(N'[People]') AND [c].[name] = N'Id');" + EOL +
-                "IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [People] DROP CONSTRAINT [' + @var0 + '];');" + EOL +
-                "ALTER TABLE [People] ALTER COLUMN [Id] int NOT NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[People]') AND [c].[name] = N'Id');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [People] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [People] ALTER COLUMN [Id] int NOT NULL;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public void AlterColumnOperation_computed()
         {
             Generate(
                 new AlterColumnOperation
                 {
-                    Table = "People",
-                    Name = "FullName",
-                    ClrType = typeof(string),
-                    ComputedColumnSql = "[FirstName] + ' ' + [LastName]"
+                    Table = "People", Name = "FullName", ClrType = typeof(string), ComputedColumnSql = "[FirstName] + ' ' + [LastName]"
                 });
 
-            Assert.Equal(
-                "DECLARE @var0 sysname;" + EOL +
-                "SELECT @var0 = [d].[name]" + EOL +
-                "FROM [sys].[default_constraints] [d]" + EOL +
-                "INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]"
-                + EOL +
-                "WHERE ([d].[parent_object_id] = OBJECT_ID(N'[People]') AND [c].[name] = N'FullName');" + EOL +
-                "IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [People] DROP CONSTRAINT [' + @var0 + '];');" + EOL +
-                "ALTER TABLE [People] DROP COLUMN [FullName];" + EOL +
-                "ALTER TABLE [People] ADD [FullName] AS [FirstName] + ' ' + [LastName];" + EOL,
-                Sql);
+            AssertSql(
+                @"DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[People]') AND [c].[name] = N'FullName');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [People] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [People] DROP COLUMN [FullName];
+ALTER TABLE [People] ADD [FullName] AS [FirstName] + ' ' + [LastName];
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void AlterColumnOperation_computed_with_index()
         {
             Generate(
@@ -340,30 +600,27 @@ namespace Microsoft.EntityFrameworkCore
                     Name = "FullName",
                     ClrType = typeof(string),
                     ComputedColumnSql = "[FirstName] + ' ' + [LastName]",
-                    OldColumn = new ColumnOperation
-                    {
-                        ClrType = typeof(string),
-                        ComputedColumnSql = "[LastName] + ', ' + [FirstName]"
-                    }
+                    OldColumn = new ColumnOperation { ClrType = typeof(string), ComputedColumnSql = "[LastName] + ', ' + [FirstName]" }
                 });
 
-            Assert.Equal(
-                "DROP INDEX [IX_Person_FullName] ON [Person];" + EOL +
-                "DECLARE @var0 sysname;" + EOL +
-                "SELECT @var0 = [d].[name]" + EOL +
-                "FROM [sys].[default_constraints] [d]" + EOL +
-                "INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]"
-                + EOL +
-                "WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'FullName');" + EOL +
-                "IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');" + EOL +
-                "ALTER TABLE [Person] DROP COLUMN [FullName];" + EOL +
-                "ALTER TABLE [Person] ADD [FullName] AS [FirstName] + ' ' + [LastName];" + EOL +
-                "CREATE INDEX [IX_Person_FullName] ON [Person] ([FullName]);" + EOL,
-                Sql);
+            AssertSql(
+                @"DROP INDEX [IX_Person_FullName] ON [Person];
+DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'FullName');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [Person] DROP COLUMN [FullName];
+ALTER TABLE [Person] ADD [FullName] AS [FirstName] + ' ' + [LastName];
+CREATE INDEX [IX_Person_FullName] ON [Person] ([FullName]);
+");
         }
 
-        [Fact]
-        public virtual void AlterColumnOperation_memoryOptimized_with_index()
+        [ConditionalTheory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public virtual void AlterColumnOperation_memoryOptimized_with_index(bool obsolete)
         {
             Generate(
                 modelBuilder => modelBuilder
@@ -371,7 +628,17 @@ namespace Microsoft.EntityFrameworkCore
                     .Entity(
                         "Person", x =>
                         {
-                            x.ForSqlServerIsMemoryOptimized();
+                            if (obsolete)
+                            {
+#pragma warning disable 618
+                                x.ForSqlServerIsMemoryOptimized();
+#pragma warning restore 618
+                            }
+                            else
+                            {
+                                x.IsMemoryOptimized();
+                            }
+
                             x.Property<string>("Name");
                             x.HasKey("Name");
                             x.HasIndex("Name");
@@ -382,27 +649,23 @@ namespace Microsoft.EntityFrameworkCore
                     Name = "Name",
                     ClrType = typeof(string),
                     MaxLength = 30,
-                    OldColumn = new ColumnOperation
-                    {
-                        ClrType = typeof(string)
-                    }
+                    OldColumn = new ColumnOperation { ClrType = typeof(string) }
                 });
 
-            Assert.Equal(
-                "ALTER TABLE [Person] DROP INDEX [IX_Person_Name];" + EOL +
-                "DECLARE @var0 sysname;" + EOL +
-                "SELECT @var0 = [d].[name]" + EOL +
-                "FROM [sys].[default_constraints] [d]" + EOL +
-                "INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]"
-                + EOL +
-                "WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Name');" + EOL +
-                "IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');" + EOL +
-                "ALTER TABLE [Person] ALTER COLUMN [Name] nvarchar(30) NOT NULL;" + EOL +
-                "ALTER TABLE [Person] ADD INDEX [IX_Person_Name] NONCLUSTERED ([Name]);" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [Person] DROP INDEX [IX_Person_Name];
+DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Name');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [Person] ALTER COLUMN [Name] nvarchar(30) NOT NULL;
+ALTER TABLE [Person] ADD INDEX [IX_Person_Name] NONCLUSTERED ([Name]);
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void AlterColumnOperation_with_index_no_narrowing()
         {
             Generate(
@@ -421,26 +684,21 @@ namespace Microsoft.EntityFrameworkCore
                     Name = "Name",
                     ClrType = typeof(string),
                     IsNullable = true,
-                    OldColumn = new ColumnOperation
-                    {
-                        ClrType = typeof(string),
-                        IsNullable = false
-                    }
+                    OldColumn = new ColumnOperation { ClrType = typeof(string), IsNullable = false }
                 });
 
-            Assert.Equal(
-                "DECLARE @var0 sysname;" + EOL +
-                "SELECT @var0 = [d].[name]" + EOL +
-                "FROM [sys].[default_constraints] [d]" + EOL +
-                "INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]"
-                + EOL +
-                "WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Name');" + EOL +
-                "IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');" + EOL +
-                "ALTER TABLE [Person] ALTER COLUMN [Name] nvarchar(450) NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Name');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [Person] ALTER COLUMN [Name] nvarchar(450) NULL;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void AlterColumnOperation_with_index()
         {
             Generate(
@@ -460,29 +718,26 @@ namespace Microsoft.EntityFrameworkCore
                     ClrType = typeof(string),
                     MaxLength = 30,
                     IsNullable = true,
-                    OldColumn = new ColumnOperation
-                    {
-                        ClrType = typeof(string),
-                        IsNullable = true
-                    }
+                    OldColumn = new ColumnOperation { ClrType = typeof(string), IsNullable = true }
                 });
 
-            Assert.Equal(
-                "DROP INDEX [IX_Person_Name] ON [Person];" + EOL +
-                "DECLARE @var0 sysname;" + EOL +
-                "SELECT @var0 = [d].[name]" + EOL +
-                "FROM [sys].[default_constraints] [d]" + EOL +
-                "INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]"
-                + EOL +
-                "WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Name');" + EOL +
-                "IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');" + EOL +
-                "ALTER TABLE [Person] ALTER COLUMN [Name] nvarchar(30) NULL;" + EOL +
-                "CREATE INDEX [IX_Person_Name] ON [Person] ([Name]);" + EOL,
-                Sql);
+            AssertSql(
+                @"DROP INDEX [IX_Person_Name] ON [Person];
+DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Name');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [Person] ALTER COLUMN [Name] nvarchar(30) NULL;
+CREATE INDEX [IX_Person_Name] ON [Person] ([Name]);
+");
         }
 
-        [Fact]
-        public virtual void AlterColumnOperation_with_index_included_column()
+        [ConditionalTheory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public virtual void AlterColumnOperation_with_index_included_column(bool obsolete)
         {
             Generate(
                 modelBuilder => modelBuilder
@@ -494,8 +749,17 @@ namespace Microsoft.EntityFrameworkCore
                             x.Property<string>("FirstName");
                             x.Property<string>("LastName");
                             x.HasKey("Name");
-                            x.HasIndex("FirstName", "LastName")
-                                .ForSqlServerInclude("Name");
+
+                            if (obsolete)
+                            {
+#pragma warning disable 618
+                                x.HasIndex("FirstName", "LastName").ForSqlServerInclude("Name");
+#pragma warning restore 618
+                            }
+                            else
+                            {
+                                x.HasIndex("FirstName", "LastName").IncludeProperties("Name");
+                            }
                         }),
                 new AlterColumnOperation
                 {
@@ -504,28 +768,23 @@ namespace Microsoft.EntityFrameworkCore
                     ClrType = typeof(string),
                     MaxLength = 30,
                     IsNullable = true,
-                    OldColumn = new ColumnOperation
-                    {
-                        ClrType = typeof(string),
-                        IsNullable = true
-                    }
+                    OldColumn = new ColumnOperation { ClrType = typeof(string), IsNullable = true }
                 });
 
-            Assert.Equal(
-                "DROP INDEX [IX_Person_FirstName_LastName] ON [Person];" + EOL +
-                "DECLARE @var0 sysname;" + EOL +
-                "SELECT @var0 = [d].[name]" + EOL +
-                "FROM [sys].[default_constraints] [d]" + EOL +
-                "INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]"
-                + EOL +
-                "WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Name');" + EOL +
-                "IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');" + EOL +
-                "ALTER TABLE [Person] ALTER COLUMN [Name] nvarchar(30) NULL;" + EOL +
-                "CREATE INDEX [IX_Person_FirstName_LastName] ON [Person] ([FirstName], [LastName]) INCLUDE ([Name]);" + EOL,
-                Sql);
+            AssertSql(
+                @"DROP INDEX [IX_Person_FirstName_LastName] ON [Person];
+DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Name');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [Person] ALTER COLUMN [Name] nvarchar(30) NULL;
+CREATE INDEX [IX_Person_FirstName_LastName] ON [Person] ([FirstName], [LastName]) INCLUDE ([Name]);
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void AlterColumnOperation_with_index_no_included()
         {
             Generate(
@@ -546,26 +805,21 @@ namespace Microsoft.EntityFrameworkCore
                     ClrType = typeof(string),
                     MaxLength = 30,
                     IsNullable = true,
-                    OldColumn = new ColumnOperation
-                    {
-                        ClrType = typeof(string),
-                        IsNullable = true
-                    }
+                    OldColumn = new ColumnOperation { ClrType = typeof(string), IsNullable = true }
                 });
 
-            Assert.Equal(
-                "DECLARE @var0 sysname;" + EOL +
-                "SELECT @var0 = [d].[name]" + EOL +
-                "FROM [sys].[default_constraints] [d]" + EOL +
-                "INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]"
-                + EOL +
-                "WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Name');" + EOL +
-                "IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');" + EOL +
-                "ALTER TABLE [Person] ALTER COLUMN [Name] nvarchar(30) NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Name');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [Person] ALTER COLUMN [Name] nvarchar(30) NULL;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void AlterColumnOperation_with_index_no_oldColumn()
         {
             Generate(
@@ -587,19 +841,18 @@ namespace Microsoft.EntityFrameworkCore
                     OldColumn = new ColumnOperation()
                 });
 
-            Assert.Equal(
-                "DECLARE @var0 sysname;" + EOL +
-                "SELECT @var0 = [d].[name]" + EOL +
-                "FROM [sys].[default_constraints] [d]" + EOL +
-                "INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]"
-                + EOL +
-                "WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Name');" + EOL +
-                "IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');" + EOL +
-                "ALTER TABLE [Person] ALTER COLUMN [Name] nvarchar(30) NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Name');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [Person] ALTER COLUMN [Name] nvarchar(30) NULL;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void AlterColumnOperation_with_composite_index()
         {
             Generate(
@@ -619,28 +872,23 @@ namespace Microsoft.EntityFrameworkCore
                     Name = "FirstName",
                     ClrType = typeof(string),
                     IsNullable = false,
-                    OldColumn = new ColumnOperation
-                    {
-                        ClrType = typeof(string),
-                        IsNullable = true
-                    }
+                    OldColumn = new ColumnOperation { ClrType = typeof(string), IsNullable = true }
                 });
 
-            Assert.Equal(
-                "DROP INDEX [IX_Person_FirstName_LastName] ON [Person];" + EOL +
-                "DECLARE @var0 sysname;" + EOL +
-                "SELECT @var0 = [d].[name]" + EOL +
-                "FROM [sys].[default_constraints] [d]" + EOL +
-                "INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]"
-                + EOL +
-                "WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'FirstName');" + EOL +
-                "IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');" + EOL +
-                "ALTER TABLE [Person] ALTER COLUMN [FirstName] nvarchar(450) NOT NULL;" + EOL +
-                "CREATE INDEX [IX_Person_FirstName_LastName] ON [Person] ([FirstName], [LastName]);" + EOL,
-                Sql);
+            AssertSql(
+                @"DROP INDEX [IX_Person_FirstName_LastName] ON [Person];
+DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'FirstName');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [Person] ALTER COLUMN [FirstName] nvarchar(450) NOT NULL;
+CREATE INDEX [IX_Person_FirstName_LastName] ON [Person] ([FirstName], [LastName]);
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void AlterColumnOperation_with_added_index()
         {
             Generate(
@@ -659,36 +907,28 @@ namespace Microsoft.EntityFrameworkCore
                     ClrType = typeof(string),
                     MaxLength = 30,
                     IsNullable = true,
-                    OldColumn = new ColumnOperation
-                    {
-                        ClrType = typeof(string),
-                        IsNullable = true
-                    }
+                    OldColumn = new ColumnOperation { ClrType = typeof(string), IsNullable = true }
                 },
-                new CreateIndexOperation
-                {
-                    Name = "IX_Person_Name",
-                    Table = "Person",
-                    Columns = new[] { "Name" }
-                });
+                new CreateIndexOperation { Name = "IX_Person_Name", Table = "Person", Columns = new[] { "Name" } });
 
-            Assert.Equal(
-                "DECLARE @var0 sysname;" + EOL +
-                "SELECT @var0 = [d].[name]" + EOL +
-                "FROM [sys].[default_constraints] [d]" + EOL +
-                "INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]"
-                + EOL +
-                "WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Name');" + EOL +
-                "IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');" + EOL +
-                "ALTER TABLE [Person] ALTER COLUMN [Name] nvarchar(30) NULL;" + EOL +
-                "GO" + EOL +
-                EOL +
-                "CREATE INDEX [IX_Person_Name] ON [Person] ([Name]);" + EOL,
-                Sql);
+            AssertSql(
+                @"DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Name');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [Person] ALTER COLUMN [Name] nvarchar(30) NULL;
+GO
+
+CREATE INDEX [IX_Person_Name] ON [Person] ([Name]);
+");
         }
 
-        [Fact]
-        public virtual void AlterColumnOperation_with_added_online_index()
+        [ConditionalTheory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public virtual void AlterColumnOperation_with_added_online_index(bool obsolete)
         {
             Generate(
                 modelBuilder => modelBuilder
@@ -697,7 +937,17 @@ namespace Microsoft.EntityFrameworkCore
                         "Person", x =>
                         {
                             x.Property<string>("Name").HasMaxLength(30);
-                            x.HasIndex("Name").ForSqlServerIsOnline();
+
+                            if (obsolete)
+                            {
+#pragma warning disable 618
+                                x.HasIndex("Name").ForSqlServerIsCreatedOnline();
+#pragma warning restore 618
+                            }
+                            else
+                            {
+                                x.HasIndex("Name").IsCreatedOnline();
+                            }
                         }),
                 new AlterColumnOperation
                 {
@@ -706,37 +956,57 @@ namespace Microsoft.EntityFrameworkCore
                     ClrType = typeof(string),
                     MaxLength = 30,
                     IsNullable = true,
-                    OldColumn = new ColumnOperation
-                    {
-                        ClrType = typeof(string),
-                        IsNullable = true
-                    }
+                    OldColumn = new ColumnOperation { ClrType = typeof(string), IsNullable = true }
                 },
                 new CreateIndexOperation
                 {
                     Name = "IX_Person_Name",
                     Table = "Person",
                     Columns = new[] { "Name" },
-                    [SqlServerAnnotationNames.Online] = true
+                    [SqlServerAnnotationNames.CreatedOnline] = true
                 });
 
-            Assert.Equal(
-                "DECLARE @var0 sysname;" + EOL +
-                "SELECT @var0 = [d].[name]" + EOL +
-                "FROM [sys].[default_constraints] [d]" + EOL +
-                "INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]"
-                + EOL +
-                "WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Name');" + EOL +
-                "IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');" + EOL +
-                "ALTER TABLE [Person] ALTER COLUMN [Name] nvarchar(30) NULL;" + EOL +
-                "GO" + EOL +
-                EOL +
-                "CREATE INDEX [IX_Person_Name] ON [Person] ([Name]) WITH (ONLINE = ON);" + EOL,
-                Sql);
+            AssertSql(
+                @"DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Name');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [Person] ALTER COLUMN [Name] nvarchar(30) NULL;
+GO
+
+CREATE INDEX [IX_Person_Name] ON [Person] ([Name]) WITH (ONLINE = ON);
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void AlterColumnOperation_identity()
+        {
+            Generate(
+                modelBuilder => modelBuilder.HasAnnotation(CoreAnnotationNames.ProductVersion, "1.1.0"),
+                new AlterColumnOperation
+                {
+                    Table = "Person",
+                    Name = "Id",
+                    ClrType = typeof(long),
+                    [SqlServerAnnotationNames.Identity] = "1, 1",
+                    OldColumn = new ColumnOperation { ClrType = typeof(int), [SqlServerAnnotationNames.Identity] = "1, 1" }
+                });
+
+            AssertSql(
+                @"DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Id');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [Person] ALTER COLUMN [Id] bigint NOT NULL;
+");
+        }
+
+        [ConditionalFact]
+        public virtual void AlterColumnOperation_identity_legacy()
         {
             Generate(
                 modelBuilder => modelBuilder.HasAnnotation(CoreAnnotationNames.ProductVersion, "1.1.0"),
@@ -753,19 +1023,18 @@ namespace Microsoft.EntityFrameworkCore
                     }
                 });
 
-            Assert.Equal(
-                "DECLARE @var0 sysname;" + EOL +
-                "SELECT @var0 = [d].[name]" + EOL +
-                "FROM [sys].[default_constraints] [d]" + EOL +
-                "INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]"
-                + EOL +
-                "WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Id');" + EOL +
-                "IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');" + EOL +
-                "ALTER TABLE [Person] ALTER COLUMN [Id] bigint NOT NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Person]') AND [c].[name] = N'Id');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Person] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [Person] ALTER COLUMN [Id] bigint NOT NULL;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void AlterColumnOperation_add_identity()
         {
             var ex = Assert.Throws<InvalidOperationException>(
@@ -776,18 +1045,50 @@ namespace Microsoft.EntityFrameworkCore
                         Table = "Person",
                         Name = "Id",
                         ClrType = typeof(int),
-                        [SqlServerAnnotationNames.ValueGenerationStrategy] = SqlServerValueGenerationStrategy.IdentityColumn,
-                        OldColumn = new ColumnOperation
-                        {
-                            ClrType = typeof(int)
-                        }
+                        [SqlServerAnnotationNames.Identity] = "1, 1",
+                        OldColumn = new ColumnOperation { ClrType = typeof(int) }
                     }));
 
             Assert.Equal(SqlServerStrings.AlterIdentityColumn, ex.Message);
         }
 
-        [Fact]
+        [ConditionalFact]
+        public virtual void AlterColumnOperation_add_identity_legacy()
+        {
+            var ex = Assert.Throws<InvalidOperationException>(
+                () => Generate(
+                    modelBuilder => modelBuilder.HasAnnotation(CoreAnnotationNames.ProductVersion, "1.1.0"),
+                    new AlterColumnOperation
+                    {
+                        Table = "Person",
+                        Name = "Id",
+                        ClrType = typeof(int),
+                        [SqlServerAnnotationNames.ValueGenerationStrategy] = SqlServerValueGenerationStrategy.IdentityColumn,
+                        OldColumn = new ColumnOperation { ClrType = typeof(int) }
+                    }));
+
+            Assert.Equal(SqlServerStrings.AlterIdentityColumn, ex.Message);
+        }
+
+        [ConditionalFact]
         public virtual void AlterColumnOperation_remove_identity()
+        {
+            var ex = Assert.Throws<InvalidOperationException>(
+                () => Generate(
+                    modelBuilder => modelBuilder.HasAnnotation(CoreAnnotationNames.ProductVersion, "1.1.0"),
+                    new AlterColumnOperation
+                    {
+                        Table = "Person",
+                        Name = "Id",
+                        ClrType = typeof(int),
+                        OldColumn = new ColumnOperation { ClrType = typeof(int), [SqlServerAnnotationNames.Identity] = "1, 1" }
+                    }));
+
+            Assert.Equal(SqlServerStrings.AlterIdentityColumn, ex.Message);
+        }
+
+        [ConditionalFact]
+        public virtual void AlterColumnOperation_remove_identity_legacy()
         {
             var ex = Assert.Throws<InvalidOperationException>(
                 () => Generate(
@@ -807,81 +1108,165 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Equal(SqlServerStrings.AlterIdentityColumn, ex.Message);
         }
 
-        [Fact]
+        [ConditionalFact]
+        public void AlterColumnOperation_with_new_comment()
+        {
+            Generate(
+                new AlterColumnOperation
+                {
+                    Table = "People",
+                    Schema = "dbo",
+                    Name = "LuckyNumber",
+                    ClrType = typeof(int),
+                    ColumnType = "int",
+                    IsNullable = false,
+                    Comment = "My Comment"
+                });
+
+            AssertSql(
+                @"DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[dbo].[People]') AND [c].[name] = N'LuckyNumber');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [dbo].[People] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [dbo].[People] ALTER COLUMN [LuckyNumber] int NOT NULL;
+EXEC sp_addextendedproperty 'MS_Description', N'My Comment', 'SCHEMA', N'dbo', 'TABLE', N'People', 'COLUMN', N'LuckyNumber';
+");
+        }
+
+        [ConditionalFact]
+        public void AlterColumnOperation_with_different_comment_to_existing()
+        {
+            Generate(
+                modelBuilder => modelBuilder
+                    .HasAnnotation(CoreAnnotationNames.ProductVersion, "1.1.0")
+                    .Entity(
+                        "Person", x =>
+                        {
+                            x.Property<string>("Name").HasComment("My Comment");
+                        }),
+                new AlterColumnOperation
+                {
+                    Table = "People",
+                    Schema = "dbo",
+                    Name = "Name",
+                    ClrType = typeof(string),
+                    IsNullable = false,
+                    Comment = "My Comment 2",
+                    OldColumn = new ColumnOperation { ClrType = typeof(string), IsNullable = true, Comment = "My Comment" }
+                });
+
+            AssertSql(
+                @"DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[dbo].[People]') AND [c].[name] = N'Name');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [dbo].[People] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [dbo].[People] ALTER COLUMN [Name] nvarchar(max) NOT NULL;
+EXEC sp_dropextendedproperty 'MS_Description', 'SCHEMA', N'dbo', 'TABLE', N'People', 'COLUMN', N'Name';
+EXEC sp_addextendedproperty 'MS_Description', N'My Comment 2', 'SCHEMA', N'dbo', 'TABLE', N'People', 'COLUMN', N'Name';
+");
+        }
+
+        [ConditionalFact]
+        public void AlterColumnOperation_removing_comment()
+        {
+            Generate(
+                modelBuilder => modelBuilder
+                    .HasAnnotation(CoreAnnotationNames.ProductVersion, "1.1.0")
+                    .Entity(
+                        "Person", x =>
+                        {
+                            x.Property<string>("Name").HasComment("My Comment");
+                        }),
+                new AlterColumnOperation
+                {
+                    Table = "People",
+                    Schema = "dbo",
+                    Name = "Name",
+                    ClrType = typeof(string),
+                    IsNullable = false,
+                    OldColumn = new ColumnOperation { ClrType = typeof(string), IsNullable = true, Comment = "My Comment" }
+                });
+
+            AssertSql(
+                @"DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[dbo].[People]') AND [c].[name] = N'Name');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [dbo].[People] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [dbo].[People] ALTER COLUMN [Name] nvarchar(max) NOT NULL;
+EXEC sp_dropextendedproperty 'MS_Description', 'SCHEMA', N'dbo', 'TABLE', N'People', 'COLUMN', N'Name';
+");
+        }
+
+        [ConditionalFact]
         public virtual void CreateDatabaseOperation()
         {
             Generate(
-                new SqlServerCreateDatabaseOperation
-                {
-                    Name = "Northwind"
-                });
+                new SqlServerCreateDatabaseOperation { Name = "Northwind" });
 
-            Assert.Equal(
-                "CREATE DATABASE [Northwind];" + EOL +
-                "GO" + EOL +
-                EOL +
-                "IF SERVERPROPERTY('EngineEdition') <> 5" + EOL +
-                "BEGIN" + EOL +
-                "    ALTER DATABASE [Northwind] SET READ_COMMITTED_SNAPSHOT ON;" + EOL +
-                "END;" + EOL,
-                Sql);
+            AssertSql(
+                @"CREATE DATABASE [Northwind];
+GO
+
+IF SERVERPROPERTY('EngineEdition') <> 5
+BEGIN
+    ALTER DATABASE [Northwind] SET READ_COMMITTED_SNAPSHOT ON;
+END;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void CreateDatabaseOperation_with_filename()
         {
             Generate(
-                new SqlServerCreateDatabaseOperation
-                {
-                    Name = "Northwind",
-                    FileName = "Narf.mdf"
-                });
+                new SqlServerCreateDatabaseOperation { Name = "Northwind", FileName = "Narf.mdf" });
 
             var expectedFile = Path.GetFullPath("Narf.mdf");
             var expectedLog = Path.GetFullPath("Narf_log.ldf");
 
-            Assert.Equal(
-                "CREATE DATABASE [Northwind]" + EOL +
-                "ON (NAME = N'Narf', FILENAME = N'" + expectedFile + "')" + EOL +
-                "LOG ON (NAME = N'Narf_log', FILENAME = N'" + expectedLog + "');" + EOL +
-                "GO" + EOL +
-                EOL +
-                "IF SERVERPROPERTY('EngineEdition') <> 5" + EOL +
-                "BEGIN" + EOL +
-                "    ALTER DATABASE [Northwind] SET READ_COMMITTED_SNAPSHOT ON;" + EOL +
-                "END;" + EOL,
-                Sql);
+            AssertSql(
+                $@"CREATE DATABASE [Northwind]
+ON (NAME = N'Narf', FILENAME = N'{expectedFile}')
+LOG ON (NAME = N'Narf_log', FILENAME = N'{expectedLog}');
+GO
+
+IF SERVERPROPERTY('EngineEdition') <> 5
+BEGIN
+    ALTER DATABASE [Northwind] SET READ_COMMITTED_SNAPSHOT ON;
+END;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void CreateDatabaseOperation_with_filename_and_datadirectory()
         {
             var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
             Generate(
-                new SqlServerCreateDatabaseOperation
-                {
-                    Name = "Northwind",
-                    FileName = "|DataDirectory|Narf.mdf"
-                });
+                new SqlServerCreateDatabaseOperation { Name = "Northwind", FileName = "|DataDirectory|Narf.mdf" });
 
             var expectedFile = Path.Combine(baseDirectory, "Narf.mdf");
             var expectedLog = Path.Combine(baseDirectory, "Narf_log.ldf");
 
-            Assert.Equal(
-                "CREATE DATABASE [Northwind]" + EOL +
-                "ON (NAME = N'Narf', FILENAME = N'" + expectedFile + "')" + EOL +
-                "LOG ON (NAME = N'Narf_log', FILENAME = N'" + expectedLog + "');" + EOL +
-                "GO" + EOL +
-                EOL +
-                "IF SERVERPROPERTY('EngineEdition') <> 5" + EOL +
-                "BEGIN" + EOL +
-                "    ALTER DATABASE [Northwind] SET READ_COMMITTED_SNAPSHOT ON;" + EOL +
-                "END;" + EOL,
-                Sql);
+            AssertSql(
+                $@"CREATE DATABASE [Northwind]
+ON (NAME = N'Narf', FILENAME = N'{expectedFile}')
+LOG ON (NAME = N'Narf_log', FILENAME = N'{expectedLog}');
+GO
+
+IF SERVERPROPERTY('EngineEdition') <> 5
+BEGIN
+    ALTER DATABASE [Northwind] SET READ_COMMITTED_SNAPSHOT ON;
+END;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void CreateDatabaseOperation_with_filename_and_custom_datadirectory()
         {
             var dataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
@@ -889,38 +1274,31 @@ namespace Microsoft.EntityFrameworkCore
             AppDomain.CurrentDomain.SetData("DataDirectory", dataDirectory);
 
             Generate(
-                new SqlServerCreateDatabaseOperation
-                {
-                    Name = "Northwind",
-                    FileName = "|DataDirectory|Narf.mdf"
-                });
+                new SqlServerCreateDatabaseOperation { Name = "Northwind", FileName = "|DataDirectory|Narf.mdf" });
 
             AppDomain.CurrentDomain.SetData("DataDirectory", null);
 
             var expectedFile = Path.Combine(dataDirectory, "Narf.mdf");
             var expectedLog = Path.Combine(dataDirectory, "Narf_log.ldf");
 
-            Assert.Equal(
-                "CREATE DATABASE [Northwind]" + EOL +
-                "ON (NAME = N'Narf', FILENAME = N'" + expectedFile + "')" + EOL +
-                "LOG ON (NAME = N'Narf_log', FILENAME = N'" + expectedLog + "');" + EOL +
-                "GO" + EOL +
-                EOL +
-                "IF SERVERPROPERTY('EngineEdition') <> 5" + EOL +
-                "BEGIN" + EOL +
-                "    ALTER DATABASE [Northwind] SET READ_COMMITTED_SNAPSHOT ON;" + EOL +
-                "END;" + EOL,
-                Sql);
+            AssertSql(
+                $@"CREATE DATABASE [Northwind]
+ON (NAME = N'Narf', FILENAME = N'{expectedFile}')
+LOG ON (NAME = N'Narf_log', FILENAME = N'{expectedLog}');
+GO
+
+IF SERVERPROPERTY('EngineEdition') <> 5
+BEGIN
+    ALTER DATABASE [Northwind] SET READ_COMMITTED_SNAPSHOT ON;
+END;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void AlterDatabaseOperationOperation()
         {
             Generate(
-                new AlterDatabaseOperation
-                {
-                    [SqlServerAnnotationNames.MemoryOptimized] = true
-                });
+                new AlterDatabaseOperation { [SqlServerAnnotationNames.MemoryOptimized] = true });
 
             Assert.Contains(
                 "CONTAINS MEMORY_OPTIMIZED_DATA;",
@@ -931,22 +1309,21 @@ namespace Microsoft.EntityFrameworkCore
         {
             base.CreateIndexOperation_nonunique();
 
-            Assert.Equal(
-                "CREATE INDEX [IX_People_Name] ON [People] ([Name]);" + EOL,
-                Sql);
+            AssertSql(
+                @"CREATE INDEX [IX_People_Name] ON [People] ([Name]);
+");
         }
 
         public override void CreateIndexOperation_unique()
         {
             base.CreateIndexOperation_unique();
 
-            Assert.Equal(
-                "CREATE UNIQUE INDEX [IX_People_Name] ON [dbo].[People] ([FirstName], [LastName]) WHERE [FirstName] IS NOT NULL AND [LastName] IS NOT NULL;"
-                + EOL,
-                Sql);
+            AssertSql(
+                @"CREATE UNIQUE INDEX [IX_People_Name] ON [dbo].[People] ([FirstName], [LastName]) WHERE [FirstName] IS NOT NULL AND [LastName] IS NOT NULL;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void CreateIndexOperation_unique_non_legacy()
         {
             Generate(
@@ -960,29 +1337,26 @@ namespace Microsoft.EntityFrameworkCore
                     IsUnique = true
                 });
 
-            Assert.Equal(
-                "CREATE UNIQUE INDEX [IX_People_Name] ON [dbo].[People] ([FirstName], [LastName]);" + EOL,
-                Sql);
+            AssertSql(
+                @"CREATE UNIQUE INDEX [IX_People_Name] ON [dbo].[People] ([FirstName], [LastName]);
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void CreateIndexOperation_clustered()
         {
             Generate(
                 new CreateIndexOperation
                 {
-                    Name = "IX_People_Name",
-                    Table = "People",
-                    Columns = new[] { "Name" },
-                    [SqlServerAnnotationNames.Clustered] = true
+                    Name = "IX_People_Name", Table = "People", Columns = new[] { "Name" }, [SqlServerAnnotationNames.Clustered] = true
                 });
 
-            Assert.Equal(
-                "CREATE CLUSTERED INDEX [IX_People_Name] ON [People] ([Name]);" + EOL,
-                Sql);
+            AssertSql(
+                @"CREATE CLUSTERED INDEX [IX_People_Name] ON [People] ([Name]);
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void CreateIndexOperation_unique_clustered()
         {
             Generate(
@@ -995,12 +1369,12 @@ namespace Microsoft.EntityFrameworkCore
                     [SqlServerAnnotationNames.Clustered] = true
                 });
 
-            Assert.Equal(
-                "CREATE UNIQUE CLUSTERED INDEX [IX_People_Name] ON [People] ([Name]);" + EOL,
-                Sql);
+            AssertSql(
+                @"CREATE UNIQUE CLUSTERED INDEX [IX_People_Name] ON [People] ([Name]);
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void CreateIndexOperation_with_include()
         {
             Generate(
@@ -1012,12 +1386,12 @@ namespace Microsoft.EntityFrameworkCore
                     [SqlServerAnnotationNames.Include] = new[] { "FirstName", "LastName" }
                 });
 
-            Assert.Equal(
-                "CREATE INDEX [IX_People_Name] ON [People] ([Name]) INCLUDE ([FirstName], [LastName]);" + EOL,
-                Sql);
+            AssertSql(
+                @"CREATE INDEX [IX_People_Name] ON [People] ([Name]) INCLUDE ([FirstName], [LastName]);
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void CreateIndexOperation_with_include_and_filter()
         {
             Generate(
@@ -1030,13 +1404,12 @@ namespace Microsoft.EntityFrameworkCore
                     [SqlServerAnnotationNames.Include] = new[] { "FirstName", "LastName" }
                 });
 
-            Assert.Equal(
-                "CREATE INDEX [IX_People_Name] ON [People] ([Name]) INCLUDE ([FirstName], [LastName]) WHERE [Name] IS NOT NULL AND <> '';"
-                + EOL,
-                Sql);
+            AssertSql(
+                @"CREATE INDEX [IX_People_Name] ON [People] ([Name]) INCLUDE ([FirstName], [LastName]) WHERE [Name] IS NOT NULL AND <> '';
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void CreateIndexOperation_unique_with_include()
         {
             Generate(
@@ -1049,13 +1422,12 @@ namespace Microsoft.EntityFrameworkCore
                     [SqlServerAnnotationNames.Include] = new[] { "FirstName", "LastName" }
                 });
 
-            Assert.Equal(
-                "CREATE UNIQUE INDEX [IX_People_Name] ON [People] ([Name]) INCLUDE ([FirstName], [LastName]) WHERE [Name] IS NOT NULL;"
-                + EOL,
-                Sql);
+            AssertSql(
+                @"CREATE UNIQUE INDEX [IX_People_Name] ON [People] ([Name]) INCLUDE ([FirstName], [LastName]) WHERE [Name] IS NOT NULL;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void CreateIndexOperation_unique_with_include_and_filter()
         {
             Generate(
@@ -1069,13 +1441,12 @@ namespace Microsoft.EntityFrameworkCore
                     [SqlServerAnnotationNames.Include] = new[] { "FirstName", "LastName" }
                 });
 
-            Assert.Equal(
-                "CREATE UNIQUE INDEX [IX_People_Name] ON [People] ([Name]) INCLUDE ([FirstName], [LastName]) WHERE [Name] IS NOT NULL AND <> '';"
-                + EOL,
-                Sql);
+            AssertSql(
+                @"CREATE UNIQUE INDEX [IX_People_Name] ON [People] ([Name]) INCLUDE ([FirstName], [LastName]) WHERE [Name] IS NOT NULL AND <> '';
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void CreateIndexOperation_unique_with_include_and_filter_online()
         {
             Generate(
@@ -1087,16 +1458,15 @@ namespace Microsoft.EntityFrameworkCore
                     IsUnique = true,
                     Filter = "[Name] IS NOT NULL AND <> ''",
                     [SqlServerAnnotationNames.Include] = new[] { "FirstName", "LastName" },
-                    [SqlServerAnnotationNames.Online] = true
+                    [SqlServerAnnotationNames.CreatedOnline] = true
                 });
 
-            Assert.Equal(
-                "CREATE UNIQUE INDEX [IX_People_Name] ON [People] ([Name]) INCLUDE ([FirstName], [LastName]) WHERE [Name] IS NOT NULL AND <> '' WITH (ONLINE = ON);"
-                + EOL,
-                Sql);
+            AssertSql(
+                @"CREATE UNIQUE INDEX [IX_People_Name] ON [People] ([Name]) INCLUDE ([FirstName], [LastName]) WHERE [Name] IS NOT NULL AND <> '' WITH (ONLINE = ON);
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void CreateIndexOperation_unique_with_include_non_legacy()
         {
             Generate(
@@ -1110,61 +1480,63 @@ namespace Microsoft.EntityFrameworkCore
                     [SqlServerAnnotationNames.Include] = new[] { "FirstName", "LastName" }
                 });
 
-            Assert.Equal(
-                "CREATE UNIQUE INDEX [IX_People_Name] ON [People] ([Name]) INCLUDE ([FirstName], [LastName]);" + EOL,
-                Sql);
+            AssertSql(
+                @"CREATE UNIQUE INDEX [IX_People_Name] ON [People] ([Name]) INCLUDE ([FirstName], [LastName]);
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void CreateIndexOperation_unique_bound_null()
         {
             Generate(
                 modelBuilder => modelBuilder.Entity("People").Property<string>("Name"),
-                new CreateIndexOperation
-                {
-                    Name = "IX_People_Name",
-                    Table = "People",
-                    Columns = new[] { "Name" },
-                    IsUnique = true
-                });
+                new CreateIndexOperation { Name = "IX_People_Name", Table = "People", Columns = new[] { "Name" }, IsUnique = true });
 
-            Assert.Equal(
-                "CREATE UNIQUE INDEX [IX_People_Name] ON [People] ([Name]) WHERE [Name] IS NOT NULL;" + EOL,
-                Sql);
+            AssertSql(
+                @"CREATE UNIQUE INDEX [IX_People_Name] ON [People] ([Name]) WHERE [Name] IS NOT NULL;
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void CreateIndexOperation_unique_bound_not_null()
         {
             Generate(
-                modelBuilder => modelBuilder.Entity("People", x =>
-                {
-                    x.Property<string>("Name").IsRequired();
-                    x.HasKey("Name");
-                }),
-                new CreateIndexOperation
-                {
-                    Name = "IX_People_Name",
-                    Table = "People",
-                    Columns = new[] { "Name" },
-                    IsUnique = true
-                });
+                modelBuilder => modelBuilder.Entity(
+                    "People", x =>
+                    {
+                        x.Property<string>("Name").IsRequired();
+                        x.HasKey("Name");
+                    }),
+                new CreateIndexOperation { Name = "IX_People_Name", Table = "People", Columns = new[] { "Name" }, IsUnique = true });
 
-            Assert.Equal(
-                "CREATE UNIQUE INDEX [IX_People_Name] ON [People] ([Name]);" + EOL,
-                Sql);
+            AssertSql(
+                @"CREATE UNIQUE INDEX [IX_People_Name] ON [People] ([Name]);
+");
         }
 
-        [Fact]
-        public virtual void CreateIndexOperation_memoryOptimized_unique_nullable()
+        [ConditionalTheory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public virtual void CreateIndexOperation_memoryOptimized_unique_nullable(bool obsolete)
         {
             Generate(
-                modelBuilder => modelBuilder.Entity("People", x =>
-                {
-                    x.ToTable("People", "dbo").ForSqlServerIsMemoryOptimized().Property<string>("Name");
-                    x.Property<int>("Id");
-                    x.HasKey("Id");
-                }),
+                modelBuilder => modelBuilder.Entity(
+                    "People", x =>
+                    {
+                        if (obsolete)
+                        {
+#pragma warning disable 618
+                            x.ToTable("People", "dbo").ForSqlServerIsMemoryOptimized().Property<string>("Name");
+#pragma warning restore 618
+                        }
+                        else
+                        {
+                            x.ToTable("People", "dbo").IsMemoryOptimized().Property<string>("Name");
+                        }
+
+                        x.Property<int>("Id");
+                        x.HasKey("Id");
+                    }),
                 new CreateIndexOperation
                 {
                     Name = "IX_People_Name",
@@ -1174,21 +1546,34 @@ namespace Microsoft.EntityFrameworkCore
                     IsUnique = true
                 });
 
-            Assert.Equal(
-                "ALTER TABLE [dbo].[People] ADD INDEX [IX_People_Name] ([Name]);" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [dbo].[People] ADD INDEX [IX_People_Name] ([Name]);
+");
         }
 
-        [Fact]
-        public virtual void CreateIndexOperation_memoryOptimized_unique_nullable_with_filter()
+        [ConditionalTheory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public virtual void CreateIndexOperation_memoryOptimized_unique_nullable_with_filter(bool obsolete)
         {
             Generate(
-                modelBuilder => modelBuilder.Entity("People", x =>
-                {
-                    x.ForSqlServerIsMemoryOptimized().Property<string>("Name");
-                    x.Property<int>("Id");
-                    x.HasKey("Id");
-                }),
+                modelBuilder => modelBuilder.Entity(
+                    "People", x =>
+                    {
+                        if (obsolete)
+                        {
+#pragma warning disable 618
+                            x.ForSqlServerIsMemoryOptimized().Property<string>("Name");
+#pragma warning restore 618
+                        }
+                        else
+                        {
+                            x.IsMemoryOptimized().Property<string>("Name");
+                        }
+
+                        x.Property<int>("Id");
+                        x.HasKey("Id");
+                    }),
                 new CreateIndexOperation
                 {
                     Name = "IX_People_Name",
@@ -1198,20 +1583,33 @@ namespace Microsoft.EntityFrameworkCore
                     Filter = "[Name] IS NOT NULL AND <> ''"
                 });
 
-            Assert.Equal(
-                "ALTER TABLE [People] ADD INDEX [IX_People_Name] ([Name]);" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [People] ADD INDEX [IX_People_Name] ([Name]);
+");
         }
 
-        [Fact]
-        public virtual void CreateIndexOperation_memoryOptimized_unique_nonclustered_not_nullable()
+        [ConditionalTheory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public virtual void CreateIndexOperation_memoryOptimized_unique_nonclustered_not_nullable(bool obsolete)
         {
             Generate(
-                modelBuilder => modelBuilder.Entity("People", x =>
-                {
-                    x.ForSqlServerIsMemoryOptimized().Property<string>("Name").IsRequired();
-                    x.HasKey("Name");
-                }),
+                modelBuilder => modelBuilder.Entity(
+                    "People", x =>
+                    {
+                        if (obsolete)
+                        {
+#pragma warning disable 618
+                            x.ForSqlServerIsMemoryOptimized().Property<string>("Name").IsRequired();
+#pragma warning restore 618
+                        }
+                        else
+                        {
+                            x.IsMemoryOptimized().Property<string>("Name").IsRequired();
+                        }
+
+                        x.HasKey("Name");
+                    }),
                 new CreateIndexOperation
                 {
                     Name = "IX_People_Name",
@@ -1221,244 +1619,203 @@ namespace Microsoft.EntityFrameworkCore
                     [SqlServerAnnotationNames.Clustered] = false
                 });
 
-            Assert.Equal(
-                "ALTER TABLE [People] ADD INDEX [IX_People_Name] UNIQUE NONCLUSTERED ([Name]);" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER TABLE [People] ADD INDEX [IX_People_Name] UNIQUE NONCLUSTERED ([Name]);
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void CreateSchemaOperation()
         {
             Generate(
-                new EnsureSchemaOperation
-                {
-                    Name = "my"
-                });
+                new EnsureSchemaOperation { Name = "my" });
 
-            Assert.Equal(
-                "IF SCHEMA_ID(N'my') IS NULL EXEC(N'CREATE SCHEMA [my];');" + EOL,
-                Sql);
+            AssertSql(
+                @"IF SCHEMA_ID(N'my') IS NULL EXEC(N'CREATE SCHEMA [my];');
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void CreateSchemaOperation_dbo()
         {
             Generate(
-                new EnsureSchemaOperation
-                {
-                    Name = "dbo"
-                });
+                new EnsureSchemaOperation { Name = "dbo" });
 
-            Assert.Equal(
-                "",
-                Sql);
+            AssertSql("");
         }
 
         public override void DropColumnOperation()
         {
             base.DropColumnOperation();
 
-            Assert.Equal(
-                "DECLARE @var0 sysname;" + EOL +
-                "SELECT @var0 = [d].[name]" + EOL +
-                "FROM [sys].[default_constraints] [d]" + EOL +
-                "INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]"
-                + EOL +
-                "WHERE ([d].[parent_object_id] = OBJECT_ID(N'[dbo].[People]') AND [c].[name] = N'LuckyNumber');" + EOL +
-                "IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [dbo].[People] DROP CONSTRAINT [' + @var0 + '];');" + EOL +
-                "ALTER TABLE [dbo].[People] DROP COLUMN [LuckyNumber];" + EOL,
-                Sql);
+            AssertSql(
+                @"DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[dbo].[People]') AND [c].[name] = N'LuckyNumber');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [dbo].[People] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [dbo].[People] DROP COLUMN [LuckyNumber];
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void DropDatabaseOperation()
         {
             Generate(
-                new SqlServerDropDatabaseOperation
-                {
-                    Name = "Northwind"
-                });
+                new SqlServerDropDatabaseOperation { Name = "Northwind" });
 
-            Assert.Equal(
-                "IF SERVERPROPERTY('EngineEdition') <> 5" + EOL +
-                "BEGIN" + EOL +
-                "    ALTER DATABASE [Northwind] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;" + EOL +
-                "END;" + EOL +
-                "GO" + EOL +
-                EOL +
-                "DROP DATABASE [Northwind];" + EOL,
-                Sql);
+            AssertSql(
+                @"IF SERVERPROPERTY('EngineEdition') <> 5
+BEGIN
+    ALTER DATABASE [Northwind] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+END;
+GO
+
+DROP DATABASE [Northwind];
+");
         }
 
         public override void DropIndexOperation()
         {
             base.DropIndexOperation();
 
-            Assert.Equal(
-                "DROP INDEX [IX_People_Name] ON [dbo].[People];" + EOL,
-                Sql);
+            AssertSql(
+                @"DROP INDEX [IX_People_Name] ON [dbo].[People];
+");
         }
 
-        [Fact]
-        public virtual void DropIndexOperation_memoryOptimized()
+        [ConditionalTheory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public virtual void DropIndexOperation_memoryOptimized(bool obsolete)
         {
             Generate(
-                modelBuilder => modelBuilder.Entity("People", x =>
-                {
-                    x.ForSqlServerIsMemoryOptimized();
-                    x.Property<int>("Id");
-                    x.HasKey("Id");
-                }),
-                new DropIndexOperation
-                {
-                    Name = "IX_People_Name",
-                    Table = "People"
-                });
+                modelBuilder => modelBuilder.Entity(
+                    "People", x =>
+                    {
+                        if (obsolete)
+                        {
+#pragma warning disable 618
+                            x.ForSqlServerIsMemoryOptimized();
+#pragma warning restore 618
+                        }
+                        else
+                        {
+                            x.IsMemoryOptimized();
+                        }
 
-            Assert.Equal(
-                "ALTER TABLE [People] DROP INDEX [IX_People_Name];" + EOL,
-                Sql);
+                        x.Property<int>("Id");
+                        x.HasKey("Id");
+                    }),
+                new DropIndexOperation { Name = "IX_People_Name", Table = "People" });
+
+            AssertSql(
+                @"ALTER TABLE [People] DROP INDEX [IX_People_Name];
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void MoveSequenceOperation_legacy()
         {
             Generate(
-                new RenameSequenceOperation
-                {
-                    Name = "EntityFrameworkHiLoSequence",
-                    Schema = "dbo",
-                    NewSchema = "my"
-                });
+                new RenameSequenceOperation { Name = "EntityFrameworkHiLoSequence", Schema = "dbo", NewSchema = "my" });
 
-            Assert.Equal(
-                "ALTER SCHEMA [my] TRANSFER [dbo].[EntityFrameworkHiLoSequence];" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER SCHEMA [my] TRANSFER [dbo].[EntityFrameworkHiLoSequence];
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void MoveSequenceOperation()
         {
             Generate(
                 modelBuilder => modelBuilder.HasAnnotation(CoreAnnotationNames.ProductVersion, "2.1.0"),
                 new RenameSequenceOperation
                 {
-                    Name = "EntityFrameworkHiLoSequence",
-                    Schema = "dbo",
-                    NewName = "EntityFrameworkHiLoSequence",
-                    NewSchema = "my"
+                    Name = "EntityFrameworkHiLoSequence", Schema = "dbo", NewName = "EntityFrameworkHiLoSequence", NewSchema = "my"
                 });
 
-            Assert.Equal(
-                "ALTER SCHEMA [my] TRANSFER [dbo].[EntityFrameworkHiLoSequence];" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER SCHEMA [my] TRANSFER [dbo].[EntityFrameworkHiLoSequence];
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void MoveSequenceOperation_into_default()
         {
             Generate(
                 modelBuilder => modelBuilder.HasAnnotation(CoreAnnotationNames.ProductVersion, "2.1.0"),
                 new RenameSequenceOperation
                 {
-                    Name = "EntityFrameworkHiLoSequence",
-                    Schema = "dbo",
-                    NewName = "EntityFrameworkHiLoSequence"
+                    Name = "EntityFrameworkHiLoSequence", Schema = "dbo", NewName = "EntityFrameworkHiLoSequence"
                 });
 
-            Assert.Equal(
-                "DECLARE @defaultSchema sysname = SCHEMA_NAME();" + EOL +
-                "EXEC(N'ALTER SCHEMA [' + @defaultSchema + N'] TRANSFER [dbo].[EntityFrameworkHiLoSequence];');" + EOL,
-                Sql);
+            AssertSql(
+                @"DECLARE @defaultSchema sysname = SCHEMA_NAME();
+EXEC(N'ALTER SCHEMA [' + @defaultSchema + N'] TRANSFER [dbo].[EntityFrameworkHiLoSequence];');
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void MoveTableOperation_legacy()
         {
             Generate(
-                new RenameTableOperation
-                {
-                    Name = "People",
-                    Schema = "dbo",
-                    NewSchema = "hr"
-                });
+                new RenameTableOperation { Name = "People", Schema = "dbo", NewSchema = "hr" });
 
-            Assert.Equal(
-                "ALTER SCHEMA [hr] TRANSFER [dbo].[People];" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER SCHEMA [hr] TRANSFER [dbo].[People];
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void MoveTableOperation()
         {
             Generate(
                 modelBuilder => modelBuilder.HasAnnotation(CoreAnnotationNames.ProductVersion, "2.1.0"),
-                new RenameTableOperation
-                {
-                    Name = "People",
-                    Schema = "dbo",
-                    NewName = "People",
-                    NewSchema = "hr"
-                });
+                new RenameTableOperation { Name = "People", Schema = "dbo", NewName = "People", NewSchema = "hr" });
 
-            Assert.Equal(
-                "ALTER SCHEMA [hr] TRANSFER [dbo].[People];" + EOL,
-                Sql);
+            AssertSql(
+                @"ALTER SCHEMA [hr] TRANSFER [dbo].[People];
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void MoveTableOperation_into_default()
         {
             Generate(
                 modelBuilder => modelBuilder.HasAnnotation(CoreAnnotationNames.ProductVersion, "2.1.0"),
-                new RenameTableOperation
-                {
-                    Name = "People",
-                    Schema = "dbo",
-                    NewName = "People"
-                });
+                new RenameTableOperation { Name = "People", Schema = "dbo", NewName = "People" });
 
-            Assert.Equal(
-                "DECLARE @defaultSchema sysname = SCHEMA_NAME();" + EOL +
-                "EXEC(N'ALTER SCHEMA [' + @defaultSchema + N'] TRANSFER [dbo].[People];');" + EOL,
-                Sql);
+            AssertSql(
+                @"DECLARE @defaultSchema sysname = SCHEMA_NAME();
+EXEC(N'ALTER SCHEMA [' + @defaultSchema + N'] TRANSFER [dbo].[People];');
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void RenameColumnOperation()
         {
             Generate(
-                new RenameColumnOperation
-                {
-                    Table = "People",
-                    Schema = "dbo",
-                    Name = "Name",
-                    NewName = "FullName"
-                });
+                new RenameColumnOperation { Table = "People", Schema = "dbo", Name = "Name", NewName = "FullName" });
 
-            Assert.Equal(
-                "EXEC sp_rename N'[dbo].[People].[Name]', N'FullName', N'COLUMN';" + EOL,
-                Sql);
+            AssertSql(
+                @"EXEC sp_rename N'[dbo].[People].[Name]', N'FullName', N'COLUMN';
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void RenameIndexOperation()
         {
             Generate(
-                new RenameIndexOperation
-                {
-                    Table = "People",
-                    Schema = "dbo",
-                    Name = "IX_People_Name",
-                    NewName = "IX_People_FullName"
-                });
+                new RenameIndexOperation { Table = "People", Schema = "dbo", Name = "IX_People_Name", NewName = "IX_People_FullName" });
 
-            Assert.Equal(
-                "EXEC sp_rename N'[dbo].[People].[IX_People_Name]', N'IX_People_FullName', N'INDEX';" + EOL,
-                Sql);
+            AssertSql(
+                @"EXEC sp_rename N'[dbo].[People].[IX_People_Name]', N'IX_People_FullName', N'INDEX';
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void RenameIndexOperations_throws_when_no_table()
         {
             var migrationBuilder = new MigrationBuilder("SqlServer");
@@ -1473,61 +1830,53 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Equal(SqlServerStrings.IndexTableRequired, ex.Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void RenameSequenceOperation_legacy()
         {
             Generate(
-                new RenameSequenceOperation
-                {
-                    Name = "EntityFrameworkHiLoSequence",
-                    Schema = "dbo",
-                    NewName = "MySequence"
-                });
+                new RenameSequenceOperation { Name = "EntityFrameworkHiLoSequence", Schema = "dbo", NewName = "MySequence" });
 
-            Assert.Equal(
-                "EXEC sp_rename N'[dbo].[EntityFrameworkHiLoSequence]', N'MySequence';" + EOL,
-                Sql);
+            AssertSql(
+                @"EXEC sp_rename N'[dbo].[EntityFrameworkHiLoSequence]', N'MySequence';
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void RenameSequenceOperation()
         {
             Generate(
                 modelBuilder => modelBuilder.HasAnnotation(CoreAnnotationNames.ProductVersion, "2.1.0"),
                 new RenameSequenceOperation
                 {
-                    Name = "EntityFrameworkHiLoSequence",
-                    Schema = "dbo",
-                    NewName = "MySequence",
-                    NewSchema = "dbo"
+                    Name = "EntityFrameworkHiLoSequence", Schema = "dbo", NewName = "MySequence", NewSchema = "dbo"
                 });
 
-            Assert.Equal(
-                "EXEC sp_rename N'[dbo].[EntityFrameworkHiLoSequence]', N'MySequence';" + EOL,
-                Sql);
+            AssertSql(
+                @"EXEC sp_rename N'[dbo].[EntityFrameworkHiLoSequence]', N'MySequence';
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public override void RenameTableOperation_legacy()
         {
             base.RenameTableOperation_legacy();
 
-            Assert.Equal(
-                "EXEC sp_rename N'[dbo].[People]', N'Person';" + EOL,
-                Sql);
+            AssertSql(
+                @"EXEC sp_rename N'[dbo].[People]', N'Person';
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public override void RenameTableOperation()
         {
             base.RenameTableOperation();
 
-            Assert.Equal(
-                "EXEC sp_rename N'[dbo].[People]', N'Person';" + EOL,
-                Sql);
+            AssertSql(
+                @"EXEC sp_rename N'[dbo].[People]', N'Person';
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void SqlOperation_handles_backslash()
         {
             Generate(
@@ -1537,12 +1886,12 @@ namespace Microsoft.EntityFrameworkCore
                           "comment"
                 });
 
-            Assert.Equal(
-                "-- Multiline comment" + EOL,
-                Sql);
+            AssertSql(
+                @"-- Multiline comment
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void SqlOperation_ignores_sequential_gos()
         {
             Generate(
@@ -1553,12 +1902,12 @@ namespace Microsoft.EntityFrameworkCore
                           "GO"
                 });
 
-            Assert.Equal(
-                "-- Ready set" + EOL,
-                Sql);
+            AssertSql(
+                @"-- Ready set
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void SqlOperation_handles_go()
         {
             Generate(
@@ -1569,15 +1918,15 @@ namespace Microsoft.EntityFrameworkCore
                           "-- Too"
                 });
 
-            Assert.Equal(
-                "-- I" + EOL +
-                "GO" + EOL +
-                EOL +
-                "-- Too" + EOL,
-                Sql);
+            AssertSql(
+                @"-- I
+GO
+
+-- Too
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void SqlOperation_handles_go_with_count()
         {
             Generate(
@@ -1587,46 +1936,41 @@ namespace Microsoft.EntityFrameworkCore
                           "GO 2"
                 });
 
-            Assert.Equal(
-                "-- I" + EOL +
-                "GO" + EOL +
-                EOL +
-                "-- I" + EOL,
-                Sql);
+            AssertSql(
+                @"-- I
+GO
+
+-- I
+");
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void SqlOperation_ignores_non_go()
         {
             Generate(
-                new SqlOperation
-                {
-                    Sql = "-- I GO 2"
-                });
+                new SqlOperation { Sql = "-- I GO 2" });
 
-            Assert.Equal(
-                "-- I GO 2" + EOL,
-                Sql);
+            AssertSql(
+                @"-- I GO 2
+");
         }
 
         public override void InsertDataOperation()
         {
             base.InsertDataOperation();
 
-            Assert.Equal(
-                "IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Full Name') AND [object_id] = OBJECT_ID(N'[People]'))"
-                + EOL +
-                "    SET IDENTITY_INSERT [People] ON;" + EOL +
-                "INSERT INTO [People] ([Id], [Full Name])" + EOL +
-                "VALUES (0, NULL)," + EOL +
-                "(1, N'Daenerys Targaryen')," + EOL +
-                "(2, N'John Snow')," + EOL +
-                "(3, N'Arya Stark')," + EOL +
-                "(4, N'Harry Strickland');" + EOL +
-                "IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Full Name') AND [object_id] = OBJECT_ID(N'[People]'))"
-                + EOL +
-                "    SET IDENTITY_INSERT [People] OFF;" + EOL,
-                Sql);
+            AssertSql(
+                @"IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Full Name') AND [object_id] = OBJECT_ID(N'[People]'))
+    SET IDENTITY_INSERT [People] ON;
+INSERT INTO [People] ([Id], [Full Name])
+VALUES (0, NULL),
+(1, N'Daenerys Targaryen'),
+(2, N'John Snow'),
+(3, N'Arya Stark'),
+(4, N'Harry Strickland');
+IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Full Name') AND [object_id] = OBJECT_ID(N'[People]'))
+    SET IDENTITY_INSERT [People] OFF;
+");
         }
 
         public override void DeleteDataOperation_simple_key()
@@ -1634,14 +1978,16 @@ namespace Microsoft.EntityFrameworkCore
             base.DeleteDataOperation_simple_key();
 
             // TODO remove rowcount
-            Assert.Equal(
-                "DELETE FROM [People]" + EOL +
-                "WHERE [Id] = 2;" + EOL +
-                "SELECT @@ROWCOUNT;" + EOL + EOL +
-                "DELETE FROM [People]" + EOL +
-                "WHERE [Id] = 4;" + EOL +
-                "SELECT @@ROWCOUNT;" + EOL + EOL,
-                Sql);
+            AssertSql(
+                @"DELETE FROM [People]
+WHERE [Id] = 2;
+SELECT @@ROWCOUNT;
+
+DELETE FROM [People]
+WHERE [Id] = 4;
+SELECT @@ROWCOUNT;
+
+");
         }
 
         public override void DeleteDataOperation_composite_key()
@@ -1649,14 +1995,16 @@ namespace Microsoft.EntityFrameworkCore
             base.DeleteDataOperation_composite_key();
 
             // TODO remove rowcount
-            Assert.Equal(
-                "DELETE FROM [People]" + EOL +
-                "WHERE [First Name] = N'Hodor' AND [Last Name] IS NULL;" + EOL +
-                "SELECT @@ROWCOUNT;" + EOL + EOL +
-                "DELETE FROM [People]" + EOL +
-                "WHERE [First Name] = N'Daenerys' AND [Last Name] = N'Targaryen';" + EOL +
-                "SELECT @@ROWCOUNT;" + EOL + EOL,
-                Sql);
+            AssertSql(
+                @"DELETE FROM [People]
+WHERE [First Name] = N'Hodor' AND [Last Name] IS NULL;
+SELECT @@ROWCOUNT;
+
+DELETE FROM [People]
+WHERE [First Name] = N'Daenerys' AND [Last Name] = N'Targaryen';
+SELECT @@ROWCOUNT;
+
+");
         }
 
         public override void UpdateDataOperation_simple_key()
@@ -1664,14 +2012,16 @@ namespace Microsoft.EntityFrameworkCore
             base.UpdateDataOperation_simple_key();
 
             // TODO remove rowcount
-            Assert.Equal(
-                "UPDATE [People] SET [Full Name] = N'Daenerys Stormborn'" + EOL +
-                "WHERE [Id] = 1;" + EOL +
-                "SELECT @@ROWCOUNT;" + EOL + EOL +
-                "UPDATE [People] SET [Full Name] = N'Homeless Harry Strickland'" + EOL +
-                "WHERE [Id] = 4;" + EOL +
-                "SELECT @@ROWCOUNT;" + EOL + EOL,
-                Sql);
+            AssertSql(
+                @"UPDATE [People] SET [Full Name] = N'Daenerys Stormborn'
+WHERE [Id] = 1;
+SELECT @@ROWCOUNT;
+
+UPDATE [People] SET [Full Name] = N'Homeless Harry Strickland'
+WHERE [Id] = 4;
+SELECT @@ROWCOUNT;
+
+");
         }
 
         public override void UpdateDataOperation_composite_key()
@@ -1679,14 +2029,16 @@ namespace Microsoft.EntityFrameworkCore
             base.UpdateDataOperation_composite_key();
 
             // TODO remove rowcount
-            Assert.Equal(
-                "UPDATE [People] SET [First Name] = N'Hodor'" + EOL +
-                "WHERE [Id] = 0 AND [Last Name] IS NULL;" + EOL +
-                "SELECT @@ROWCOUNT;" + EOL + EOL +
-                "UPDATE [People] SET [First Name] = N'Harry'" + EOL +
-                "WHERE [Id] = 4 AND [Last Name] = N'Strickland';" + EOL +
-                "SELECT @@ROWCOUNT;" + EOL + EOL,
-                Sql);
+            AssertSql(
+                @"UPDATE [People] SET [First Name] = N'Hodor'
+WHERE [Id] = 0 AND [Last Name] IS NULL;
+SELECT @@ROWCOUNT;
+
+UPDATE [People] SET [First Name] = N'Harry'
+WHERE [Id] = 4 AND [Last Name] = N'Strickland';
+SELECT @@ROWCOUNT;
+
+");
         }
 
         public override void UpdateDataOperation_multiple_columns()
@@ -1694,14 +2046,16 @@ namespace Microsoft.EntityFrameworkCore
             base.UpdateDataOperation_multiple_columns();
 
             // TODO remove rowcount
-            Assert.Equal(
-                "UPDATE [People] SET [First Name] = N'Daenerys', [Nickname] = N'Dany'" + EOL +
-                "WHERE [Id] = 1;" + EOL +
-                "SELECT @@ROWCOUNT;" + EOL + EOL +
-                "UPDATE [People] SET [First Name] = N'Harry', [Nickname] = N'Homeless'" + EOL +
-                "WHERE [Id] = 4;" + EOL +
-                "SELECT @@ROWCOUNT;" + EOL + EOL,
-                Sql);
+            AssertSql(
+                @"UPDATE [People] SET [First Name] = N'Daenerys', [Nickname] = N'Dany'
+WHERE [Id] = 1;
+SELECT @@ROWCOUNT;
+
+UPDATE [People] SET [First Name] = N'Harry', [Nickname] = N'Homeless'
+WHERE [Id] = 4;
+SELECT @@ROWCOUNT;
+
+");
         }
 
         public SqlServerMigrationSqlGeneratorTest()

@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite.Properties;
 using SQLitePCL;
-
 using static SQLitePCL.raw;
 
 namespace Microsoft.Data.Sqlite
@@ -206,7 +205,11 @@ namespace Microsoft.Data.Sqlite
         protected override void Dispose(bool disposing)
         {
             DisposePreparedStatements(disposing);
-            _connection?.RemoveCommand(this);
+
+            if (disposing)
+            {
+                _connection?.RemoveCommand(this);
+            }
 
             base.Dispose(disposing);
         }
@@ -327,7 +330,7 @@ namespace Microsoft.Data.Sqlite
                     var unboundParams = new List<string>();
                     for (var i = 1; i <= expectedParams; i++)
                     {
-                        var name = sqlite3_bind_parameter_name(stmt, i);
+                        var name = sqlite3_bind_parameter_name(stmt, i).utf8_to_string();
 
                         if (_parameters.IsValueCreated
                             && !_parameters.Value.Cast<SqliteParameter>().Any(p => p.ParameterName == name))
@@ -500,7 +503,7 @@ namespace Microsoft.Data.Sqlite
                 SqliteException.ThrowExceptionForRC(rc, _connection.Handle);
 
                 // Statement was empty, white space, or a comment
-                if (stmt.ptr == IntPtr.Zero)
+                if (stmt.IsInvalid)
                 {
                     if (!string.IsNullOrEmpty(tail))
                     {

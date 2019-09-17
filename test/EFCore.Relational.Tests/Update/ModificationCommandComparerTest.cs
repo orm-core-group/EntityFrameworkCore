@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.EntityFrameworkCore.TestUtilities;
 using Microsoft.EntityFrameworkCore.Update.Internal;
 using Xunit;
 
@@ -15,21 +16,20 @@ namespace Microsoft.EntityFrameworkCore.Update
 {
     public class ModificationCommandComparerTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Compare_returns_0_only_for_commands_that_are_equal()
         {
-            IMutableModel model = new Model();
+            IMutableModel model = new Model(TestRelationalConventionSetBuilder.Build());
             var entityType = model.AddEntityType(typeof(object));
+            var key = entityType.AddProperty("Id", typeof(int));
+            entityType.SetPrimaryKey(key);
 
             var optionsBuilder = new DbContextOptionsBuilder()
-                .UseModel(model)
+                .UseModel(model.FinalizeModel())
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .UseInternalServiceProvider(InMemoryFixture.DefaultServiceProvider);
 
             var stateManager = new DbContext(optionsBuilder.Options).GetService<IStateManager>();
-
-            var key = entityType.AddProperty("Id", typeof(int));
-            entityType.SetPrimaryKey(key);
 
             var entry1 = stateManager.GetOrCreateEntry(new object());
             entry1[key] = 1;
@@ -98,7 +98,7 @@ namespace Microsoft.EntityFrameworkCore.Update
             Assert.True(0 < mCC.Compare(modificationCommandModified, modificationCommandDeleted));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Compare_returns_0_only_for_entries_that_have_same_key_values()
         {
             Compare_returns_0_only_for_entries_that_have_same_key_values_generic<short>(-1, 1);
@@ -153,19 +153,19 @@ namespace Microsoft.EntityFrameworkCore.Update
 
         private void Compare_returns_0_only_for_entries_that_have_same_key_values_generic<T>(T value1, T value2)
         {
-            IMutableModel model = new Model();
+            IMutableModel model = new Model(TestRelationalConventionSetBuilder.Build());
             var entityType = model.AddEntityType(typeof(object));
-
-            var optionsBuilder = new DbContextOptionsBuilder()
-                .UseInternalServiceProvider(InMemoryFixture.DefaultServiceProvider)
-                .UseModel(model)
-                .UseInMemoryDatabase(Guid.NewGuid().ToString());
-
-            var stateManager = new DbContext(optionsBuilder.Options).GetService<IStateManager>();
 
             var keyProperty = entityType.AddProperty("Id", typeof(T));
             keyProperty.IsNullable = false;
             entityType.SetPrimaryKey(keyProperty);
+
+            var optionsBuilder = new DbContextOptionsBuilder()
+                .UseInternalServiceProvider(InMemoryFixture.DefaultServiceProvider)
+                .UseModel(model.FinalizeModel())
+                .UseInMemoryDatabase(Guid.NewGuid().ToString());
+
+            var stateManager = new DbContext(optionsBuilder.Options).GetService<IStateManager>();
 
             var entry1 = stateManager.GetOrCreateEntry(new object());
             entry1[keyProperty] = value1;

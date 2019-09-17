@@ -10,7 +10,7 @@ namespace Microsoft.EntityFrameworkCore.Design.Internal
 {
     public class DbContextOperationsTest
     {
-        [Fact]
+        [ConditionalFact]
         public void CreateContext_gets_service()
         {
             var assembly = MockAssembly.Create(typeof(TestProgram), typeof(TestContext));
@@ -31,9 +31,10 @@ namespace Microsoft.EntityFrameworkCore.Design.Internal
 #pragma warning restore RCS1213 // Remove unused member declaration.
                 => new TestWebHost(
                     new ServiceCollection()
-                        .AddDbContext<TestContext>(b =>
-                            b.EnableServiceProviderCaching(false)
-                             .UseInMemoryDatabase(Guid.NewGuid().ToString()))
+                        .AddDbContext<TestContext>(
+                            b =>
+                                b.EnableServiceProviderCaching(false)
+                                    .UseInMemoryDatabase(Guid.NewGuid().ToString()))
                         .BuildServiceProvider());
         }
 

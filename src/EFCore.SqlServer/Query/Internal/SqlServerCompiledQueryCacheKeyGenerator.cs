@@ -1,6 +1,7 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System;
 using System.Linq.Expressions;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Query;
@@ -17,8 +18,8 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Internal
     ///         doing so can result in application failures when updating to a new Entity Framework Core release.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Scoped"/>. This means that each
-    ///         <see cref="DbContext"/> instance will use its own instance of this service.
+    ///         The service lifetime is <see cref="ServiceLifetime.Scoped" />. This means that each
+    ///         <see cref="DbContext" /> instance will use its own instance of this service.
     ///         The implementation may depend on other services registered with any lifetime.
     ///         The implementation does not need to be thread-safe.
     ///     </para>
@@ -70,13 +71,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Internal
                 => _relationalCompiledQueryCacheKey.Equals(other._relationalCompiledQueryCacheKey)
                    && _useRowNumberOffset == other._useRowNumberOffset;
 
-            public override int GetHashCode()
-            {
-                unchecked
-                {
-                    return (_relationalCompiledQueryCacheKey.GetHashCode() * 397) ^ _useRowNumberOffset.GetHashCode();
-                }
-            }
+            public override int GetHashCode() => HashCode.Combine(_relationalCompiledQueryCacheKey, _useRowNumberOffset);
         }
     }
 }

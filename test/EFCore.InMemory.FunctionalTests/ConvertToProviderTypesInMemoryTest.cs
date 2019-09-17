@@ -3,6 +3,7 @@
 
 using System;
 using Microsoft.EntityFrameworkCore.TestUtilities;
+using Xunit;
 
 namespace Microsoft.EntityFrameworkCore
 {
@@ -27,6 +28,8 @@ namespace Microsoft.EntityFrameworkCore
             public override bool SupportsLargeStringComparisons => true;
 
             public override bool SupportsBinaryKeys => false;
+
+            public override bool SupportsDecimalComparisons => true;
 
             public override DateTime DefaultDateTime => new DateTime();
         }

@@ -4,7 +4,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata.Conventions.Internal;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -14,7 +13,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Conventions
 {
     public class ConventionSetBuilderTests
     {
-        [Fact]
+        [ConditionalFact]
         public virtual IModel Can_build_a_model_with_default_conventions_without_DI()
         {
             var modelBuilder = new ModelBuilder(GetConventionSet());

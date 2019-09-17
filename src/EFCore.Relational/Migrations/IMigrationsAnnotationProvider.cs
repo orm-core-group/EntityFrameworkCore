@@ -15,9 +15,9 @@ namespace Microsoft.EntityFrameworkCore.Migrations
     ///         used by EF Core Migrations on various elements of the <see cref="IModel" />.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Singleton"/>. This means a single instance
-    ///         is used by many <see cref="DbContext"/> instances. The implementation must be thread-safe.
-    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped"/>.
+    ///         The service lifetime is <see cref="ServiceLifetime.Singleton" />. This means a single instance
+    ///         is used by many <see cref="DbContext" /> instances. The implementation must be thread-safe.
+    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped" />.
     ///     </para>
     /// </summary>
     public interface IMigrationsAnnotationProvider
@@ -138,8 +138,8 @@ namespace Microsoft.EntityFrameworkCore.Migrations
         ///     Gets provider-specific Migrations annotations for the given <see cref="ICheckConstraint" />
         ///     when it is being removed/altered.
         /// </summary>
-        /// <param name="sequence"> The check constraint. </param>
+        /// <param name="checkConstraint"> The check constraint. </param>
         /// <returns> The annotations. </returns>
-        IEnumerable<IAnnotation> ForRemove([NotNull] ICheckConstraint sequence);
+        IEnumerable<IAnnotation> ForRemove([NotNull] ICheckConstraint checkConstraint);
     }
 }

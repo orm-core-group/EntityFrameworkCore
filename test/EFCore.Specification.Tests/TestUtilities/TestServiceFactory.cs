@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Internal;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.EntityFrameworkCore.TestUtilities
@@ -32,7 +32,8 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
                 (typeof(IRegisteredServices), new RegisteredServices(Enumerable.Empty<Type>())),
                 (typeof(ServiceParameterBindingFactory), new ServiceParameterBindingFactory(typeof(IStateManager))),
                 (typeof(IDiagnosticsLogger<DbLoggerCategory.Model>), new TestLogger<DbLoggerCategory.Model, TestLoggingDefinitions>()),
-                (typeof(IDiagnosticsLogger<DbLoggerCategory.Model.Validation>), new TestLogger<DbLoggerCategory.Model.Validation, TestLoggingDefinitions>()),
+                (typeof(IDiagnosticsLogger<DbLoggerCategory.Model.Validation>),
+                    new TestLogger<DbLoggerCategory.Model.Validation, TestLoggingDefinitions>()),
                 (typeof(IDiagnosticsLogger<DbLoggerCategory.Query>), new TestLogger<DbLoggerCategory.Query, TestLoggingDefinitions>())
             };
 

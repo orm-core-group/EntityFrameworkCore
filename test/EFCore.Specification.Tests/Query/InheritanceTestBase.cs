@@ -20,7 +20,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
         protected TFixture Fixture { get; }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_query_when_shared_column()
         {
             using (var context = CreateContext())
@@ -28,11 +28,11 @@ namespace Microsoft.EntityFrameworkCore.Query
                 var coke = context.Set<Coke>().Single();
                 Assert.Equal(6, coke.SugarGrams);
                 Assert.Equal(4, coke.CaffeineGrams);
-                Assert.Equal(5, coke.Carbination);
+                Assert.Equal(5, coke.Carbonation);
 
                 var lilt = context.Set<Lilt>().Single();
                 Assert.Equal(4, lilt.SugarGrams);
-                Assert.Equal(7, lilt.Carbination);
+                Assert.Equal(7, lilt.Carbonation);
 
                 var tea = context.Set<Tea>().Single();
                 Assert.True(tea.HasMilk);
@@ -40,7 +40,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_query_all_types_when_shared_column()
         {
             using (var context = CreateContext())
@@ -51,11 +51,11 @@ namespace Microsoft.EntityFrameworkCore.Query
                 var coke = drinks.OfType<Coke>().Single();
                 Assert.Equal(6, coke.SugarGrams);
                 Assert.Equal(4, coke.CaffeineGrams);
-                Assert.Equal(5, coke.Carbination);
+                Assert.Equal(5, coke.Carbonation);
 
                 var lilt = drinks.OfType<Lilt>().Single();
                 Assert.Equal(4, lilt.SugarGrams);
-                Assert.Equal(7, lilt.Carbination);
+                Assert.Equal(7, lilt.Carbonation);
 
                 var tea = drinks.OfType<Tea>().Single();
                 Assert.True(tea.HasMilk);
@@ -63,7 +63,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_use_of_type_animal()
         {
             using (var context = CreateContext())
@@ -77,29 +77,41 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_use_is_kiwi()
         {
             using (var context = CreateContext())
             {
                 var kiwis = context.Set<Animal>().Where(a => a is Kiwi).ToList();
 
-                Assert.Equal(1, kiwis.Count);
+                Assert.Single(kiwis);
             }
         }
 
-        [Fact]
+        [ConditionalFact]
+        public virtual void Can_use_backwards_is_animal()
+        {
+            using (var context = CreateContext())
+            {
+                // ReSharper disable once IsExpressionAlwaysTrue
+                var kiwis = context.Set<Kiwi>().Where(a => a is Animal).ToList();
+
+                Assert.Single(kiwis);
+            }
+        }
+
+        [ConditionalFact]
         public virtual void Can_use_is_kiwi_with_other_predicate()
         {
             using (var context = CreateContext())
             {
                 var animals = context.Set<Animal>().Where(a => a is Kiwi && a.CountryId == 1).ToList();
 
-                Assert.Equal(1, animals.Count);
+                Assert.Single(animals);
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_use_is_kiwi_in_projection()
         {
             using (var context = CreateContext())
@@ -112,7 +124,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_use_of_type_bird()
         {
             using (var context = CreateContext())
@@ -126,7 +138,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_use_of_type_bird_predicate()
         {
             using (var context = CreateContext())
@@ -138,13 +150,13 @@ namespace Microsoft.EntityFrameworkCore.Query
                         .OrderBy(a => a.Species)
                         .ToList();
 
-                Assert.Equal(1, animals.Count);
+                Assert.Single(animals);
                 Assert.IsType<Kiwi>(animals[0]);
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_use_of_type_bird_with_projection()
         {
             using (var context = CreateContext())
@@ -153,18 +165,15 @@ namespace Microsoft.EntityFrameworkCore.Query
                     = context.Set<Animal>()
                         .OfType<Bird>()
                         .Select(
-                            b => new
-                            {
-                                b.EagleId
-                            })
+                            b => new { b.EagleId })
                         .ToList();
 
                 Assert.Equal(2, animals.Count);
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Empty(context.ChangeTracker.Entries());
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_use_of_type_bird_first()
         {
             using (var context = CreateContext())
@@ -173,37 +182,50 @@ namespace Microsoft.EntityFrameworkCore.Query
 
                 Assert.NotNull(bird);
                 Assert.IsType<Kiwi>(bird);
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_use_of_type_kiwi()
         {
             using (var context = CreateContext())
             {
                 var animals = context.Set<Animal>().OfType<Kiwi>().ToList();
 
-                Assert.Equal(1, animals.Count);
+                Assert.Single(animals);
                 Assert.IsType<Kiwi>(animals[0]);
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Fact]
+        [ConditionalFact(Skip = "17364")]
+        public virtual void Can_use_backwards_of_type_animal()
+        {
+            using (var context = CreateContext())
+            {
+                var animals = context.Set<Kiwi>().OfType<Animal>().ToList();
+
+                Assert.Single(animals);
+                Assert.IsType<Kiwi>(animals[0]);
+                Assert.Single(context.ChangeTracker.Entries());
+            }
+        }
+
+        [ConditionalFact]
         public virtual void Can_use_of_type_rose()
         {
             using (var context = CreateContext())
             {
                 var plants = context.Set<Plant>().OfType<Rose>().ToList();
 
-                Assert.Equal(1, plants.Count);
+                Assert.Single(plants);
                 Assert.IsType<Rose>(plants[0]);
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_query_all_animals()
         {
             using (var context = CreateContext())
@@ -216,7 +238,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_query_all_animal_views()
         {
             using (var context = CreateContext())
@@ -229,7 +251,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_query_all_plants()
         {
             using (var context = CreateContext())
@@ -242,7 +264,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_filter_all_animals()
         {
             using (var context = CreateContext())
@@ -253,12 +275,12 @@ namespace Microsoft.EntityFrameworkCore.Query
                         .Where(a => a.Name == "Great spotted kiwi")
                         .ToList();
 
-                Assert.Equal(1, animals.Count);
+                Assert.Single(animals);
                 Assert.IsType<Kiwi>(animals[0]);
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_query_all_birds()
         {
             using (var context = CreateContext())
@@ -271,7 +293,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_query_just_kiwis()
         {
             using (var context = CreateContext())
@@ -282,7 +304,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_query_just_roses()
         {
             using (var context = CreateContext())
@@ -293,7 +315,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual void Can_include_animals()
         {
             using (var context = CreateContext())
@@ -310,7 +332,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact(Skip = "issue #15064")]
+        [ConditionalFact]
         public virtual void Can_include_prey()
         {
             using (var context = CreateContext())
@@ -325,7 +347,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_use_of_type_kiwi_where_south_on_derived_property()
         {
             using (var context = CreateContext())
@@ -336,13 +358,13 @@ namespace Microsoft.EntityFrameworkCore.Query
                         .Where(x => x.FoundOn == Island.South)
                         .ToList();
 
-                Assert.Equal(1, animals.Count);
+                Assert.Single(animals);
                 Assert.IsType<Kiwi>(animals[0]);
-                Assert.Equal(1, context.ChangeTracker.Entries().Count());
+                Assert.Single(context.ChangeTracker.Entries());
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_use_of_type_kiwi_where_north_on_derived_property()
         {
             using (var context = CreateContext())
@@ -353,12 +375,12 @@ namespace Microsoft.EntityFrameworkCore.Query
                         .Where(x => x.FoundOn == Island.North)
                         .ToList();
 
-                Assert.Equal(0, animals.Count);
-                Assert.Equal(0, context.ChangeTracker.Entries().Count());
+                Assert.Empty(animals);
+                Assert.Empty(context.ChangeTracker.Entries());
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Discriminator_used_when_projection_over_derived_type()
         {
             using (var context = CreateContext())
@@ -368,11 +390,11 @@ namespace Microsoft.EntityFrameworkCore.Query
                         .Select(k => k.FoundOn)
                         .ToArray();
 
-                Assert.Equal(1, kiwis.Length);
+                Assert.Single(kiwis);
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Discriminator_used_when_projection_over_derived_type2()
         {
             using (var context = CreateContext())
@@ -380,37 +402,30 @@ namespace Microsoft.EntityFrameworkCore.Query
                 var birds
                     = context.Set<Bird>()
                         .Select(
-                            b => new
-                            {
-                                b.IsFlightless,
-                                Discriminator = EF.Property<string>(b, "Discriminator")
-                            })
+                            b => new { b.IsFlightless, Discriminator = EF.Property<string>(b, "Discriminator") })
                         .ToArray();
 
                 Assert.Equal(2, birds.Length);
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Discriminator_with_cast_in_shadow_property()
         {
             using (var context = CreateContext())
             {
-                var preditors
+                var predators
                     = context.Set<Animal>()
                         .Where(b => "Kiwi" == EF.Property<string>(b, "Discriminator"))
                         .Select(
-                            k => new
-                            {
-                                Preditor = EF.Property<string>((Bird)k, "EagleId")
-                            })
+                            k => new { Predator = EF.Property<string>((Bird)k, "EagleId") })
                         .ToArray();
 
-                Assert.Equal(1, preditors.Length);
+                Assert.Single(predators);
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Discriminator_used_when_projection_over_of_type()
         {
             using (var context = CreateContext())
@@ -421,11 +436,11 @@ namespace Microsoft.EntityFrameworkCore.Query
                         .Select(k => k.FoundOn)
                         .ToArray();
 
-                Assert.Equal(1, birds.Length);
+                Assert.Single(birds);
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Can_insert_update_delete()
         {
             TestHelpers.ExecuteWithStrategyInTransaction(
@@ -435,10 +450,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 {
                     var kiwi = new Kiwi
                     {
-                        Species = "Apteryx owenii",
-                        Name = "Little spotted kiwi",
-                        IsFlightless = true,
-                        FoundOn = Island.North
+                        Species = "Apteryx owenii", Name = "Little spotted kiwi", IsFlightless = true, FoundOn = Island.North
                     };
 
                     var nz = context.Set<Country>().Single(c => c.Id == 1);
@@ -477,67 +489,80 @@ namespace Microsoft.EntityFrameworkCore.Query
         {
         }
 
-        [Fact(Skip = "Issue #14935. Cannot eval 'Concat({value(Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryable`1[Microsoft.EntityFrameworkCore.TestModels.Inheritance.Eagle])})'")]
-        public virtual void Can_concat_kiwis_and_eagles_as_birds()
+        [ConditionalFact(Skip = "#16298")]
+        public virtual void Union_siblings_with_duplicate_property_in_subquery()
         {
+            // Coke and Tea both have CaffeineGrams, which both need to be projected out on each side and so
+            // requiring alias uniquification. They also have a different number of properties.
             using (var context = CreateContext())
             {
-                var kiwis = context.Set<Kiwi>();
+                var cokes = context.Set<Coke>();
 
-                var eagles = context.Set<Eagle>();
+                var teas = context.Set<Tea>();
 
-                var concat = kiwis.Cast<Bird>().Concat(eagles).ToList();
+                var concat = cokes.Cast<Drink>()
+                    .Union(teas)
+                    .Where(d => d.Id > 0)
+                    .ToList();
 
                 Assert.Equal(2, concat.Count);
             }
         }
 
-        [Fact(Skip = "Issue #14935. Cannot eval 'Except({value(Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryable`1[Microsoft.EntityFrameworkCore.TestModels.Inheritance.Eagle])})'")]
-        public virtual void Can_except_kiwis_and_eagles_as_birds()
+        [ConditionalFact(Skip = "#16298")]
+        public virtual void OfType_Union_subquery()
         {
             using (var context = CreateContext())
             {
-                var kiwis = context.Set<Kiwi>();
-
-                var eagles = context.Set<Eagle>();
-
-                var concat = kiwis.Cast<Bird>().Except(eagles).ToList();
-
-                Assert.Equal(1, concat.Count);
+                context.Set<Animal>()
+                    .OfType<Kiwi>()
+                    .Union(
+                        context.Set<Animal>()
+                            .OfType<Kiwi>())
+                    .Where(o => o.FoundOn == Island.North)
+                    .ToList();
             }
         }
 
-        [Fact(Skip = "Issue #14935. Cannot eval 'Intersect({value(Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryable`1[Microsoft.EntityFrameworkCore.TestModels.Inheritance.Eagle])})'")]
-        public virtual void Can_intersect_kiwis_and_eagles_as_birds()
+        [ConditionalFact(Skip = "#16298")]
+        public virtual void OfType_Union_OfType()
         {
             using (var context = CreateContext())
             {
-                var kiwis = context.Set<Kiwi>();
-
-                var eagles = context.Set<Eagle>();
-
-                var concat = kiwis.Cast<Bird>().Intersect(eagles).ToList();
-
-                Assert.Equal(0, concat.Count);
+                context.Set<Bird>()
+                    .OfType<Kiwi>()
+                    .Union(context.Set<Bird>())
+                    .OfType<Kiwi>()
+                    .ToList();
             }
         }
 
-        [Fact(Skip = "Issue #14935. Cannot eval 'Union({value(Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryable`1[Microsoft.EntityFrameworkCore.TestModels.Inheritance.Eagle])})'")]
-        public virtual void Can_union_kiwis_and_eagles_as_birds()
+        [ConditionalFact]
+        public virtual void Subquery_OfType()
         {
             using (var context = CreateContext())
             {
-                var kiwis = context.Set<Kiwi>();
-
-                var eagles = context.Set<Eagle>();
-
-                var concat = kiwis.Cast<Bird>().Union(eagles).ToList();
-
-                Assert.Equal(2, concat.Count);
+                context.Set<Bird>()
+                    .Take(5)
+                    .Distinct() // Causes pushdown
+                    .OfType<Kiwi>()
+                    .ToList();
             }
         }
 
-        [Fact]
+        [ConditionalFact(Skip = "#16298")]
+        public virtual void Union_entity_equality()
+        {
+            using (var context = CreateContext())
+            {
+                context.Set<Kiwi>()
+                    .Union(context.Set<Eagle>().Cast<Bird>())
+                    .Where(b => b == null)
+                    .ToList();
+            }
+        }
+
+        [ConditionalFact]
         public virtual void Setting_foreign_key_to_a_different_type_throws()
         {
             using (var context = CreateContext())
@@ -546,10 +571,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
                 var eagle = new Eagle
                 {
-                    Species = "Haliaeetus leucocephalus",
-                    Name = "Bald eagle",
-                    Group = EagleGroup.Booted,
-                    EagleId = kiwi.Species
+                    Species = "Haliaeetus leucocephalus", Name = "Bald eagle", Group = EagleGroup.Booted, EagleId = kiwi.Species
                 };
 
                 context.Add(eagle);
@@ -567,7 +589,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
         protected virtual bool EnforcesFkConstraints => true;
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Byte_enum_value_constant_used_in_projection()
         {
             using (var context = CreateContext())
@@ -575,7 +597,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 var query = context.Set<Kiwi>().Select(k => k.IsFlightless ? Island.North : Island.South);
                 var result = query.ToList();
 
-                Assert.Equal(1, result.Count);
+                Assert.Single(result);
                 Assert.Equal(Island.North, result[0]);
             }
         }

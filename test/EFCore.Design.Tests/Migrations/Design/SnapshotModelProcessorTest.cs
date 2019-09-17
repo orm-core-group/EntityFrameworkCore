@@ -18,7 +18,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations.Internal
 {
     public class SnapshotModelProcessorTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Updates_provider_annotations_on_model()
         {
             var builder = new ModelBuilder(new ConventionSet());
@@ -62,7 +62,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations.Internal
             Assert.Empty(reporter.Messages);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Warns_for_conflicting_annotations()
         {
             var model = new Model();
@@ -83,7 +83,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations.Internal
             Assert.True(actual == "Value1" || actual == "Value2");
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Warns_for_conflicting_annotations_one_relational()
         {
             var model = new Model();
@@ -104,10 +104,10 @@ namespace Microsoft.EntityFrameworkCore.Migrations.Internal
             Assert.True(actual == "Value1" || actual == "Value2");
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Does_not_warn_for_duplicate_non_conflicting_annotations()
         {
-            var model = new Model();
+            var model = new ModelBuilder(new ConventionSet()).Model;
             model.SetProductVersion("1.1.2");
             model["Unicorn:DefaultSchema"] = "Value";
             model["Hippo:DefaultSchema"] = "Value";
@@ -124,7 +124,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations.Internal
             Assert.Equal("Value", (string)model["Relational:DefaultSchema"]);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Does_not_process_non_v1_models()
         {
             var model = new Model();
@@ -143,7 +143,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations.Internal
             Assert.Equal("Value", (string)model["Unicorn:DefaultSchema"]);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Sets_owned_type_keys()
         {
             var builder = new ModelBuilder(new ConventionSet());

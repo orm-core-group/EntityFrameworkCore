@@ -28,9 +28,6 @@ namespace Microsoft.EntityFrameworkCore.Storage
         internal static readonly PropertyInfo ContextProperty
             = typeof(MaterializationContext).GetProperty(nameof(Context));
 
-        internal static readonly ConstructorInfo ObsoleteConstructor
-            = typeof(MaterializationContext).GetConstructor(new[] { typeof(ValueBuffer) });
-
         /// <summary>
         ///     Creates a new <see cref="MaterializationContext" /> instance.
         /// </summary>

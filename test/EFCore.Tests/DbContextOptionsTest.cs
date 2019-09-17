@@ -16,7 +16,7 @@ namespace Microsoft.EntityFrameworkCore
 {
     public class DbContextOptionsTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Warnings_can_be_configured()
         {
             var optionsBuilder = new DbContextOptionsBuilder()
@@ -27,28 +27,28 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Equal(WarningBehavior.Throw, warningConfiguration.DefaultBehavior);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Model_can_be_set_explicitly_in_options()
         {
             var model = new Model();
 
-            var optionsBuilder = new DbContextOptionsBuilder().UseModel(model);
+            var optionsBuilder = new DbContextOptionsBuilder().UseModel(model.FinalizeModel());
 
             Assert.Same(model, optionsBuilder.Options.FindExtension<CoreOptionsExtension>().Model);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Sensitive_data_logging_can_be_set_explicitly_in_options()
         {
             var model = new Model();
 
-            var optionsBuilder = new DbContextOptionsBuilder().UseModel(model).EnableSensitiveDataLogging();
+            var optionsBuilder = new DbContextOptionsBuilder().UseModel(model.FinalizeModel()).EnableSensitiveDataLogging();
 
             Assert.Same(model, optionsBuilder.Options.FindExtension<CoreOptionsExtension>().Model);
             Assert.True(optionsBuilder.Options.FindExtension<CoreOptionsExtension>().IsSensitiveDataLoggingEnabled);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Extensions_can_be_added_to_options()
         {
             var optionsBuilder = new DbContextOptionsBuilder();
@@ -70,91 +70,126 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Same(extension2, optionsBuilder.Options.FindExtension<FakeDbContextOptionsExtension2>());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Can_update_an_existing_extension()
         {
             var optionsBuilder = new DbContextOptionsBuilder();
 
-            var extension1 = new FakeDbContextOptionsExtension1
-            {
-                Something = "One "
-            };
-            var extension2 = new FakeDbContextOptionsExtension1
-            {
-                Something = "Two "
-            };
+            var extension1 = new FakeDbContextOptionsExtension1 { Something = "One " };
+            var extension2 = new FakeDbContextOptionsExtension1 { Something = "Two " };
 
             ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension1);
             ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension2);
 
-            Assert.Equal(1, optionsBuilder.Options.Extensions.Count());
+            Assert.Single(optionsBuilder.Options.Extensions);
             Assert.DoesNotContain(extension1, optionsBuilder.Options.Extensions);
             Assert.Contains(extension2, optionsBuilder.Options.Extensions);
 
             Assert.Same(extension2, optionsBuilder.Options.FindExtension<FakeDbContextOptionsExtension1>());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void IsConfigured_returns_true_if_any_provider_extensions_have_been_added()
         {
             var optionsBuilder = new DbContextOptionsBuilder();
 
             Assert.False(optionsBuilder.IsConfigured);
 
-            ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(new FakeDbContextOptionsExtension2());
+            var extension = new FakeDbContextOptionsExtension2();
+
+            ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension);
 
             Assert.True(optionsBuilder.IsConfigured);
+            Assert.False(extension.AppliedServices);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void IsConfigured_returns_false_if_only_non_provider_extensions_have_been_added()
         {
             var optionsBuilder = new DbContextOptionsBuilder();
 
             Assert.False(optionsBuilder.IsConfigured);
 
-            ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(new FakeDbContextOptionsExtension1());
+            var extension = new FakeDbContextOptionsExtension1();
+            ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension);
 
             Assert.False(optionsBuilder.IsConfigured);
+            Assert.False(extension.AppliedServices);
         }
 
         private class FakeDbContextOptionsExtension1 : IDbContextOptionsExtension
         {
+            private DbContextOptionsExtensionInfo _info;
+
             public string Something { get; set; }
 
-            public virtual bool ApplyServices(IServiceCollection services) => false;
+            public DbContextOptionsExtensionInfo Info
+                => _info ??= new ExtensionInfo(this);
 
-            public virtual long GetServiceProviderHashCode() => 0;
+            public bool AppliedServices { get; private set; }
+
+            public virtual void ApplyServices(IServiceCollection services)
+                => AppliedServices = true;
 
             public virtual void Validate(IDbContextOptions options)
             {
             }
 
-            public virtual string LogFragment => "";
-
-            public void PopulateDebugInfo(IDictionary<string, string> debugInfo)
+            private sealed class ExtensionInfo : DbContextOptionsExtensionInfo
             {
+                public ExtensionInfo(IDbContextOptionsExtension extension)
+                    : base(extension)
+                {
+                }
+
+                public override bool IsDatabaseProvider => false;
+
+                public override long GetServiceProviderHashCode() => 0;
+
+                public override string LogFragment => "";
+
+                public override void PopulateDebugInfo(IDictionary<string, string> debugInfo)
+                {
+                }
             }
         }
 
         private class FakeDbContextOptionsExtension2 : IDbContextOptionsExtension
         {
-            public virtual bool ApplyServices(IServiceCollection services) => true;
+            private DbContextOptionsExtensionInfo _info;
 
-            public virtual long GetServiceProviderHashCode() => 0;
+            public DbContextOptionsExtensionInfo Info
+                => _info ??= new ExtensionInfo(this);
+
+            public bool AppliedServices { get; private set; }
+
+            public virtual void ApplyServices(IServiceCollection services)
+                => AppliedServices = true;
 
             public virtual void Validate(IDbContextOptions options)
             {
             }
 
-            public virtual string LogFragment => "";
-
-            public void PopulateDebugInfo(IDictionary<string, string> debugInfo)
+            private sealed class ExtensionInfo : DbContextOptionsExtensionInfo
             {
+                public ExtensionInfo(IDbContextOptionsExtension extension)
+                    : base(extension)
+                {
+                }
+
+                public override bool IsDatabaseProvider => true;
+
+                public override long GetServiceProviderHashCode() => 0;
+
+                public override string LogFragment => "";
+
+                public override void PopulateDebugInfo(IDictionary<string, string> debugInfo)
+                {
+                }
             }
         }
 
-        [Fact]
+        [ConditionalFact]
         public void UseModel_on_generic_builder_returns_generic_builder()
         {
             var model = new Model();
@@ -164,7 +199,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Same(model, optionsBuilder.Options.FindExtension<CoreOptionsExtension>().Model);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void UseLoggerFactory_on_generic_builder_returns_generic_builder()
         {
             var loggerFactory = new LoggerFactory();
@@ -174,7 +209,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Same(loggerFactory, optionsBuilder.Options.FindExtension<CoreOptionsExtension>().LoggerFactory);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void UseMemoryCache_on_generic_builder_returns_generic_builder()
         {
             var memoryCache = new FakeMemoryCache();
@@ -192,7 +227,7 @@ namespace Microsoft.EntityFrameworkCore
             public void Remove(object key) => throw new NotImplementedException();
         }
 
-        [Fact]
+        [ConditionalFact]
         public void UseInternalServiceProvider_on_generic_builder_returns_generic_builder()
         {
             var serviceProvider = new FakeServiceProvider();
@@ -207,19 +242,19 @@ namespace Microsoft.EntityFrameworkCore
             public object GetService(Type serviceType) => throw new NotImplementedException();
         }
 
-        [Fact]
+        [ConditionalFact]
         public void EnableSensitiveDataLogging_on_generic_builder_returns_generic_builder()
         {
             GenericCheck(new DbContextOptionsBuilder<UnkoolContext>().EnableSensitiveDataLogging());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void EnableDetailedErrors_on_generic_builder_returns_generic_builder()
         {
             GenericCheck(new DbContextOptionsBuilder<UnkoolContext>().EnableDetailedErrors());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void UseQueryTrackingBehavior_on_generic_builder_returns_generic_builder()
         {
             var optionsBuilder = GenericCheck(
@@ -229,7 +264,7 @@ namespace Microsoft.EntityFrameworkCore
                 QueryTrackingBehavior.NoTracking, optionsBuilder.Options.FindExtension<CoreOptionsExtension>().QueryTrackingBehavior);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void ConfigureWarnings_on_generic_builder_returns_generic_builder()
         {
             var optionsBuilder = GenericCheck(
@@ -243,7 +278,7 @@ namespace Microsoft.EntityFrameworkCore
         private DbContextOptionsBuilder<UnkoolContext> GenericCheck(DbContextOptionsBuilder<UnkoolContext> optionsBuilder) =>
             optionsBuilder;
 
-        [Fact]
+        [ConditionalFact]
         public void Generic_builder_returns_generic_options()
         {
             var builder = new DbContextOptionsBuilder<UnkoolContext>();

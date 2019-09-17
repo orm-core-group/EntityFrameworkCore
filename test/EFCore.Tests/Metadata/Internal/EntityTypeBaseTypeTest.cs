@@ -11,7 +11,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 {
     public partial class EntityTypeTest
     {
-        [Fact]
+        [ConditionalFact]
         public void Circular_inheritance_should_throw()
         {
             var model = CreateModel();
@@ -44,7 +44,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => a.BaseType = d).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Setting_CLR_base_for_shadow_entity_type_should_throw()
         {
             var model = CreateModel();
@@ -57,7 +57,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => b.BaseType = a).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Setting_shadow_base_for_CLR_entity_type_should_throw()
         {
             var model = CreateModel();
@@ -70,7 +70,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => b.BaseType = a).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Setting_not_assignable_base_should_throw()
         {
             var model = CreateModel();
@@ -83,7 +83,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => a.BaseType = b).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Properties_on_base_type_should_be_inherited()
         {
             var model = CreateModel();
@@ -111,6 +111,8 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             b.BaseType = a;
             c.BaseType = a;
 
+            model.FinalizeModel();
+
             Assert.Equal(new[] { "E", "G" }, a.GetProperties().Select(p => p.Name).ToArray());
             Assert.Equal(new[] { "E", "G", "F", "H" }, b.GetProperties().Select(p => p.Name).ToArray());
             Assert.Equal(new[] { "E", "G", "H", "I" }, c.GetProperties().Select(p => p.Name).ToArray());
@@ -119,7 +121,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Same(b.FindProperty("E"), a.FindProperty("E"));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Properties_added_to_base_type_should_be_inherited()
         {
             var model = CreateModel();
@@ -144,6 +146,8 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             c.AddProperty(C.HProperty);
             c.AddProperty("I", typeof(string));
 
+            model.FinalizeModel();
+
             Assert.Equal(new[] { "E", "G" }, a.GetProperties().Select(p => p.Name).ToArray());
             Assert.Equal(new[] { "E", "G", "F", "H" }, b.GetProperties().Select(p => p.Name).ToArray());
             Assert.Equal(new[] { "E", "G", "H", "I" }, c.GetProperties().Select(p => p.Name).ToArray());
@@ -151,7 +155,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(new[] { 0, 1, 2, 3 }, c.GetProperties().Select(p => p.GetIndex()));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Properties_should_be_updated_when_base_type_changes()
         {
             var model = CreateModel();
@@ -167,21 +171,19 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 
             Assert.Equal(new[] { "F", "H" }, c.GetProperties().Select(p => p.Name).ToArray());
             Assert.Equal(new[] { "F", "H", "E", "G" }, d.GetProperties().Select(p => p.Name).ToArray());
-            Assert.Equal(new[] { 0, 1 }, c.GetProperties().Select(p => p.GetIndex()));
-            Assert.Equal(new[] { 0, 1, 2, 3 }, d.GetProperties().Select(p => p.GetIndex()));
 
             d.BaseType = null;
 
             Assert.Equal(new[] { "F", "H" }, c.GetProperties().Select(p => p.Name).ToArray());
             Assert.Equal(new[] { "E", "G" }, d.GetProperties().Select(p => p.Name).ToArray());
-            Assert.Equal(new[] { 0, 1 }, c.GetProperties().Select(p => p.GetIndex()));
-            Assert.Equal(new[] { 0, 1 }, d.GetProperties().Select(p => p.GetIndex()));
 
             var a = model.AddEntityType(typeof(A));
             a.AddProperty(A.EProperty);
             a.AddProperty(A.GProperty);
 
             c.BaseType = a;
+
+            model.FinalizeModel();
 
             Assert.Equal(new[] { "E", "G" }, a.GetProperties().Select(p => p.Name).ToArray());
             Assert.Equal(new[] { "E", "G", "F", "H" }, c.GetProperties().Select(p => p.Name).ToArray());
@@ -191,7 +193,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(new[] { 0, 1 }, d.GetProperties().Select(p => p.GetIndex()));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_property_throws_when_parent_type_has_property_with_same_name()
         {
             var model = CreateModel();
@@ -204,10 +206,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 
             Assert.Equal(
                 CoreStrings.ConflictingPropertyOrNavigation("G", typeof(B).Name, typeof(A).Name),
-                Assert.Throws<InvalidOperationException>(() => b.AddProperty("G", null)).Message);
+                Assert.Throws<InvalidOperationException>(() => b.AddProperty("G")).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_property_throws_when_grandparent_type_has_property_with_same_name()
         {
             var model = CreateModel();
@@ -223,10 +225,10 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 
             Assert.Equal(
                 CoreStrings.ConflictingPropertyOrNavigation("G", typeof(D).Name, typeof(A).Name),
-                Assert.Throws<InvalidOperationException>(() => d.AddProperty("G", null)).Message);
+                Assert.Throws<InvalidOperationException>(() => d.AddProperty("G")).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_property_throws_when_child_type_has_property_with_same_name()
         {
             var model = CreateModel();
@@ -243,7 +245,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => a.AddProperty(A.GProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_property_throws_when_grandchild_type_has_property_with_same_name()
         {
             var model = CreateModel();
@@ -263,7 +265,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => a.AddProperty(A.GProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Setting_base_type_throws_when_parent_contains_duplicate_property()
         {
             var model = CreateModel();
@@ -279,7 +281,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => b.BaseType = a).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Setting_base_type_throws_when_grandparent_contains_duplicate_property()
         {
             var model = CreateModel();
@@ -300,7 +302,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => d.BaseType = c).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Setting_base_type_throws_when_grandchild_contain_duplicate_property()
         {
             var model = CreateModel();
@@ -321,7 +323,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => c.BaseType = a).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Keys_on_base_type_should_be_inherited()
         {
             var model = CreateModel();
@@ -348,6 +350,8 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 
             b.BaseType = a;
 
+            model.FinalizeModel();
+
             Assert.Equal(
                 new[] { new[] { "E" }, new[] { "G" } },
                 a.GetKeys().Select(fk => fk.Properties.Select(p => p.Name).ToArray()).ToArray());
@@ -361,7 +365,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Same(b.FindKey(b.FindProperty("G")), a.FindKey(a.FindProperty("G")));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Keys_added_to_base_type_should_be_inherited()
         {
             var model = CreateModel();
@@ -378,6 +382,8 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             a.SetPrimaryKey(a.FindProperty("G"));
             a.AddKey(a.FindProperty("E"));
 
+            model.FinalizeModel();
+
             Assert.Equal(
                 new[] { new[] { "E" }, new[] { "G" } },
                 a.GetKeys().Select(fk => fk.Properties.Select(p => p.Name).ToArray()).ToArray());
@@ -388,7 +394,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(new[] { "G", "E", "F" }, b.GetProperties().Select(p => p.Name).ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Keys_should_be_updated_when_base_type_changes()
         {
             var model = CreateModel();
@@ -417,7 +423,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(new[] { "F" }, b.GetProperties().Select(p => p.Name).ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_keys_throws_when_there_is_a_parent_type()
         {
             var model = CreateModel();
@@ -428,13 +434,13 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 
             Assert.Equal(
                 CoreStrings.DerivedEntityTypeKey(typeof(B).Name, typeof(A).Name),
-                Assert.Throws<InvalidOperationException>(() => b.SetPrimaryKey(b.AddProperty("G", null))).Message);
+                Assert.Throws<InvalidOperationException>(() => b.SetPrimaryKey(b.AddProperty("G"))).Message);
             Assert.Equal(
                 CoreStrings.DerivedEntityTypeKey(typeof(B).Name, typeof(A).Name),
-                Assert.Throws<InvalidOperationException>(() => b.AddKey(b.AddProperty("E", null))).Message);
+                Assert.Throws<InvalidOperationException>(() => b.AddKey(b.AddProperty("E"))).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Setting_base_type_throws_when_child_contains_key()
         {
             var model = CreateModel();
@@ -459,7 +465,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => b.BaseType = a).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Setting_base_type_throws_on_keyless_type()
         {
             var model = CreateModel();
@@ -473,7 +479,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => b.BaseType = a).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void HasNoKey_on_derived_type_throws()
         {
             var model = CreateModel();
@@ -487,7 +493,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => b.IsKeyless = true).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Navigations_on_base_type_should_be_inherited()
         {
             var model = CreateModel();
@@ -521,7 +527,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Same(customerType.FindNavigation("Orders"), specialCustomerType.FindNavigation("Orders"));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Navigations_added_to_base_type_should_be_inherited()
         {
             var model = CreateModel();
@@ -549,7 +555,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(new[] { "Orders", "DerivedOrders" }, specialCustomerType.GetNavigations().Select(p => p.Name).ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Navigations_should_be_updated_when_base_type_changes()
         {
             var model = CreateModel();
@@ -577,7 +583,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 new[] { nameof(SpecialCustomer.DerivedOrders) }, specialCustomerType.GetNavigations().Select(p => p.Name).ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_navigation_throws_when_parent_type_has_navigation_with_same_name()
         {
             var model = CreateModel();
@@ -603,7 +609,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                         specialCustomerForeignKey.HasPrincipalToDependent(Customer.OrdersProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_navigation_throws_when_grandparent_type_has_navigation_with_same_name()
         {
             var model = CreateModel();
@@ -633,7 +639,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal("Orders", ((IEntityType)verySpecialCustomerType).GetNavigations().Single().Name);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_navigation_throws_when_child_type_has_navigation_with_same_name()
         {
             var model = CreateModel();
@@ -659,7 +665,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                         customerForeignKey.HasPrincipalToDependent("Orders")).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_navigation_throws_when_grandchild_type_has_navigation_with_same_name()
         {
             var model = CreateModel();
@@ -691,7 +697,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Equal(nameof(Customer.Orders), ((IEntityType)verySpecialCustomerType).GetNavigations().Single().Name);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Setting_base_type_throws_when_parent_contains_duplicate_navigation()
         {
             var model = CreateModel();
@@ -720,7 +726,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => specialOrderType.BaseType = orderType).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Setting_base_type_throws_when_grandparent_contains_duplicate_navigation()
         {
             var model = CreateModel();
@@ -751,7 +757,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => specialOrderType.BaseType = orderType).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Setting_base_type_throws_when_grandchild_contain_duplicate_navigation()
         {
             var model = CreateModel();
@@ -782,7 +788,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => verySpecialOrderType.BaseType = specialOrderType).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void ForeignKeys_on_base_type_should_be_inherited()
         {
             var model = CreateModel();
@@ -816,7 +822,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Same(customerForeignKey, specialOrderType.FindForeignKey(foreignKeyProperty, customerKey, customerType));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void ForeignKeys_added_to_base_type_should_be_inherited()
         {
             var model = CreateModel();
@@ -850,7 +856,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 specialOrderType.GetForeignKeys().Select(fk => fk.Properties.Select(p => p.Name).ToArray()).ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void ForeignKeys_should_be_updated_when_base_type_changes()
         {
             var model = CreateModel();
@@ -878,7 +884,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 specialOrderType.GetForeignKeys().Select(fk => fk.Properties.Select(p => p.Name).ToArray()).ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_foreignKey_throws_when_parent_type_has_foreignKey_on_same_properties()
         {
             var model = CreateModel();
@@ -904,7 +910,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => specialOrderType.AddForeignKey(foreignKeyProperty, customerKey, customerType)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_foreignKey_throws_when_grandparent_type_has_foreignKey_on_same_properties()
         {
             var model = CreateModel();
@@ -933,7 +939,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => verySpecialOrderType.AddForeignKey(foreignKeyProperty, customerKey, customerType)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_foreignKey_throws_when_child_type_has_foreignKey_on_same_properties()
         {
             var model = CreateModel();
@@ -959,7 +965,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => orderType.AddForeignKey(foreignKeyProperty, customerKey, customerType)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_foreignKey_throws_when_grandchild_type_has_foreignKey_on_same_properties()
         {
             var model = CreateModel();
@@ -988,7 +994,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => orderType.AddForeignKey(foreignKeyProperty, customerKey, customerType)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Index_on_base_type_should_be_inherited()
         {
             var model = CreateModel();
@@ -1019,7 +1025,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
             Assert.Same(index, specialOrderType.FindIndex(indexProperty));
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Index_added_to_base_type_should_be_inherited()
         {
             var model = CreateModel();
@@ -1050,7 +1056,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 specialOrderType.GetIndexes().Select(fk => fk.Properties.Select(p => p.Name).ToArray()).ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Indexes_should_be_updated_when_base_type_changes()
         {
             var model = CreateModel();
@@ -1075,7 +1081,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 specialOrderType.GetIndexes().Select(fk => fk.Properties.Select(p => p.Name).ToArray()).ToArray());
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_an_index_throws_if_properties_were_removed()
         {
             var model = CreateModel();
@@ -1088,7 +1094,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityType.AddIndex(new[] { idProperty })).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_an_index_throws_if_duplicate_properties()
         {
             var model = CreateModel();
@@ -1101,7 +1107,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                 Assert.Throws<InvalidOperationException>(() => entityType.AddIndex(new[] { idProperty, idProperty })).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_an_index_throws_when_parent_type_has_index_on_same_properties()
         {
             var model = CreateModel();
@@ -1119,7 +1125,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => specialOrderType.AddIndex(indexProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_an_index_throws_when_grandparent_type_has_index_on_same_properties()
         {
             var model = CreateModel();
@@ -1140,7 +1146,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => verySpecialOrderType.AddIndex(indexProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_an_index_throws_when_child_type_has_index_on_same_properties()
         {
             var model = CreateModel();
@@ -1158,7 +1164,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
                     () => orderType.AddIndex(indexProperty)).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public void Adding_an_index_throws_when_grandchild_type_has_index_on_same_properties()
         {
             var model = CreateModel();

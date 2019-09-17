@@ -11,7 +11,6 @@ using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Update;
 using Microsoft.EntityFrameworkCore.Utilities;
 using Microsoft.Extensions.DependencyInjection;
-using Remotion.Linq;
 
 namespace Microsoft.EntityFrameworkCore.Storage
 {
@@ -24,8 +23,8 @@ namespace Microsoft.EntityFrameworkCore.Storage
     ///         not used in application code.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Scoped"/>. This means that each
-    ///         <see cref="DbContext"/> instance will use its own instance of this service.
+    ///         The service lifetime is <see cref="ServiceLifetime.Scoped" />. This means that each
+    ///         <see cref="DbContext" /> instance will use its own instance of this service.
     ///         The implementation may depend on other services registered with any lifetime.
     ///         The implementation does not need to be thread-safe.
     ///     </para>
@@ -68,47 +67,9 @@ namespace Microsoft.EntityFrameworkCore.Storage
             IList<IUpdateEntry> entries,
             CancellationToken cancellationToken = default);
 
-        /// <summary>
-        ///     Translates a query model into a function that can be executed to get query results from the database.
-        /// </summary>
-        /// <typeparam name="TResult"> The type of results returned by the query. </typeparam>
-        /// <param name="queryModel"> An object model representing the query to be executed. </param>
-        /// <returns> A function that will execute the query. </returns>
-        public virtual Func<QueryContext, IEnumerable<TResult>> CompileQuery<TResult>(QueryModel queryModel)
+        public virtual Func<QueryContext, TResult> CompileQuery<TResult>(Expression query, bool async)
             => Dependencies.QueryCompilationContextFactory
-                .Create(async: false)
-                .CreateQueryModelVisitor()
-                .CreateQueryExecutor<TResult>(Check.NotNull(queryModel, nameof(queryModel)));
-
-        /// <summary>
-        ///     Translates a query model into a function that can be executed to asynchronously get query results from the database.
-        /// </summary>
-        /// <typeparam name="TResult"> The type of results returned by the query. </typeparam>
-        /// <param name="queryModel"> An object model representing the query to be executed. </param>
-        /// <returns> A function that will asynchronously execute the query. </returns>
-        public virtual Func<QueryContext, IAsyncEnumerable<TResult>> CompileAsyncQuery<TResult>(QueryModel queryModel)
-            => Dependencies.QueryCompilationContextFactory
-                .Create(async: true)
-                .CreateQueryModelVisitor()
-                .CreateAsyncQueryExecutor<TResult>(Check.NotNull(queryModel, nameof(queryModel)));
-
-        public virtual Func<QueryContext, TResult> CompileQuery2<TResult>(Expression query, bool async)
-        {
-            try
-            {
-                return Dependencies.QueryCompilationContextFactory2
-                    .Create(async)
-                    .CreateQueryExecutor<TResult>(query);
-            }
-            catch (Exception e)
-            {
-                if (e is NotImplementedException)
-                {
-                    return qc => default;
-                }
-
-                throw;
-            }
-        }
+                .Create(async)
+                .CreateQueryExecutor<TResult>(query);
     }
 }

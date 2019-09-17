@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using JetBrains.Annotations;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace Microsoft.EntityFrameworkCore.Migrations.Operations
@@ -10,7 +9,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations.Operations
     /// <summary>
     ///     A <see cref="MigrationOperation" /> to alter an existing table.
     /// </summary>
-    public class AlterTableOperation : MigrationOperation, IAlterMigrationOperation
+    public class AlterTableOperation : TableOperation, IAlterMigrationOperation
     {
         /// <summary>
         ///     The name of the table.
@@ -25,11 +24,9 @@ namespace Microsoft.EntityFrameworkCore.Migrations.Operations
         /// <summary>
         ///     An operation representing the table as it was before being altered.
         /// </summary>
-        public virtual Annotatable OldTable { get; [param: NotNull] set; } = new Annotatable();
+        public virtual TableOperation OldTable { get; [param: NotNull] set; } = new TableOperation();
 
-        /// <summary>
-        ///     The <see cref="OldTable" /> exposed to examine annotations.
-        /// </summary>
+        /// <inheritdoc />
         IMutableAnnotatable IAlterMigrationOperation.OldAnnotations => OldTable;
     }
 }

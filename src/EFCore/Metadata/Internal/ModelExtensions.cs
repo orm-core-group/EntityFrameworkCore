@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using JetBrains.Annotations;
+using Microsoft.EntityFrameworkCore.Infrastructure.Internal;
 
 namespace Microsoft.EntityFrameworkCore.Metadata.Internal
 {
@@ -23,7 +24,7 @@ namespace Microsoft.EntityFrameworkCore.Metadata.Internal
         ///     any release. You should only use it directly in your code with extreme caution and knowing that
         ///     doing so can result in application failures when updating to a new Entity Framework Core release.
         /// </summary>
-        public static void SetProductVersion([NotNull] this Model model, [NotNull] string value)
+        public static void SetProductVersion([NotNull] this IMutableModel model, [NotNull] string value)
             => model[CoreAnnotationNames.ProductVersion] = value;
 
         /// <summary>

@@ -4,6 +4,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using JetBrains.Annotations;
@@ -22,9 +23,9 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
     ///         The validator that enforces core rules common for all providers.
     ///     </para>
     ///     <para>
-    ///         The service lifetime is <see cref="ServiceLifetime.Singleton"/>. This means a single instance
-    ///         is used by many <see cref="DbContext"/> instances. The implementation must be thread-safe.
-    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped"/>.
+    ///         The service lifetime is <see cref="ServiceLifetime.Singleton" />. This means a single instance
+    ///         is used by many <see cref="DbContext" /> instances. The implementation must be thread-safe.
+    ///         This service cannot depend on services registered as <see cref="ServiceLifetime.Scoped" />.
     ///     </para>
     /// </summary>
     public class ModelValidator : IModelValidator
@@ -49,32 +50,253 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         ///     Validates a model, throwing an exception if any errors are found.
         /// </summary>
         /// <param name="model"> The model to validate. </param>
-        /// <param name="loggers"> Loggers to use. </param>
-        public virtual void Validate(IModel model, DiagnosticsLoggers loggers)
+        /// <param name="logger"> The logger to use. </param>
+        public virtual void Validate(IModel model, IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
         {
-            ValidateNoShadowEntities(model, loggers);
-            ValidateDefiningNavigations(model, loggers);
-            ValidateOwnership(model, loggers);
-            ValidateNonNullPrimaryKeys(model, loggers);
-            ValidateNoShadowKeys(model, loggers);
-            ValidateNoMutableKeys(model, loggers);
-            ValidateNoCycles(model, loggers);
-            ValidateClrInheritance(model, loggers);
-            ValidateChangeTrackingStrategy(model, loggers);
-            ValidateForeignKeys(model, loggers);
-            ValidateFieldMapping(model, loggers);
-            ValidateKeylessTypes(model, loggers);
-            ValidateQueryFilters(model, loggers);
-            ValidateData(model, loggers);
-            LogShadowProperties(model, loggers);
+            ((Model)model).MakeReadonly();
+
+            ValidateNoShadowEntities(model, logger);
+            ValidateIgnoredMembers(model, logger);
+            ValidatePropertyMapping(model, logger);
+            ValidateRelationships(model, logger);
+            ValidateDefiningNavigations(model, logger);
+            ValidateOwnership(model, logger);
+            ValidateNonNullPrimaryKeys(model, logger);
+            ValidateNoShadowKeys(model, logger);
+            ValidateNoMutableKeys(model, logger);
+            ValidateNoCycles(model, logger);
+            ValidateClrInheritance(model, logger);
+            ValidateDiscriminatorValues(model, logger);
+            ValidateChangeTrackingStrategy(model, logger);
+            ValidateForeignKeys(model, logger);
+            ValidateFieldMapping(model, logger);
+            ValidateKeylessTypes(model, logger);
+            ValidateQueryFilters(model, logger);
+            ValidateDefiningQuery(model, logger);
+            ValidateData(model, logger);
+            LogShadowProperties(model, logger);
+        }
+
+        /// <summary>
+        ///     Validates relationships.
+        /// </summary>
+        /// <param name="model"> The model. </param>
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateRelationships(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
+        {
+            Check.NotNull(model, nameof(model));
+
+            foreach (var entityType in model.GetEntityTypes())
+            {
+                foreach (var foreignKey in entityType.GetDeclaredForeignKeys())
+                {
+                    if (foreignKey.IsUnique
+                        && foreignKey is IConventionForeignKey concreteFk
+                        && concreteFk.GetPrincipalEndConfigurationSource() == null)
+                    {
+                        throw new InvalidOperationException(
+                            CoreStrings.AmbiguousOneToOneRelationship(
+                                foreignKey.DeclaringEntityType.DisplayName() + (foreignKey.DependentToPrincipal == null
+                                    ? ""
+                                    : "." + foreignKey.DependentToPrincipal.Name),
+                                foreignKey.PrincipalEntityType.DisplayName() + (foreignKey.PrincipalToDependent == null
+                                    ? ""
+                                    : "." + foreignKey.PrincipalToDependent.Name)));
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Validates property mappings.
+        /// </summary>
+        /// <param name="model"> The model. </param>
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidatePropertyMapping(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
+        {
+            Check.NotNull(model, nameof(model));
+
+            if (!(model is IConventionModel conventionModel))
+            {
+                return;
+            }
+
+            foreach (var entityType in conventionModel.GetEntityTypes())
+            {
+                var unmappedProperty = entityType.GetProperties().FirstOrDefault(
+                    p => (!ConfigurationSource.Convention.Overrides(p.GetConfigurationSource())
+                          || !p.IsShadowProperty())
+                         && p.FindTypeMapping() == null);
+
+                if (unmappedProperty != null)
+                {
+                    throw new InvalidOperationException(
+                        CoreStrings.PropertyNotMapped(
+                            entityType.DisplayName(), unmappedProperty.Name, unmappedProperty.ClrType.ShortDisplayName()));
+                }
+
+                if (!entityType.HasClrType())
+                {
+                    continue;
+                }
+
+                var clrProperties = new HashSet<string>(StringComparer.Ordinal);
+
+                var runtimeProperties = entityType.AsEntityType().GetRuntimeProperties();
+
+                clrProperties.UnionWith(
+                    runtimeProperties.Values
+                        .Where(pi => pi.IsCandidateProperty())
+                        .Select(pi => pi.GetSimpleMemberName()));
+
+                clrProperties.ExceptWith(entityType.GetProperties().Select(p => p.Name));
+                clrProperties.ExceptWith(entityType.GetNavigations().Select(p => p.Name));
+                clrProperties.ExceptWith(entityType.GetServiceProperties().Select(p => p.Name));
+                clrProperties.RemoveWhere(p => entityType.FindIgnoredConfigurationSource(p) != null);
+
+                if (clrProperties.Count <= 0)
+                {
+                    continue;
+                }
+
+                foreach (var clrProperty in clrProperties)
+                {
+                    var actualProperty = runtimeProperties[clrProperty];
+                    var propertyType = actualProperty.PropertyType;
+                    var targetSequenceType = propertyType.TryGetSequenceType();
+
+                    if (conventionModel.FindIgnoredConfigurationSource(propertyType.DisplayName()) != null
+                        || targetSequenceType != null
+                        && conventionModel.FindIgnoredConfigurationSource(targetSequenceType.DisplayName()) != null)
+                    {
+                        continue;
+                    }
+
+                    var targetType = FindCandidateNavigationPropertyType(actualProperty);
+
+                    var isTargetWeakOrOwned
+                        = targetType != null
+                          && (conventionModel.HasEntityTypeWithDefiningNavigation(targetType)
+                              || conventionModel.IsOwned(targetType));
+
+                    if (targetType?.IsValidEntityType() == true
+                        && (isTargetWeakOrOwned
+                            || conventionModel.FindEntityType(targetType) != null
+                            || targetType.GetRuntimeProperties().Any(p => p.IsCandidateProperty())))
+                    {
+                        // ReSharper disable CheckForReferenceEqualityInstead.1
+                        // ReSharper disable CheckForReferenceEqualityInstead.3
+                        if ((!entityType.IsKeyless
+                             || targetSequenceType == null)
+                            && entityType.GetDerivedTypes().All(
+                                dt => dt.GetDeclaredNavigations().FirstOrDefault(n => n.Name == actualProperty.GetSimpleMemberName())
+                                      == null)
+                            && (!isTargetWeakOrOwned
+                                || (!targetType.Equals(entityType.ClrType)
+                                    && (!entityType.IsInOwnershipPath(targetType)
+                                        || (entityType.FindOwnership().PrincipalEntityType.ClrType.Equals(targetType)
+                                            && targetSequenceType == null))
+                                    && (!entityType.IsInDefinitionPath(targetType)
+                                        || (entityType.DefiningEntityType.ClrType.Equals(targetType)
+                                            && targetSequenceType == null)))))
+                        {
+                            if (conventionModel.IsOwned(entityType.ClrType)
+                                && conventionModel.IsOwned(targetType))
+                            {
+                                throw new InvalidOperationException(
+                                    CoreStrings.AmbiguousOwnedNavigation(
+                                        entityType.ClrType.ShortDisplayName(), targetType.ShortDisplayName()));
+                            }
+
+                            throw new InvalidOperationException(
+                                CoreStrings.NavigationNotAdded(
+                                    entityType.DisplayName(), actualProperty.Name, propertyType.ShortDisplayName()));
+                        }
+                        // ReSharper restore CheckForReferenceEqualityInstead.3
+                        // ReSharper restore CheckForReferenceEqualityInstead.1
+                    }
+                    else if (targetSequenceType == null && propertyType.GetTypeInfo().IsInterface
+                             || targetSequenceType?.GetTypeInfo().IsInterface == true)
+                    {
+                        throw new InvalidOperationException(
+                            CoreStrings.InterfacePropertyNotAdded(
+                                entityType.DisplayName(), actualProperty.Name, propertyType.ShortDisplayName()));
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException(
+                            CoreStrings.PropertyNotAdded(
+                                entityType.DisplayName(), actualProperty.Name, propertyType.ShortDisplayName()));
+                    }
+                }
+            }
+        }
+
+        private Type FindCandidateNavigationPropertyType(PropertyInfo propertyInfo)
+            => Dependencies.MemberClassifier.FindCandidateNavigationPropertyType(propertyInfo);
+
+        /// <summary>
+        ///     Validates that no attempt is made to ignore inherited properties.
+        /// </summary>
+        /// <param name="model"> The model. </param>
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateIgnoredMembers(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
+        {
+            Check.NotNull(model, nameof(model));
+
+            if (!(model is IConventionModel conventionModel))
+            {
+                return;
+            }
+
+            foreach (var entityType in conventionModel.GetEntityTypes())
+            {
+                foreach (var ignoredMember in entityType.GetIgnoredMembers())
+                {
+                    if (entityType.FindIgnoredConfigurationSource(ignoredMember) != ConfigurationSource.Explicit)
+                    {
+                        continue;
+                    }
+
+                    var property = entityType.FindProperty(ignoredMember);
+                    if (property != null)
+                    {
+                        if (property.DeclaringEntityType != entityType)
+                        {
+                            throw new InvalidOperationException(
+                                CoreStrings.InheritedPropertyCannotBeIgnored(
+                                    ignoredMember, entityType.DisplayName(), property.DeclaringEntityType.DisplayName()));
+                        }
+
+                        Debug.Assert(false);
+                    }
+
+                    var navigation = entityType.FindNavigation(ignoredMember);
+                    if (navigation != null)
+                    {
+                        if (navigation.DeclaringEntityType != entityType)
+                        {
+                            throw new InvalidOperationException(
+                                CoreStrings.InheritedPropertyCannotBeIgnored(
+                                    ignoredMember, entityType.DisplayName(), navigation.DeclaringEntityType.DisplayName()));
+                        }
+
+                        Debug.Assert(false);
+                    }
+                }
+            }
         }
 
         /// <summary>
         ///     Validates that the model does not contain any entity types without a corresponding CLR type.
         /// </summary>
         /// <param name="model"> The model to validate. </param>
-        /// <param name="loggers"> Loggers to use if needed. </param>
-        protected virtual void ValidateNoShadowEntities([NotNull] IModel model, DiagnosticsLoggers loggers)
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateNoShadowEntities(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
         {
             Check.NotNull(model, nameof(model));
 
@@ -90,8 +312,9 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         ///     Validates the mapping/configuration of shadow keys in the model.
         /// </summary>
         /// <param name="model"> The model to validate. </param>
-        /// <param name="loggers"> Loggers to use if needed. </param>
-        protected virtual void ValidateNoShadowKeys([NotNull] IModel model, DiagnosticsLoggers loggers)
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateNoShadowKeys(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
         {
             Check.NotNull(model, nameof(model));
 
@@ -130,8 +353,9 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         ///     Validates the mapping/configuration of mutable in the model.
         /// </summary>
         /// <param name="model"> The model to validate. </param>
-        /// <param name="loggers"> Loggers to use if needed. </param>
-        protected virtual void ValidateNoMutableKeys([NotNull] IModel model, DiagnosticsLoggers loggers)
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateNoMutableKeys(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
         {
             Check.NotNull(model, nameof(model));
 
@@ -152,9 +376,12 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         ///     Validates the mapping/configuration of the model for cycles.
         /// </summary>
         /// <param name="model"> The model to validate. </param>
-        /// <param name="loggers"> Loggers to use if needed. </param>
-        protected virtual void ValidateNoCycles([NotNull] IModel model, DiagnosticsLoggers loggers)
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateNoCycles(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
         {
+            Check.NotNull(model, nameof(model));
+
             var unvalidatedEntityTypes = new HashSet<IEntityType>(model.GetEntityTypes());
             foreach (var entityType in model.GetEntityTypes())
             {
@@ -195,8 +422,9 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         ///     Validates the mapping/configuration of primary key nullability in the model.
         /// </summary>
         /// <param name="model"> The model to validate. </param>
-        /// <param name="loggers"> Loggers to use if needed. </param>
-        protected virtual void ValidateNonNullPrimaryKeys([NotNull] IModel model, DiagnosticsLoggers loggers)
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateNonNullPrimaryKeys(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
         {
             Check.NotNull(model, nameof(model));
 
@@ -215,23 +443,23 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         ///     Validates the mapping/configuration of inheritance in the model.
         /// </summary>
         /// <param name="model"> The model to validate. </param>
-        /// <param name="loggers"> Loggers to use if needed. </param>
-        protected virtual void ValidateClrInheritance([NotNull] IModel model, DiagnosticsLoggers loggers)
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateClrInheritance(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
         {
             Check.NotNull(model, nameof(model));
 
             var validEntityTypes = new HashSet<IEntityType>();
             foreach (var entityType in model.GetEntityTypes())
             {
-                ValidateClrInheritance(model, entityType, validEntityTypes, loggers);
+                ValidateClrInheritance(model, entityType, validEntityTypes);
             }
         }
 
         private void ValidateClrInheritance(
             [NotNull] IModel model,
             [NotNull] IEntityType entityType,
-            [NotNull] HashSet<IEntityType> validEntityTypes,
-            DiagnosticsLoggers loggers)
+            [NotNull] HashSet<IEntityType> validEntityTypes)
         {
             Check.NotNull(model, nameof(model));
             Check.NotNull(entityType, nameof(entityType));
@@ -276,11 +504,66 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         }
 
         /// <summary>
+        ///     Validates the mapping/configuration of inheritance in the model.
+        /// </summary>
+        /// <param name="model"> The model to validate. </param>
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateDiscriminatorValues(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
+        {
+            foreach (var rootEntityType in model.GetRootEntityTypes())
+            {
+                ValidateDiscriminatorValues(rootEntityType);
+            }
+        }
+
+        private static void ValidateDiscriminatorValues(IEntityType rootEntityType)
+        {
+            var discriminatorValues = new Dictionary<object, IEntityType>();
+            var derivedTypes = rootEntityType.GetDerivedTypesInclusive().ToList();
+            if (derivedTypes.Count == 1)
+            {
+                return;
+            }
+
+            if (rootEntityType.GetDiscriminatorProperty() == null)
+            {
+                throw new InvalidOperationException(
+                    CoreStrings.NoDiscriminatorProperty(rootEntityType.DisplayName()));
+            }
+
+            foreach (var derivedType in derivedTypes)
+            {
+                if (derivedType.ClrType?.IsInstantiable() != true)
+                {
+                    continue;
+                }
+
+                var discriminatorValue = derivedType.GetDiscriminatorValue();
+                if (discriminatorValue == null)
+                {
+                    throw new InvalidOperationException(
+                        CoreStrings.NoDiscriminatorValue(derivedType.DisplayName()));
+                }
+
+                if (discriminatorValues.TryGetValue(discriminatorValue, out var duplicateEntityType))
+                {
+                    throw new InvalidOperationException(
+                        CoreStrings.DuplicateDiscriminatorValue(
+                            derivedType.DisplayName(), discriminatorValue, duplicateEntityType.DisplayName()));
+                }
+
+                discriminatorValues[discriminatorValue] = derivedType;
+            }
+        }
+
+        /// <summary>
         ///     Validates the mapping/configuration of change tracking in the model.
         /// </summary>
         /// <param name="model"> The model to validate. </param>
-        /// <param name="loggers"> Loggers to use if needed. </param>
-        protected virtual void ValidateChangeTrackingStrategy([NotNull] IModel model, DiagnosticsLoggers loggers)
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateChangeTrackingStrategy(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
         {
             Check.NotNull(model, nameof(model));
 
@@ -298,8 +581,9 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         ///     Validates the mapping/configuration of ownership in the model.
         /// </summary>
         /// <param name="model"> The model to validate. </param>
-        /// <param name="loggers"> Loggers to use if needed. </param>
-        protected virtual void ValidateOwnership([NotNull] IModel model, DiagnosticsLoggers loggers)
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateOwnership(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
         {
             Check.NotNull(model, nameof(model));
 
@@ -349,7 +633,8 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
                                 ownership.PrincipalEntityType.DisplayName()));
                     }
                 }
-                else if (entityType.HasClrType() && ((IMutableModel)model).ShouldBeOwned(entityType.ClrType))
+                else if (entityType.HasClrType()
+                         && ((IMutableModel)model).IsOwned(entityType.ClrType))
                 {
                     throw new InvalidOperationException(CoreStrings.OwnerlessOwnedType(entityType.DisplayName()));
                 }
@@ -365,10 +650,11 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         ///     Validates the mapping/configuration of foreign keys in the model.
         /// </summary>
         /// <param name="model"> The model to validate. </param>
-        /// <param name="loggers"> Loggers to use if needed. </param>
-        protected virtual void ValidateForeignKeys([NotNull] IModel model, DiagnosticsLoggers loggers)
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateForeignKeys(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
         {
-            var modelLogger = loggers.GetLogger<DbLoggerCategory.Model>();
+            Check.NotNull(model, nameof(model));
 
             foreach (var entityType in model.GetEntityTypes())
             {
@@ -377,7 +663,7 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
                     if (declaredForeignKey.PrincipalEntityType == declaredForeignKey.DeclaringEntityType
                         && PropertyListComparer.Instance.Equals(declaredForeignKey.PrincipalKey.Properties, declaredForeignKey.Properties))
                     {
-                        modelLogger.RedundantForeignKeyWarning(declaredForeignKey);
+                        logger.RedundantForeignKeyWarning(declaredForeignKey);
                     }
 
                     if (entityType.BaseType == null)
@@ -414,8 +700,9 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         ///     Validates the mapping/configuration of defining navigations in the model.
         /// </summary>
         /// <param name="model"> The model to validate. </param>
-        /// <param name="loggers"> Loggers to use if needed. </param>
-        protected virtual void ValidateDefiningNavigations([NotNull] IModel model, DiagnosticsLoggers loggers)
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateDefiningNavigations(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
         {
             Check.NotNull(model, nameof(model));
 
@@ -446,7 +733,8 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
                                     entityType.DisplayName()));
                         }
 
-                        foreach (var otherEntityType in model.GetEntityTypes().Where(et => et.ClrType == entityType.ClrType && et != entityType))
+                        foreach (var otherEntityType in model.GetEntityTypes()
+                            .Where(et => et.ClrType == entityType.ClrType && et != entityType))
                         {
                             if (!otherEntityType.GetForeignKeys().Any(fk => fk.IsOwnership))
                             {
@@ -463,8 +751,9 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         ///     Validates the mapping/configuration of properties mapped to fields in the model.
         /// </summary>
         /// <param name="model"> The model to validate. </param>
-        /// <param name="loggers"> Loggers to use if needed. </param>
-        protected virtual void ValidateFieldMapping([NotNull] IModel model, DiagnosticsLoggers loggers)
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateFieldMapping(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
         {
             Check.NotNull(model, nameof(model));
 
@@ -477,7 +766,7 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
                         .Concat(entityType.GetDeclaredNavigations())
                         .Where(p => !p.IsShadowProperty()));
 
-                var constructorBinding = (ConstructorBinding)entityType[CoreAnnotationNames.ConstructorBinding];
+                var constructorBinding = (InstantiationBinding)entityType[CoreAnnotationNames.ConstructorBinding];
 
                 if (constructorBinding != null)
                 {
@@ -523,8 +812,9 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         ///     Validates the mapping/configuration of entity types without keys in the model.
         /// </summary>
         /// <param name="model"> The model to validate. </param>
-        /// <param name="loggers"> Loggers to use if needed. </param>
-        protected virtual void ValidateKeylessTypes([NotNull] IModel model, DiagnosticsLoggers loggers)
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateKeylessTypes(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
         {
             Check.NotNull(model, nameof(model));
 
@@ -541,7 +831,7 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
                     if (entityType.FindPrimaryKey() != null)
                     {
                         throw new InvalidOperationException(
-                            CoreStrings.NonKeylessEntityTypeDefiningQuery(entityType.DisplayName()));
+                            CoreStrings.DefiningQueryWithKey(entityType.DisplayName()));
                     }
                 }
             }
@@ -551,20 +841,40 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         ///     Validates the mapping/configuration of query filters in the model.
         /// </summary>
         /// <param name="model"> The model to validate. </param>
-        /// <param name="loggers"> Loggers to use if needed. </param>
-        protected virtual void ValidateQueryFilters([NotNull] IModel model, DiagnosticsLoggers loggers)
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateQueryFilters(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
         {
             Check.NotNull(model, nameof(model));
 
             foreach (var entityType in model.GetEntityTypes())
             {
-                if (entityType.GetQueryFilter() != null)
+                if (entityType.GetQueryFilter() != null
+                    && entityType.BaseType != null)
                 {
-                    if (entityType.BaseType != null)
-                    {
-                        throw new InvalidOperationException(
-                            CoreStrings.BadFilterDerivedType(entityType.GetQueryFilter(), entityType.DisplayName()));
-                    }
+                    throw new InvalidOperationException(
+                        CoreStrings.BadFilterDerivedType(entityType.GetQueryFilter(), entityType.DisplayName()));
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Validates the mapping/configuration of defining queries in the model.
+        /// </summary>
+        /// <param name="model"> The model to validate. </param>
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateDefiningQuery(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
+        {
+            Check.NotNull(model, nameof(model));
+
+            foreach (var entityType in model.GetEntityTypes())
+            {
+                if (entityType.GetDefiningQuery() != null
+                    && entityType.FindPrimaryKey() != null)
+                {
+                    throw new InvalidOperationException(
+                        CoreStrings.DefiningQueryWithKey(entityType.DisplayName()));
                 }
             }
         }
@@ -573,13 +883,13 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         ///     Validates the mapping/configuration of data (e.g. seed data) in the model.
         /// </summary>
         /// <param name="model"> The model to validate. </param>
-        /// <param name="loggers"> Loggers to use if needed. </param>
-        protected virtual void ValidateData([NotNull] IModel model, DiagnosticsLoggers loggers)
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void ValidateData([NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
         {
             Check.NotNull(model, nameof(model));
 
             var identityMaps = new Dictionary<IKey, IIdentityMap>();
-            var sensitiveDataLogged = loggers.GetLogger<DbLoggerCategory.Model.Validation>().ShouldLogSensitiveData();
+            var sensitiveDataLogged = logger.ShouldLogSensitiveData();
 
             foreach (var entityType in model.GetEntityTypes())
             {
@@ -602,7 +912,8 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
                                      && (property.ValueGenerated & ValueGenerated.OnAdd) == 0)
                                     || property.IsPrimaryKey()))
                             {
-                                throw new InvalidOperationException(CoreStrings.SeedDatumMissingValue(entityType.DisplayName(), property.Name));
+                                throw new InvalidOperationException(
+                                    CoreStrings.SeedDatumMissingValue(entityType.DisplayName(), property.Name));
                             }
                         }
                         else if (property.RequiresValueGenerator()
@@ -611,10 +922,13 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
                         {
                             if (property.ClrType.IsSignedInteger())
                             {
-                                throw new InvalidOperationException(CoreStrings.SeedDatumSignedNumericValue(entityType.DisplayName(), property.Name));
+                                throw new InvalidOperationException(
+                                    CoreStrings.SeedDatumSignedNumericValue(entityType.DisplayName(), property.Name));
                             }
 
-                            throw new InvalidOperationException(CoreStrings.SeedDatumDefaultValue(entityType.DisplayName(), property.Name, property.ClrType.GetDefaultValue()));
+                            throw new InvalidOperationException(
+                                CoreStrings.SeedDatumDefaultValue(
+                                    entityType.DisplayName(), property.Name, property.ClrType.GetDefaultValue()));
                         }
                         else if (!property.ClrType.GetTypeInfo().IsAssignableFrom(value.GetType().GetTypeInfo()))
                         {
@@ -679,7 +993,8 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
                         {
                             throw new InvalidOperationException(
                                 CoreStrings.SeedDatumDuplicateSensitive(
-                                    entityType.DisplayName(), string.Join(", ", key.Properties.Select((p, i) => p.Name + ":" + keyValues[i]))));
+                                    entityType.DisplayName(),
+                                    string.Join(", ", key.Properties.Select((p, i) => p.Name + ":" + keyValues[i]))));
                         }
 
                         throw new InvalidOperationException(
@@ -698,12 +1013,11 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
         ///     Logs all shadow properties that were created because there was no matching CLR member.
         /// </summary>
         /// <param name="model"> The model to validate. </param>
-        /// <param name="loggers"> Loggers to use if needed. </param>
-        protected virtual void LogShadowProperties([NotNull] IModel model, DiagnosticsLoggers loggers)
+        /// <param name="logger"> The logger to use. </param>
+        protected virtual void LogShadowProperties(
+            [NotNull] IModel model, [NotNull] IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
         {
             Check.NotNull(model, nameof(model));
-
-            var modelLogger = loggers.GetLogger<DbLoggerCategory.Model>();
 
             foreach (var entityType in model.GetEntityTypes().Where(t => t.ClrType != null))
             {
@@ -711,7 +1025,7 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
                 {
                     if (property.IsShadowProperty())
                     {
-                        modelLogger.ShadowPropertyCreated(property);
+                        logger.ShadowPropertyCreated(property);
                     }
                 }
             }

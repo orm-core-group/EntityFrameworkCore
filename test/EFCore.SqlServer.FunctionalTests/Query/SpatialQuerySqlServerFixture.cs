@@ -3,7 +3,7 @@
 
 using System.Linq;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.EntityFrameworkCore.TestModels.SpatialModel;
 using Microsoft.EntityFrameworkCore.TestUtilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,10 +34,10 @@ namespace Microsoft.EntityFrameworkCore.Query
             modelBuilder.HasDbFunction(
                 typeof(GeoExtensions).GetMethod(nameof(GeoExtensions.Distance)),
                 b => b.HasTranslation(
-                    e => new SqlFunctionExpression(
+                    e => SqlFunctionExpression.Create(
                         e.First(),
                         "STDistance",
-                         e.Skip(1),
+                        e.Skip(1),
                         typeof(double),
                         null)));
         }

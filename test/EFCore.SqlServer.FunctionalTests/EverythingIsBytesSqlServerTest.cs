@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.TestUtilities;
-using Microsoft.EntityFrameworkCore.TestUtilities.Xunit;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -25,10 +24,13 @@ namespace Microsoft.EntityFrameworkCore
         [ConditionalFact]
         public virtual void Columns_have_expected_data_types()
         {
-            var actual = BuiltInDataTypesSqlServerTest.QueryForColumnTypes(CreateContext());
+            var actual = BuiltInDataTypesSqlServerTest.QueryForColumnTypes(
+                CreateContext(),
+                nameof(ObjectBackedDataTypes), nameof(NullableBackedDataTypes), nameof(NonNullableBackedDataTypes));
 
             const string expected = @"BinaryForeignKeyDataType.BinaryKeyDataTypeId ---> [nullable varbinary] [MaxLength = 900]
 BinaryForeignKeyDataType.Id ---> [varbinary] [MaxLength = 4]
+BinaryKeyDataType.Ex ---> [nullable varbinary] [MaxLength = -1]
 BinaryKeyDataType.Id ---> [varbinary] [MaxLength = 900]
 BuiltInDataTypes.Enum16 ---> [varbinary] [MaxLength = 2]
 BuiltInDataTypes.Enum32 ---> [varbinary] [MaxLength = 4]
@@ -175,6 +177,8 @@ UnicodeDataTypes.StringUnicode ---> [nullable varbinary] [MaxLength = -1]
 
             public override bool SupportsBinaryKeys => true;
 
+            public override bool SupportsDecimalComparisons => true;
+
             public override DateTime DefaultDateTime => new DateTime();
 
             public override DbContextOptionsBuilder AddOptions(DbContextOptionsBuilder builder)
@@ -243,29 +247,26 @@ UnicodeDataTypes.StringUnicode ---> [nullable varbinary] [MaxLength = -1]
                     }
                 }
 
-                if (clrType != null)
+                if (clrType == typeof(byte[]))
                 {
-                    if (clrType == typeof(byte[]))
+                    if (mappingInfo.IsRowVersion == true)
                     {
-                        if (mappingInfo.IsRowVersion == true)
-                        {
-                            return _rowversion;
-                        }
-
-                        var isFixedLength = mappingInfo.IsFixedLength == true;
-
-                        var size = mappingInfo.Size ?? (mappingInfo.IsKeyOrIndex ? (int?)900 : null);
-                        if (size > 8000)
-                        {
-                            size = isFixedLength ? 8000 : (int?)null;
-                        }
-
-                        return new SqlServerByteArrayTypeMapping(
-                            "varbinary(" + (size == null ? "max" : size.ToString()) + ")",
-                            size,
-                            isFixedLength,
-                            storeTypePostfix: size == null ? StoreTypePostfix.None : (StoreTypePostfix?)null);
+                        return _rowversion;
                     }
+
+                    var isFixedLength = mappingInfo.IsFixedLength == true;
+
+                    var size = mappingInfo.Size ?? (mappingInfo.IsKeyOrIndex ? (int?)900 : null);
+                    if (size > 8000)
+                    {
+                        size = isFixedLength ? 8000 : (int?)null;
+                    }
+
+                    return new SqlServerByteArrayTypeMapping(
+                        "varbinary(" + (size == null ? "max" : size.ToString()) + ")",
+                        size,
+                        isFixedLength,
+                        storeTypePostfix: size == null ? StoreTypePostfix.None : (StoreTypePostfix?)null);
                 }
 
                 return null;

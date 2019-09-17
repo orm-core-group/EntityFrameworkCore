@@ -35,7 +35,7 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
         public IReadOnlyList<string> Parameters => ((TestSqlLogger)Logger).Parameters;
         public string Sql => string.Join(_eol + _eol, SqlStatements);
 
-        public void AssertBaseline(string[] expected, bool assertOrder = true)
+        public void AssertBaseline(string[] expected)
         {
             if (_proceduralQueryGeneration)
             {
@@ -44,34 +44,16 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
 
             try
             {
-                if (assertOrder)
+                for (var i = 0; i < expected.Length; i++)
                 {
-                    for (var i = 0; i < expected.Length; i++)
-                    {
-                        Assert.Equal(expected[i], SqlStatements[i], ignoreLineEndingDifferences: true);
-                    }
-                }
-                else
-                {
-                    foreach (var expectedFragment in expected)
-                    {
-                        var normalizedExpectedFragment = expectedFragment.Replace("\r", string.Empty).Replace("\n", _eol);
-                        Assert.Contains(
-                            normalizedExpectedFragment,
-                            SqlStatements);
-                    }
+                    Assert.Equal(expected[i], SqlStatements[i], ignoreLineEndingDifferences: true);
                 }
             }
             catch
             {
                 var methodCallLine = Environment.StackTrace.Split(
-                        new[] { _eol },
-#if NETCOREAPP3_0
-                        StringSplitOptions.RemoveEmptyEntries)[3]
-#else
-                        StringSplitOptions.RemoveEmptyEntries)[4]
-#endif
-                    .Substring(6);
+                    new[] { _eol },
+                    StringSplitOptions.RemoveEmptyEntries)[3].Substring(6);
 
                 var testName = methodCallLine.Substring(0, methodCallLine.IndexOf(')') + 1);
                 var lineIndex = methodCallLine.LastIndexOf("line", StringComparison.Ordinal);
@@ -83,7 +65,7 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
                 var logFile = currentDirectory.Substring(
                                   0,
                                   currentDirectory.LastIndexOf("\\artifacts\\", StringComparison.Ordinal) + 1)
-                              + "QueryBaseline.cs";
+                              + "QueryBaseline.txt";
 
                 var testInfo = testName + " : " + lineNumber + FileNewLine;
 
@@ -102,9 +84,9 @@ namespace Microsoft.EntityFrameworkCore.TestUtilities
 
                 var contents = testInfo + newBaseLine + FileNewLine + FileNewLine;
 
-                //File.AppendAllText(logFile, contents);
+                File.AppendAllText(logFile, contents);
 
-                //throw;
+                throw;
             }
         }
 

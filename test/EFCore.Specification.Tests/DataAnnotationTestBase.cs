@@ -13,7 +13,6 @@ using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata.Conventions.Internal;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.TestUtilities;
@@ -45,16 +44,7 @@ namespace Microsoft.EntityFrameworkCore
 
         public virtual ModelBuilder CreateModelBuilder()
         {
-            var context = CreateContext();
-            var conventionSetBuilder = CreateConventionSetBuilder(context);
-            var loggers = new DiagnosticsLoggers(
-                context.GetService<IDiagnosticsLogger<DbLoggerCategory.Model>>(),
-                context.GetService<IDiagnosticsLogger<DbLoggerCategory.Model.Validation>>());
-
-            var conventionSet = conventionSetBuilder.CreateConventionSet();
-
-            conventionSet.ModelBuiltConventions.Add(
-                new ValidatingConvention(context.GetService<IModelValidator>(), loggers));
+            var conventionSet = CreateConventionSetBuilder(CreateContext()).CreateConventionSet();
 
             return new ModelBuilder(conventionSet);
         }
@@ -77,7 +67,7 @@ namespace Microsoft.EntityFrameworkCore
         {
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Explicit_configuration_on_derived_type_overrides_annotation_on_unmapped_base_type()
         {
             var modelBuilder = CreateModelBuilder();
@@ -92,7 +82,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Equal(10, GetProperty<Employee>(modelBuilder, "Name").GetMaxLength());
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Explicit_configuration_on_derived_type_overrides_annotation_on_mapped_base_type()
         {
             var modelBuilder = CreateModelBuilder();
@@ -110,7 +100,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Equal(10, GetProperty<Employee>(modelBuilder, "Name").GetMaxLength());
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Explicit_configuration_on_derived_type_or_base_type_is_last_one_wins()
         {
             var modelBuilder = CreateModelBuilder();
@@ -151,7 +141,7 @@ namespace Microsoft.EntityFrameworkCore
         protected static IMutableProperty GetProperty<TEntity>(ModelBuilder modelBuilder, string name)
             => modelBuilder.Model.FindEntityType(typeof(TEntity)).FindProperty(name);
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Duplicate_column_order_is_ignored()
         {
             var modelBuilder = CreateModelBuilder();
@@ -173,7 +163,7 @@ namespace Microsoft.EntityFrameworkCore
             public string Name { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual ModelBuilder Non_public_annotations_are_enabled()
         {
             var modelBuilder = CreateModelBuilder();
@@ -202,7 +192,7 @@ namespace Microsoft.EntityFrameworkCore
             private string PersonFirstName { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual ModelBuilder Field_annotations_are_enabled()
         {
             var modelBuilder = CreateModelBuilder();
@@ -225,7 +215,7 @@ namespace Microsoft.EntityFrameworkCore
 #pragma warning restore 169
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void NotMapped_should_propagate_down_inheritance_hierarchy()
         {
             var modelBuilder = CreateModelBuilder();
@@ -247,19 +237,19 @@ namespace Microsoft.EntityFrameworkCore
         {
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void NotMapped_on_base_class_property_ignores_it()
         {
             var modelBuilder = CreateModelBuilder();
 
             modelBuilder.Entity<Unit1>();
-            modelBuilder.Entity<BaseEntity1>();
+            modelBuilder.Entity<BaseEntity1>().Property(e => e.BaseClassProperty);
 
             Validate(modelBuilder);
 
             Assert.Null(modelBuilder.Model.FindEntityType(typeof(AbstractBaseEntity1)).FindProperty("BaseClassProperty"));
-            Assert.Null(modelBuilder.Model.FindEntityType(typeof(BaseEntity1)).FindProperty("BaseClassProperty"));
-            Assert.Null(modelBuilder.Model.FindEntityType(typeof(Unit1)).FindProperty("BaseClassProperty"));
+            Assert.NotNull(modelBuilder.Model.FindEntityType(typeof(BaseEntity1)).FindProperty("BaseClassProperty"));
+            Assert.NotNull(modelBuilder.Model.FindEntityType(typeof(Unit1)).FindProperty("BaseClassProperty"));
             Assert.Null(modelBuilder.Model.FindEntityType(typeof(AbstractBaseEntity1)).FindProperty("VirtualBaseClassProperty"));
             Assert.Null(modelBuilder.Model.FindEntityType(typeof(BaseEntity1)).FindProperty("VirtualBaseClassProperty"));
             Assert.Null(modelBuilder.Model.FindEntityType(typeof(Unit1)).FindProperty("VirtualBaseClassProperty"));
@@ -293,8 +283,8 @@ namespace Microsoft.EntityFrameworkCore
             public new string VirtualBaseClassProperty { get; set; }
         }
 
-        [Fact]
-        public virtual void NotMapped_on_base_class_property_and_overriden_property_ignores_them()
+        [ConditionalFact]
+        public virtual void NotMapped_on_base_class_property_and_overridden_property_ignores_them()
         {
             var modelBuilder = CreateModelBuilder();
 
@@ -337,7 +327,7 @@ namespace Microsoft.EntityFrameworkCore
             public new string VirtualBaseClassProperty { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void NotMapped_on_base_class_property_discovered_through_navigation_ignores_it()
         {
             var modelBuilder = CreateModelBuilder();
@@ -351,22 +341,20 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Null(modelBuilder.Model.FindEntityType(typeof(Unit3)).FindProperty("AbstractBaseClassProperty"));
         }
 
-        [Fact]
-        public virtual void NotMapped_on_overriden_mapped_base_class_property_throws()
+        [ConditionalFact]
+        public virtual void NotMapped_on_overridden_property_is_ignored()
         {
             var modelBuilder = CreateModelBuilder();
 
             modelBuilder.Entity<Unit3>();
             modelBuilder.Entity<BaseEntity3>();
 
-            Assert.Equal(
-                CoreStrings.InheritedPropertyCannotBeIgnored(
-                    nameof(Unit3.VirtualBaseClassProperty), typeof(Unit3).ShortDisplayName(), typeof(BaseEntity3).ShortDisplayName()),
-                Assert.Throws<InvalidOperationException>(
-                    () => Validate(modelBuilder)).Message);
+            Assert.NotNull(modelBuilder.Model.FindEntityType(typeof(Unit3)).FindProperty("VirtualBaseClassProperty"));
+
+            Validate(modelBuilder);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void NotMapped_on_unmapped_derived_property_ignores_it()
         {
             var modelBuilder = CreateModelBuilder();
@@ -410,7 +398,7 @@ namespace Microsoft.EntityFrameworkCore
             public new string VirtualBaseClassProperty { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void NotMapped_on_abstract_base_class_property_ignores_it()
         {
             var modelBuilder = CreateModelBuilder();
@@ -426,8 +414,8 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Null(modelBuilder.Model.FindEntityType(typeof(Unit3)).FindProperty("AbstractBaseClassProperty"));
         }
 
-        [Fact]
-        public virtual void NotMapped_on_unmapped_base_class_property_and_overriden_property_ignores_it()
+        [ConditionalFact]
+        public virtual void NotMapped_on_unmapped_base_class_property_and_overridden_property_ignores_it()
         {
             var modelBuilder = CreateModelBuilder();
             modelBuilder.Ignore<AbstractBaseEntity2>();
@@ -441,7 +429,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Null(modelBuilder.Model.FindEntityType(typeof(Unit2)).FindProperty("VirtualBaseClassProperty"));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void NotMapped_on_unmapped_base_class_property_ignores_it()
         {
             var modelBuilder = CreateModelBuilder();
@@ -457,7 +445,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Null(modelBuilder.Model.FindEntityType(typeof(Unit1)).FindProperty("VirtualBaseClassProperty"));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void NotMapped_on_new_property_with_same_name_as_in_unmapped_base_class_ignores_it()
         {
             var modelBuilder = CreateModelBuilder();
@@ -497,8 +485,8 @@ namespace Microsoft.EntityFrameworkCore
             public new string VirtualBaseClassProperty { get; set; }
         }
 
-        [Fact]
-        public virtual void StringLength_with_value_takes_presedence_over_MaxLength()
+        [ConditionalFact]
+        public virtual void StringLength_with_value_takes_precedence_over_MaxLength()
         {
             var modelBuilder = CreateModelBuilder();
 
@@ -523,7 +511,7 @@ namespace Microsoft.EntityFrameworkCore
             public string PersonLastName { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void MaxLength_with_length_takes_precedence_over_StringLength()
         {
             var modelBuilder = CreateModelBuilder();
@@ -549,7 +537,7 @@ namespace Microsoft.EntityFrameworkCore
             public string PersonLastName { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual ModelBuilder Default_length_for_key_string_column()
         {
             var modelBuilder = CreateModelBuilder();
@@ -580,7 +568,7 @@ namespace Microsoft.EntityFrameworkCore
             public virtual Login1 User { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual ModelBuilder Key_and_column_work_together()
         {
             var modelBuilder = CreateModelBuilder();
@@ -601,7 +589,7 @@ namespace Microsoft.EntityFrameworkCore
             public string PersonFirstName { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual ModelBuilder Key_and_MaxLength_64_produce_nvarchar_64()
         {
             var modelBuilder = CreateModelBuilder();
@@ -623,7 +611,7 @@ namespace Microsoft.EntityFrameworkCore
             public string PersonFirstName { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Key_from_base_type_is_recognized()
         {
             var modelBuilder = CreateModelBuilder();
@@ -637,7 +625,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.True(GetProperty<DODerived>(modelBuilder, "OrderLineNo").IsPrimaryKey());
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Key_from_base_type_is_recognized_if_base_discovered_first()
         {
             var modelBuilder = CreateModelBuilder();
@@ -651,7 +639,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.True(GetProperty<DODerived>(modelBuilder, "OrderLineNo").IsPrimaryKey());
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Key_from_base_type_is_recognized_if_discovered_through_relationship()
         {
             var modelBuilder = CreateModelBuilder();
@@ -685,7 +673,7 @@ namespace Microsoft.EntityFrameworkCore
             public string Special { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Key_on_nav_prop_is_ignored()
         {
             var modelBuilder = CreateModelBuilder();
@@ -713,7 +701,7 @@ namespace Microsoft.EntityFrameworkCore
             public DASimple SpecialSimple { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual ModelBuilder Key_property_is_not_used_for_FK_when_set_by_annotation()
         {
             var modelBuilder = CreateModelBuilder();
@@ -722,8 +710,7 @@ namespace Microsoft.EntityFrameworkCore
             modelBuilder.Entity<Child>();
             var toy = modelBuilder.Entity<Toy>();
 
-            Assert.False(
-                toy.Metadata.GetForeignKeys().Any(fk => fk.IsUnique == false && fk.Properties.Any(p => p.Name == nameof(Toy.IdRow))));
+            Assert.DoesNotContain(toy.Metadata.GetForeignKeys(), fk => fk.IsUnique == false && fk.Properties.Any(p => p.Name == nameof(Toy.IdRow)));
 
             Validate(modelBuilder);
 
@@ -760,21 +747,19 @@ namespace Microsoft.EntityFrameworkCore
             public string Name { get; set; }
         }
 
-        [Fact]
-        public virtual ModelBuilder Key_specified_on_multiple_properties_can_be_overriden()
+        [ConditionalFact]
+        public virtual ModelBuilder Key_specified_on_multiple_properties_can_be_overridden()
         {
             var modelBuilder = CreateModelBuilder();
 
             modelBuilder.Entity<CompositeKeyAttribute>().HasKey(
-                c => new
-                {
-                    c.IdRow,
-                    c.Name
-                });
+                c => new { c.IdRow, c.Name });
 
             Validate(modelBuilder);
 
-            Assert.Equal(2, modelBuilder.Model.FindEntityType(typeof(CompositeKeyAttribute)).GetKeys().Single().Properties.Count);
+            var entityType = modelBuilder.Model.FindEntityType(typeof(CompositeKeyAttribute));
+            Assert.Equal(2, entityType.GetKeys().Single().Properties.Count);
+            Assert.Equal(2, entityType.GetProperties().Count());
 
             return modelBuilder;
         }
@@ -790,17 +775,13 @@ namespace Microsoft.EntityFrameworkCore
             // ReSharper restore UnusedAutoPropertyAccessor.Local
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual ModelBuilder DatabaseGeneratedOption_configures_the_property_correctly()
         {
             var modelBuilder = CreateModelBuilder();
 
             modelBuilder.Entity<GeneratedEntity>().HasAlternateKey(
-                e => new
-                {
-                    e.Identity,
-                    e.Version
-                });
+                e => new { e.Identity, e.Version });
 
             var entity = modelBuilder.Model.FindEntityType(typeof(GeneratedEntity));
 
@@ -831,18 +812,13 @@ namespace Microsoft.EntityFrameworkCore
             public Guid Version { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual ModelBuilder DatabaseGeneratedOption_Identity_does_not_throw_on_noninteger_properties()
         {
             var modelBuilder = CreateModelBuilder();
 
             modelBuilder.Entity<GeneratedEntityNonInteger>().HasAlternateKey(
-                e => new
-                {
-                    e.String,
-                    e.DateTime,
-                    e.Guid
-                });
+                e => new { e.String, e.DateTime, e.Guid });
 
             var entity = modelBuilder.Model.FindEntityType(typeof(GeneratedEntityNonInteger));
 
@@ -877,7 +853,7 @@ namespace Microsoft.EntityFrameworkCore
             public Guid Guid { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual ModelBuilder Timestamp_takes_precedence_over_MaxLength()
         {
             var modelBuilder = CreateModelBuilder();
@@ -903,7 +879,7 @@ namespace Microsoft.EntityFrameworkCore
             public byte[] NonMaxTimestamp { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Annotation_in_derived_class_when_base_class_processed_after_derived_class()
         {
             var modelBuilder = CreateModelBuilder();
@@ -927,7 +903,7 @@ namespace Microsoft.EntityFrameworkCore
             public virtual string Style { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Required_and_ForeignKey_to_Required()
         {
             var modelBuilder = CreateModelBuilder();
@@ -960,8 +936,7 @@ namespace Microsoft.EntityFrameworkCore
             public virtual Login2 User { get; set; }
         }
 
-        [Fact]
-        // Regression test for Dev11 Bug 94993
+        [ConditionalFact]
         public virtual void Required_to_Required_and_ForeignKey()
         {
             var modelBuilder = CreateModelBuilder();
@@ -994,7 +969,7 @@ namespace Microsoft.EntityFrameworkCore
             public virtual Login3 User { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Required_and_ForeignKey_to_Required_and_ForeignKey()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1008,8 +983,8 @@ namespace Microsoft.EntityFrameworkCore
             Assert.True(GetProperty<Profile4>(modelBuilder, nameof(Profile4.Profile4Id)).IsForeignKey());
         }
 
-        [Fact]
-        public virtual void Required_and_ForeignKey_to_Required_and_ForeignKey_can_be_overriden()
+        [ConditionalFact]
+        public virtual void Required_and_ForeignKey_to_Required_and_ForeignKey_can_be_overridden()
         {
             var modelBuilder = CreateModelBuilder();
 
@@ -1047,7 +1022,7 @@ namespace Microsoft.EntityFrameworkCore
             public virtual Login4 User { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void ForeignKey_to_nothing()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1078,7 +1053,7 @@ namespace Microsoft.EntityFrameworkCore
             public virtual Login5 User { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Required_and_ForeignKey_to_nothing()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1110,7 +1085,7 @@ namespace Microsoft.EntityFrameworkCore
             public virtual Login6 User { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Nothing_to_ForeignKey()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1141,7 +1116,7 @@ namespace Microsoft.EntityFrameworkCore
             public virtual Login7 User { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Nothing_to_Required_and_ForeignKey()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1173,7 +1148,7 @@ namespace Microsoft.EntityFrameworkCore
             public virtual Login8 User { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void ForeignKey_to_ForeignKey()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1208,7 +1183,7 @@ namespace Microsoft.EntityFrameworkCore
             public virtual Login9 User { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void ForeignKey_to_ForeignKey_same_name()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1241,7 +1216,7 @@ namespace Microsoft.EntityFrameworkCore
             public Login10 User { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void ForeignKey_to_ForeignKey_same_name_one_shadow()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1270,7 +1245,7 @@ namespace Microsoft.EntityFrameworkCore
             public virtual Login11 User { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void Shared_ForeignKey_to_different_principals()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1310,7 +1285,71 @@ namespace Microsoft.EntityFrameworkCore
             public int Id { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
+        public virtual void ForeignKeyAttribute_configures_relationships_when_inverse_on_derived()
+        {
+            var modelBuilder = CreateModelBuilder();
+
+            modelBuilder.Entity<Answer>();
+            modelBuilder.Entity<MultipleAnswers>()
+                .HasMany(m => m.Answers)
+                .WithOne(p => (MultipleAnswers)p.Answer)
+                .HasForeignKey(p => p.AnswerId);
+            modelBuilder.Entity<MultipleAnswersRepeating>()
+                .HasMany(m => m.Answers)
+                .WithOne(p => (MultipleAnswersRepeating)p.Answer)
+                .HasForeignKey(p => p.AnswerId);
+
+            modelBuilder.Entity<PartialAnswerBase>();
+            modelBuilder.Entity<PartialAnswer>();
+            modelBuilder.Entity<PartialAnswerRepeating>();
+
+            Validate(modelBuilder);
+
+            var fk1 = modelBuilder.Model.FindEntityType(typeof(PartialAnswer)).GetForeignKeys().Single();
+            Assert.Equal(nameof(PartialAnswer.Answer), fk1.DependentToPrincipal.Name);
+            Assert.Equal(nameof(MultipleAnswers.Answers), fk1.PrincipalToDependent.Name);
+            Assert.Equal(nameof(PartialAnswer.AnswerId), fk1.Properties.Single().Name);
+
+            var fk2 = modelBuilder.Model.FindEntityType(typeof(PartialAnswerRepeating)).GetForeignKeys().Single();
+            Assert.Equal(nameof(PartialAnswerRepeating.Answer), fk1.DependentToPrincipal.Name);
+            Assert.Equal(nameof(MultipleAnswersRepeating.Answers), fk1.PrincipalToDependent.Name);
+            Assert.Equal(nameof(PartialAnswerRepeating.AnswerId), fk1.Properties.Single().Name);
+        }
+
+        private abstract class Answer
+        {
+            public int Id { get; set; }
+        }
+
+        private class PartialAnswerBase
+        {
+            public int Id { get; set; }
+            public int AnswerId { get; set; }
+
+            [ForeignKey("AnswerId")]
+            public virtual Answer Answer { get; set; }
+        }
+
+        private class PartialAnswer : PartialAnswerBase
+        {
+        }
+
+        private class PartialAnswerRepeating : PartialAnswerBase
+        {
+        }
+
+        private class MultipleAnswers : Answer
+        {
+            public virtual ICollection<PartialAnswer> Answers { get; set; }
+        }
+
+        private class MultipleAnswersRepeating : Answer
+        {
+            public virtual ICollection<PartialAnswerRepeating> Answers { get; set; }
+        }
+
+        [ConditionalFact]
         public virtual ModelBuilder TableNameAttribute_affects_table_name_in_TPH()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1335,7 +1374,7 @@ namespace Microsoft.EntityFrameworkCore
             public string DerivedData { get; set; }
         }
 
-        [Fact(Skip = "issue #15285")]
+        [ConditionalFact]
         public virtual void ConcurrencyCheckAttribute_throws_if_value_in_database_changed()
         {
             ExecuteWithStrategyInTransaction(
@@ -1359,7 +1398,7 @@ namespace Microsoft.EntityFrameworkCore
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void DatabaseGeneratedAttribute_autogenerates_values_when_set_to_identity()
         {
             ExecuteWithStrategyInTransaction(
@@ -1370,21 +1409,15 @@ namespace Microsoft.EntityFrameworkCore
                         {
                             RequiredColumn = "Third",
                             RowVersion = new Guid("00000000-0000-0000-0000-000000000003"),
-                            Details = new Details
-                            {
-                                Name = "Third Name"
-                            },
-                            AdditionalDetails = new Details
-                            {
-                                Name = "Third Additional Name"
-                            }
+                            Details = new Details { Name = "Third Name" },
+                            AdditionalDetails = new Details { Name = "Third Additional Name" }
                         });
 
                     context.SaveChanges();
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void MaxLengthAttribute_throws_while_inserting_value_longer_than_max_length()
         {
             ExecuteWithStrategyInTransaction(
@@ -1396,14 +1429,8 @@ namespace Microsoft.EntityFrameworkCore
                             RequiredColumn = "ValidString",
                             RowVersion = new Guid("00000000-0000-0000-0000-000000000001"),
                             MaxLengthProperty = "Short",
-                            Details = new Details
-                            {
-                                Name = "Third Name"
-                            },
-                            AdditionalDetails = new Details
-                            {
-                                Name = "Third Additional Name"
-                            }
+                            Details = new Details { Name = "Third Name" },
+                            AdditionalDetails = new Details { Name = "Third Additional Name" }
                         });
 
                     context.SaveChanges();
@@ -1418,14 +1445,8 @@ namespace Microsoft.EntityFrameworkCore
                             RequiredColumn = "ValidString",
                             RowVersion = new Guid("00000000-0000-0000-0000-000000000002"),
                             MaxLengthProperty = "VeryVeryVeryVeryVeryVeryLongString",
-                            Details = new Details
-                            {
-                                Name = "Third Name"
-                            },
-                            AdditionalDetails = new Details
-                            {
-                                Name = "Third Additional Name"
-                            }
+                            Details = new Details { Name = "Third Name" },
+                            AdditionalDetails = new Details { Name = "Third Additional Name" }
                         });
 
                     Assert.Equal(
@@ -1434,7 +1455,7 @@ namespace Microsoft.EntityFrameworkCore
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void NotMappedAttribute_ignores_entityType()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1443,7 +1464,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Null(modelBuilder.Model.FindEntityType(typeof(C)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void NotMappedAttribute_ignores_navigation()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1452,7 +1473,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Null(modelBuilder.Model.FindEntityType(typeof(UselessBookDetails)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void NotMappedAttribute_ignores_property()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1461,7 +1482,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Null(modelBuilder.Model.FindEntityType(typeof(One)).FindProperty("IgnoredProperty"));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void NotMappedAttribute_ignores_explicit_interface_implementation_property()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1481,7 +1502,7 @@ namespace Microsoft.EntityFrameworkCore
             int IEntityBase.Target { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void NotMappedAttribute_removes_ambiguity_in_relationship_building()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1493,7 +1514,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.DoesNotContain("Book", model.FindEntityType(typeof(BookDetails)).GetNavigations().Select(nav => nav.Name));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void NotMappedAttribute_removes_ambiguity_in_relationship_building_with_base()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1516,7 +1537,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.DoesNotContain("Book", model.FindEntityType(typeof(BookDetails)).GetNavigations().Select(nav => nav.Name).ToList());
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void InversePropertyAttribute_removes_ambiguity()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1532,7 +1553,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Null(model.FindEntityType(typeof(Book)).FindNavigation(nameof(Book.AlternateLabel)).FindInverse());
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void InversePropertyAttribute_removes_ambiguity_with_base_type()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1555,7 +1576,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Null(model.FindEntityType(typeof(AnotherBookLabel)).FindNavigation(nameof(SpecialBookLabel.Book)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void InversePropertyAttribute_removes_ambiguity_with_base_type_ignored()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1571,7 +1592,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Null(model.FindEntityType(typeof(Book)).FindNavigation(nameof(Book.AlternateLabel)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void InversePropertyAttribute_from_ignored_base_causes_ambiguity()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1583,10 +1604,10 @@ namespace Microsoft.EntityFrameworkCore
 
             Assert.Null(model.FindEntityType(typeof(AnotherBookLabel)).FindNavigation(nameof(AnotherBookLabel.Book)));
             Assert.Null(model.FindEntityType(typeof(SpecialBookLabel)).FindNavigation(nameof(SpecialBookLabel.Book)));
-            Assert.Equal(0, model.FindEntityType(typeof(Book)).GetNavigations().Count());
+            Assert.Empty(model.FindEntityType(typeof(Book)).GetNavigations());
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void InversePropertyAttribute_from_ignored_base_can_be_ignored_to_remove_ambiguity()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1602,7 +1623,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Null(model.FindEntityType(typeof(Book)).FindNavigation(nameof(Book.AlternateLabel)));
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void InversePropertyAttribute_removes_ambiguity_from_the_ambiguous_end()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1698,7 +1719,7 @@ namespace Microsoft.EntityFrameworkCore
         {
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void InversePropertyAttribute_removes_ambiguity_when_combined_with_other_attributes()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1742,7 +1763,7 @@ namespace Microsoft.EntityFrameworkCore
             public virtual User SalesManager { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void InversePropertyAttribute_removes_ambiguity_with_base_type_bidirectional()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1777,7 +1798,7 @@ namespace Microsoft.EntityFrameworkCore
             public virtual Q QRefDerived { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void InversePropertyAttribute_is_noop_in_unambiguous_models()
         {
             var modelBuilder = CreateModelBuilder();
@@ -1819,14 +1840,59 @@ namespace Microsoft.EntityFrameworkCore
             public Blog7698 BlogInverseNav { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
+        public virtual void InversePropertyAttribute_pointing_to_same_nav_on_base_causes_ambiguity()
+        {
+            var modelBuilder = CreateModelBuilder();
+            modelBuilder.Entity<MultipleAnswersInverse>();
+            modelBuilder.Entity<MultipleAnswersRepeatingInverse>();
+
+            Assert.Equal(
+                CoreStrings.WarningAsErrorTemplate(
+                    CoreEventId.MultipleInversePropertiesSameTargetWarning,
+                CoreResources.LogMultipleInversePropertiesSameTarget(new TestLogger<TestLoggingDefinitions>())
+                    .GenerateMessage(
+                    $"{nameof(MultipleAnswersRepeatingInverse)}.{nameof(MultipleAnswersRepeatingInverse.Answers)},"
+                    + $" {nameof(MultipleAnswersInverse)}.{nameof(MultipleAnswersInverse.Answers)}",
+                         nameof(PartialAnswerInverse.Answer)),
+                "CoreEventId.MultipleInversePropertiesSameTargetWarning"),
+                Assert.Throws<InvalidOperationException>(() => modelBuilder.FinalizeModel()).Message);
+        }
+
+        private class PartialAnswerInverse
+        {
+            public int Id { get; set; }
+            public int AnswerId { get; set; }
+            public virtual AnswerBaseInverse Answer { get; set; }
+        }
+
+        private class PartialAnswerRepeatingInverse : PartialAnswerInverse { }
+
+        private abstract class AnswerBaseInverse
+        {
+            public int Id { get; set; }
+        }
+
+        private class MultipleAnswersInverse : AnswerBaseInverse
+        {
+            [InverseProperty("Answer")]
+            public virtual ICollection<PartialAnswerInverse> Answers { get; set; }
+        }
+
+        private class MultipleAnswersRepeatingInverse : AnswerBaseInverse
+        {
+            [InverseProperty("Answer")]
+            public virtual IEnumerable<PartialAnswerRepeatingInverse> Answers { get; set; }
+        }
+
+        [ConditionalFact]
         public virtual void ForeignKeyAttribute_creates_two_relationships_if_applied_on_property_on_both_side()
         {
             var modelBuilder = CreateModelBuilder();
             var model = modelBuilder.Model;
             modelBuilder.Ignore<Author>();
             modelBuilder.Ignore<AuthorDetails>();
-            modelBuilder.Entity<Post>();
+            modelBuilder.Entity<Post>().Property("PostDetailsId");
 
             Assert.Null(model.FindEntityType(typeof(Post)).FindNavigation("PostDetails").ForeignKey.PrincipalToDependent);
             Assert.Equal(
@@ -1839,21 +1905,20 @@ namespace Microsoft.EntityFrameworkCore
             Assert.Equal(LogLevel.Warning, logEntry.Level);
             Assert.Equal(
                 CoreResources.LogForeignKeyAttributesOnBothProperties(new TestLogger<TestLoggingDefinitions>()).GenerateMessage(
-                    nameof(PostDetails), nameof(PostDetails.Post),
-                    nameof(Post), nameof(Post.PostDetails),
-                    nameof(PostDetails.PostId),
-                    nameof(Post.PostDetailsId)),
+                    nameof(PostDetails.Post), nameof(PostDetails),
+                    nameof(Post.PostDetails), nameof(Post),
+                    nameof(Post.PostDetailsId), nameof(PostDetails.PostId)),
                 logEntry.Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void ForeignKeyAttribute_creates_two_relationships_if_applied_on_navigations_on_both_sides_and_values_do_not_match()
         {
             var modelBuilder = CreateModelBuilder();
             var model = modelBuilder.Model;
             modelBuilder.Ignore<PostDetails>();
             modelBuilder.Ignore<AuthorDetails>();
-            modelBuilder.Entity<Post>();
+            modelBuilder.Entity<Post>().Property("PostDetailsId");
 
             Assert.Null(model.FindEntityType(typeof(Post)).FindNavigation("Author").ForeignKey.PrincipalToDependent);
             Assert.Equal("AuthorId", model.FindEntityType(typeof(Post)).FindNavigation("Author").ForeignKey.Properties.First().Name);
@@ -1868,7 +1933,7 @@ namespace Microsoft.EntityFrameworkCore
                     nameof(Post), nameof(Post.Author), nameof(Author), nameof(Author.Post)), logEntry.Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void
             ForeignKeyAttribute_creates_two_relationships_if_applied_on_navigation_and_property_on_different_sides_and_values_do_not_match()
         {
@@ -1894,8 +1959,9 @@ namespace Microsoft.EntityFrameworkCore
             var logEntry = Fixture.ListLoggerFactory.Log.Single();
             Assert.Equal(LogLevel.Warning, logEntry.Level);
             Assert.Equal(
-                CoreResources.LogConflictingForeignKeyAttributesOnNavigationAndProperty(new TestLogger<TestLoggingDefinitions>()).GenerateMessage(
-                    nameof(Author), nameof(Author.AuthorDetails), nameof(AuthorDetails), nameof(AuthorDetails.AuthorId)),
+                CoreResources.LogConflictingForeignKeyAttributesOnNavigationAndProperty(new TestLogger<TestLoggingDefinitions>())
+                    .GenerateMessage(
+                        nameof(Author), nameof(Author.AuthorDetails), nameof(AuthorDetails), nameof(AuthorDetails.AuthorId)),
                 logEntry.Message);
         }
 
@@ -1904,7 +1970,7 @@ namespace Microsoft.EntityFrameworkCore
             public int Id { get; set; }
 
             [ForeignKey("PostDetails")]
-            public int PostDetailsId { get; set; }
+            public int PostDetailsId;
 
             public PostDetails PostDetails { get; set; }
 
@@ -1944,7 +2010,7 @@ namespace Microsoft.EntityFrameworkCore
             public Author Author { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void
             ForeignKeyAttribute_throws_if_applied_on_property_on_both_side_but_navigations_are_connected_by_inverse_property()
         {
@@ -1955,7 +2021,7 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Throws<InvalidOperationException>(() => modelBuilder.Entity<A>()).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void
             ForeignKeyAttribute_throws_if_applied_on_both_navigations_connected_by_inverse_property_but_values_do_not_match()
         {
@@ -1966,7 +2032,7 @@ namespace Microsoft.EntityFrameworkCore
                 Assert.Throws<InvalidOperationException>(() => modelBuilder.Entity<D>()).Message);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void ForeignKeyAttribute_throws_if_applied_on_two_relationships_targetting_the_same_property()
         {
             var modelBuilder = CreateModelBuilder();
@@ -2029,17 +2095,14 @@ namespace Microsoft.EntityFrameworkCore
             public A As { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void RequiredAttribute_for_navigation_throws_while_inserting_null_value()
         {
             ExecuteWithStrategyInTransaction(
                 context =>
                 {
                     context.Set<BookDetails>().Add(
-                        new BookDetails
-                        {
-                            AnotherBookId = 1
-                        });
+                        new BookDetails { AnotherBookId = 1 });
 
                     context.SaveChanges();
                 });
@@ -2055,7 +2118,7 @@ namespace Microsoft.EntityFrameworkCore
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void RequiredAttribute_does_nothing_when_specified_on_nav_to_dependent_per_convention()
         {
             var modelBuilder = CreateModelBuilder();
@@ -2067,7 +2130,7 @@ namespace Microsoft.EntityFrameworkCore
             Assert.False(relationship.IsRequired);
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void RequiredAttribute_for_property_throws_while_inserting_null_value()
         {
             ExecuteWithStrategyInTransaction(
@@ -2078,14 +2141,8 @@ namespace Microsoft.EntityFrameworkCore
                         {
                             RequiredColumn = "ValidString",
                             RowVersion = new Guid("00000000-0000-0000-0000-000000000001"),
-                            Details = new Details
-                            {
-                                Name = "One"
-                            },
-                            AdditionalDetails = new Details
-                            {
-                                Name = "Two"
-                            }
+                            Details = new Details { Name = "One" },
+                            AdditionalDetails = new Details { Name = "Two" }
                         });
 
                     context.SaveChanges();
@@ -2099,14 +2156,8 @@ namespace Microsoft.EntityFrameworkCore
                         {
                             RequiredColumn = null,
                             RowVersion = new Guid("00000000-0000-0000-0000-000000000002"),
-                            Details = new Details
-                            {
-                                Name = "One"
-                            },
-                            AdditionalDetails = new Details
-                            {
-                                Name = "Two"
-                            }
+                            Details = new Details { Name = "One" },
+                            AdditionalDetails = new Details { Name = "Two" }
                         });
 
                     Assert.Equal(
@@ -2115,17 +2166,14 @@ namespace Microsoft.EntityFrameworkCore
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void StringLengthAttribute_throws_while_inserting_value_longer_than_max_length()
         {
             ExecuteWithStrategyInTransaction(
                 context =>
                 {
                     context.Set<Two>().Add(
-                        new Two
-                        {
-                            Data = "ValidString"
-                        });
+                        new Two { Data = "ValidString" });
 
                     context.SaveChanges();
                 });
@@ -2134,10 +2182,7 @@ namespace Microsoft.EntityFrameworkCore
                 context =>
                 {
                     context.Set<Two>().Add(
-                        new Two
-                        {
-                            Data = "ValidButLongString"
-                        });
+                        new Two { Data = "ValidButLongString" });
 
                     Assert.Equal(
                         "An error occurred while updating the entries. See the inner exception for details.",
@@ -2145,7 +2190,7 @@ namespace Microsoft.EntityFrameworkCore
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void TimestampAttribute_throws_if_value_in_database_changed()
         {
             ExecuteWithStrategyInTransaction(
@@ -2167,7 +2212,7 @@ namespace Microsoft.EntityFrameworkCore
                 });
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void OwnedEntityTypeAttribute_configures_one_reference_as_owned()
         {
             var modelBuilder = CreateModelBuilder();
@@ -2193,7 +2238,7 @@ namespace Microsoft.EntityFrameworkCore
             public StreetAddress ShippingAddress { get; set; }
         }
 
-        [Fact]
+        [ConditionalFact]
         public virtual void OwnedEntityTypeAttribute_configures_all_references_as_owned()
         {
             var modelBuilder = CreateModelBuilder();
@@ -2247,50 +2292,25 @@ namespace Microsoft.EntityFrameworkCore
                     {
                         RequiredColumn = "First",
                         RowVersion = new Guid("00000001-0000-0000-0000-000000000001"),
-                        Details = new Details
-                        {
-                            Name = "First Name"
-                        },
-                        AdditionalDetails = new Details
-                        {
-                            Name = "First Additional Name"
-                        }
+                        Details = new Details { Name = "First Name" },
+                        AdditionalDetails = new Details { Name = "First Additional Name" }
                     });
                 context.Set<One>().Add(
                     new One
                     {
                         RequiredColumn = "Second",
                         RowVersion = new Guid("00000001-0000-0000-0000-000000000001"),
-                        Details = new Details
-                        {
-                            Name = "Second Name"
-                        },
-                        AdditionalDetails = new Details
-                        {
-                            Name = "Second Additional Name"
-                        }
+                        Details = new Details { Name = "Second Name" },
+                        AdditionalDetails = new Details { Name = "Second Additional Name" }
                     });
 
                 context.Set<Two>().Add(
-                    new Two
-                    {
-                        Data = "First"
-                    });
+                    new Two { Data = "First" });
                 context.Set<Two>().Add(
-                    new Two
-                    {
-                        Data = "Second"
-                    });
+                    new Two { Data = "Second" });
 
                 context.Set<Book>().Add(
-                    new Book
-                    {
-                        Id = 1,
-                        AdditionalDetails = new Details
-                        {
-                            Name = "Book Name"
-                        }
-                    });
+                    new Book { Id = 1, AdditionalDetails = new Details { Name = "Book Name" } });
 
                 context.SaveChanges();
             }
