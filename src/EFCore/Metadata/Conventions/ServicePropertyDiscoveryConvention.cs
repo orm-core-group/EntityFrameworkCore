@@ -1,229 +1,137 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using JetBrains.Annotations;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Infrastructure;
+using System.Diagnostics.CodeAnalysis;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.EntityFrameworkCore.Metadata.Conventions.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.EntityFrameworkCore.Utilities;
 
-namespace Microsoft.EntityFrameworkCore.Metadata.Conventions
+namespace Microsoft.EntityFrameworkCore.Metadata.Conventions;
+
+/// <summary>
+///     A convention that adds service properties to entity types.
+/// </summary>
+/// <remarks>
+///     See <see href="https://aka.ms/efcore-docs-conventions">Model building conventions</see> for more information and examples.
+/// </remarks>
+public class ServicePropertyDiscoveryConvention :
+    IEntityTypeAddedConvention,
+    IEntityTypeBaseTypeChangedConvention
 {
     /// <summary>
-    ///     A convention that adds service properties to entity types.
+    ///     Creates a new instance of <see cref="ServicePropertyDiscoveryConvention" />.
     /// </summary>
-    public class ServicePropertyDiscoveryConvention :
-        IEntityTypeAddedConvention,
-        IEntityTypeBaseTypeChangedConvention,
-        IEntityTypeMemberIgnoredConvention,
-        IModelFinalizedConvention
+    /// <param name="dependencies">Parameter object containing dependencies for this convention.</param>
+    /// <param name="useAttributes">Whether the convention will use attributes found on the members.</param>
+    public ServicePropertyDiscoveryConvention(
+        ProviderConventionSetBuilderDependencies dependencies,
+        bool useAttributes = true)
     {
-        /// <summary>
-        ///     Creates a new instance of <see cref="ServicePropertyDiscoveryConvention" />.
-        /// </summary>
-        /// <param name="dependencies"> Parameter object containing dependencies for this convention. </param>
-        public ServicePropertyDiscoveryConvention([NotNull] ProviderConventionSetBuilderDependencies dependencies)
+        Dependencies = dependencies;
+        UseAttributes = useAttributes;
+    }
+
+    /// <summary>
+    ///     Dependencies for this service.
+    /// </summary>
+    protected virtual ProviderConventionSetBuilderDependencies Dependencies { get; }
+
+    /// <summary>
+    ///     A value indicating whether the convention will use attributes found on the members.
+    /// </summary>
+    protected virtual bool UseAttributes { get; }
+
+    /// <summary>
+    ///     Called after an entity type is added to the model.
+    /// </summary>
+    /// <param name="entityTypeBuilder">The builder for the entity type.</param>
+    /// <param name="context">Additional information associated with convention execution.</param>
+    public virtual void ProcessEntityTypeAdded(
+        IConventionEntityTypeBuilder entityTypeBuilder,
+        IConventionContext<IConventionEntityTypeBuilder> context)
+        => DiscoverServiceProperties(entityTypeBuilder, context);
+
+    /// <summary>
+    ///     Called after the base type of an entity type changes.
+    /// </summary>
+    /// <param name="entityTypeBuilder">The builder for the entity type.</param>
+    /// <param name="newBaseType">The new base entity type.</param>
+    /// <param name="oldBaseType">The old base entity type.</param>
+    /// <param name="context">Additional information associated with convention execution.</param>
+    public virtual void ProcessEntityTypeBaseTypeChanged(
+        IConventionEntityTypeBuilder entityTypeBuilder,
+        IConventionEntityType? newBaseType,
+        IConventionEntityType? oldBaseType,
+        IConventionContext<IConventionEntityType> context)
+    {
+        if (entityTypeBuilder.Metadata.BaseType == newBaseType)
         {
-            Dependencies = dependencies;
+            DiscoverServiceProperties(entityTypeBuilder, context);
+        }
+    }
+
+    /// <summary>
+    ///    Discovers properties on the given structural type.
+    /// </summary>
+    /// <param name="structuralTypeBuilder">The type for which the properties will be discovered.</param>
+    /// <param name="context">Additional information associated with convention execution.</param>
+    protected virtual void DiscoverServiceProperties(
+        IConventionTypeBaseBuilder structuralTypeBuilder,
+        IConventionContext context)
+    {
+        if (structuralTypeBuilder is not IConventionEntityTypeBuilder entityTypeBuilder)
+        {
+            return;
         }
 
-        /// <summary>
-        ///     Parameter object containing service dependencies.
-        /// </summary>
-        protected virtual ProviderConventionSetBuilderDependencies Dependencies { get; }
-
-        /// <summary>
-        ///     Called after an entity type is added to the model.
-        /// </summary>
-        /// <param name="entityTypeBuilder"> The builder for the entity type. </param>
-        /// <param name="context"> Additional information associated with convention execution. </param>
-        public virtual void ProcessEntityTypeAdded(
-            IConventionEntityTypeBuilder entityTypeBuilder, IConventionContext<IConventionEntityTypeBuilder> context)
-            => Process(entityTypeBuilder);
-
-        /// <summary>
-        ///     Called after the base type of an entity type changes.
-        /// </summary>
-        /// <param name="entityTypeBuilder"> The builder for the entity type. </param>
-        /// <param name="newBaseType"> The new base entity type. </param>
-        /// <param name="oldBaseType"> The old base entity type. </param>
-        /// <param name="context"> Additional information associated with convention execution. </param>
-        public virtual void ProcessEntityTypeBaseTypeChanged(
-            IConventionEntityTypeBuilder entityTypeBuilder,
-            IConventionEntityType newBaseType,
-            IConventionEntityType oldBaseType,
-            IConventionContext<IConventionEntityType> context)
+        var entityType = entityTypeBuilder.Metadata;
+        foreach (var memberInfo in GetMembers(entityType))
         {
-            if (entityTypeBuilder.Metadata.BaseType == newBaseType)
+            if (!IsCandidateServiceProperty(memberInfo, entityType, out var factory))
             {
-                Process(entityTypeBuilder);
+                continue;
             }
+
+            entityTypeBuilder.ServiceProperty(memberInfo)?.HasParameterBinding(
+                (ServiceParameterBinding)factory.Bind(entityType, memberInfo.GetMemberType(), memberInfo.GetSimpleMemberName()));
+        }
+    }
+
+    /// <summary>
+    ///     Returns the CLR members from the given type that should be considered when discovering properties.
+    /// </summary>
+    /// <param name="structuralType">The type for which the properties will be discovered.</param>
+    /// <returns>The CLR members to be considered.</returns>
+    protected virtual IEnumerable<MemberInfo> GetMembers(IConventionTypeBase structuralType)
+        => structuralType.GetRuntimeProperties().Values.Cast<MemberInfo>()
+            .Concat(structuralType.GetRuntimeFields().Values);
+
+    /// <summary>
+    ///     Returns a value indicating whether the given member is a service property candidate.
+    /// </summary>
+    /// <param name="memberInfo">The member.</param>
+    /// <param name="structuralType">The type for which the properties will be discovered.</param>
+    /// <param name="factory">The parameter binding factory for the property.</param>
+    protected virtual bool IsCandidateServiceProperty(
+        MemberInfo memberInfo, IConventionTypeBase structuralType, [NotNullWhen(true)] out IParameterBindingFactory? factory)
+    {
+        factory = null;
+        var model = (Model)structuralType.Model;
+        if (structuralType is not IConventionEntityType entityType
+            || !entityType.Builder.CanHaveServiceProperty(memberInfo)
+            || model.FindIsComplexConfigurationSource(memberInfo.GetMemberType().UnwrapNullableType()) != null)
+        {
+            return false;
         }
 
-        private void Process(IConventionEntityTypeBuilder entityTypeBuilder)
+        factory = Dependencies.MemberClassifier.FindServicePropertyCandidateBindingFactory(memberInfo, model, UseAttributes);
+        if (factory == null)
         {
-            var entityType = entityTypeBuilder.Metadata;
-
-            if (!entityType.HasClrType())
-            {
-                return;
-            }
-
-            var candidates = entityType.GetRuntimeProperties().Values;
-
-            foreach (var propertyInfo in candidates)
-            {
-                var name = propertyInfo.GetSimpleMemberName();
-                if (entityTypeBuilder.IsIgnored(name)
-                    || entityType.FindProperty(propertyInfo) != null
-                    || entityType.FindNavigation(propertyInfo) != null
-                    || !propertyInfo.IsCandidateProperty(publicOnly: false)
-                    || (propertyInfo.IsCandidateProperty()
-                        && Dependencies.TypeMappingSource.FindMapping(propertyInfo) != null))
-                {
-                    continue;
-                }
-
-                var factory = Dependencies.ParameterBindingFactories.FindFactory(propertyInfo.PropertyType, name);
-                if (factory == null)
-                {
-                    continue;
-                }
-
-                var duplicateMap = GetDuplicateServiceProperties(entityType);
-                if (duplicateMap != null
-                    && duplicateMap.TryGetValue(propertyInfo.PropertyType, out var duplicateServiceProperties))
-                {
-                    duplicateServiceProperties.Add(propertyInfo);
-
-                    return;
-                }
-
-                var otherServicePropertySameType = entityType.GetServiceProperties()
-                    .FirstOrDefault(p => p.ClrType == propertyInfo.PropertyType);
-                if (otherServicePropertySameType != null)
-                {
-                    if (ConfigurationSource.Convention.Overrides(otherServicePropertySameType.GetConfigurationSource()))
-                    {
-                        otherServicePropertySameType.DeclaringEntityType.RemoveServiceProperty(otherServicePropertySameType.Name);
-                    }
-
-                    AddDuplicateServiceProperty(entityTypeBuilder, propertyInfo);
-                    AddDuplicateServiceProperty(entityTypeBuilder, otherServicePropertySameType.GetIdentifyingMemberInfo());
-
-                    return;
-                }
-
-                entityTypeBuilder.ServiceProperty(propertyInfo)?.HasParameterBinding(
-                    (ServiceParameterBinding)factory.Bind(entityType, propertyInfo.PropertyType, propertyInfo.GetSimpleMemberName()));
-            }
+            return false;
         }
 
-        /// <summary>
-        ///     Called after an entity type member is ignored.
-        /// </summary>
-        /// <param name="entityTypeBuilder"> The builder for the entity type. </param>
-        /// <param name="name"> The name of the ignored member. </param>
-        /// <param name="context"> Additional information associated with convention execution. </param>
-        public virtual void ProcessEntityTypeMemberIgnored(
-            IConventionEntityTypeBuilder entityTypeBuilder, string name, IConventionContext<string> context)
-        {
-            var entityType = entityTypeBuilder.Metadata;
-            var duplicateMap = GetDuplicateServiceProperties(entityType);
-            if (duplicateMap == null)
-            {
-                return;
-            }
-
-            var member = (MemberInfo)entityType.GetRuntimeProperties().Find(name)
-                         ?? entityType.GetRuntimeFields().Find(name);
-            var type = member.GetMemberType();
-            if (duplicateMap.TryGetValue(type, out var duplicateServiceProperties)
-                && duplicateServiceProperties.Remove(member))
-            {
-                if (duplicateServiceProperties.Count != 1)
-                {
-                    return;
-                }
-
-                var otherMember = duplicateServiceProperties.First();
-                var otherName = otherMember.GetSimpleMemberName();
-                var factory = Dependencies.ParameterBindingFactories.FindFactory(type, otherName);
-                entityType.Builder.ServiceProperty(otherMember)?.HasParameterBinding(
-                    (ServiceParameterBinding)factory.Bind(entityType, type, otherName));
-                duplicateMap.Remove(type);
-                if (duplicateMap.Count == 0)
-                {
-                    SetDuplicateServiceProperties(entityType.Builder, null);
-                }
-            }
-        }
-
-        /// <summary>
-        ///     Called after a model is finalized.
-        /// </summary>
-        /// <param name="modelBuilder"> The builder for the model. </param>
-        /// <param name="context"> Additional information associated with convention execution. </param>
-        public virtual void ProcessModelFinalized(IConventionModelBuilder modelBuilder, IConventionContext<IConventionModelBuilder> context)
-        {
-            foreach (var entityType in modelBuilder.Metadata.GetEntityTypes())
-            {
-                var duplicateMap = GetDuplicateServiceProperties(entityType);
-                if (duplicateMap == null)
-                {
-                    continue;
-                }
-
-                foreach (var duplicateServiceProperties in duplicateMap.Values)
-                {
-                    foreach (var duplicateServiceProperty in duplicateServiceProperties)
-                    {
-                        if (entityType.FindProperty(duplicateServiceProperty.GetSimpleMemberName()) == null
-                            && entityType.FindNavigation(duplicateServiceProperty.GetSimpleMemberName()) == null)
-                        {
-                            throw new InvalidOperationException(
-                                CoreStrings.AmbiguousServiceProperty(
-                                    duplicateServiceProperty.Name,
-                                    duplicateServiceProperty.GetMemberType().ShortDisplayName(),
-                                    entityType.DisplayName()));
-                        }
-                    }
-                }
-
-                SetDuplicateServiceProperties(entityType.Builder, null);
-            }
-        }
-
-        private static void AddDuplicateServiceProperty(IConventionEntityTypeBuilder entityTypeBuilder, MemberInfo serviceProperty)
-        {
-            var duplicateMap = GetDuplicateServiceProperties(entityTypeBuilder.Metadata)
-                               ?? new Dictionary<Type, HashSet<MemberInfo>>(1);
-
-            var type = serviceProperty.GetMemberType();
-            if (!duplicateMap.TryGetValue(type, out var duplicateServiceProperties))
-            {
-                duplicateServiceProperties = new HashSet<MemberInfo>();
-                duplicateMap[type] = duplicateServiceProperties;
-            }
-
-            duplicateServiceProperties.Add(serviceProperty);
-
-            SetDuplicateServiceProperties(entityTypeBuilder, duplicateMap);
-        }
-
-        private static Dictionary<Type, HashSet<MemberInfo>> GetDuplicateServiceProperties(IConventionEntityType entityType)
-            => entityType.FindAnnotation(CoreAnnotationNames.DuplicateServiceProperties)?.Value
-                as Dictionary<Type, HashSet<MemberInfo>>;
-
-        private static void SetDuplicateServiceProperties(
-            IConventionEntityTypeBuilder entityTypeBuilder,
-            Dictionary<Type, HashSet<MemberInfo>> duplicateServiceProperties)
-            => entityTypeBuilder.HasAnnotation(CoreAnnotationNames.DuplicateServiceProperties, duplicateServiceProperties);
+        var memberType = memberInfo.GetMemberType();
+        return !entityType.HasServiceProperties()
+            || !entityType.GetServiceProperties().Any(p => p.ClrType == memberType);
     }
 }

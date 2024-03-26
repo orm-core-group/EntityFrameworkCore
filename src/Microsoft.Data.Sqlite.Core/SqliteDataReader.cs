@@ -1,5 +1,5 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
 using System.Collections;
@@ -7,10 +7,12 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 using System.Threading;
 using Microsoft.Data.Sqlite.Properties;
+using Microsoft.Data.Sqlite.Utilities;
 using SQLitePCL;
 using static SQLitePCL.raw;
 
@@ -19,24 +21,23 @@ namespace Microsoft.Data.Sqlite
     /// <summary>
     ///     Provides methods for reading the result of a command executed against a SQLite database.
     /// </summary>
+    /// <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/types">Data Types</seealso>
     public class SqliteDataReader : DbDataReader
     {
         private readonly SqliteCommand _command;
         private readonly bool _closeConnection;
-        private readonly Stopwatch _timer;
-        private IEnumerator<sqlite3_stmt> _stmtEnumerator;
-        private SqliteDataRecord _record;
+        private TimeSpan _totalElapsedTime;
+        private IEnumerator<sqlite3_stmt>? _stmtEnumerator;
+        private SqliteDataRecord? _record;
         private bool _closed;
         private int _recordsAffected = -1;
 
         internal SqliteDataReader(
             SqliteCommand command,
-            Stopwatch timer,
             IEnumerable<sqlite3_stmt> stmts,
             bool closeConnection)
         {
             _command = command;
-            _timer = timer;
             _stmtEnumerator = stmts.GetEnumerator();
             _closeConnection = closeConnection;
         }
@@ -61,8 +62,8 @@ namespace Microsoft.Data.Sqlite
         ///     Gets a handle to underlying prepared statement.
         /// </summary>
         /// <value>A handle to underlying prepared statement.</value>
-        /// <seealso href="http://sqlite.org/c3ref/stmt.html">Prepared Statement Object</seealso>
-        public virtual sqlite3_stmt Handle
+        /// <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/interop">Interoperability</seealso>
+        public virtual sqlite3_stmt? Handle
             => _record?.Handle;
 
         /// <summary>
@@ -91,6 +92,7 @@ namespace Microsoft.Data.Sqlite
         /// </summary>
         /// <param name="name">The name of the column. The value is case-sensitive.</param>
         /// <returns>The value.</returns>
+        /// <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/types">Data Types</seealso>
         public override object this[string name]
             => _record == null
                 ? throw new InvalidOperationException(Resources.NoData)
@@ -101,6 +103,7 @@ namespace Microsoft.Data.Sqlite
         /// </summary>
         /// <param name="ordinal">The zero-based column ordinal.</param>
         /// <returns>The value.</returns>
+        /// <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/types">Data Types</seealso>
         public override object this[int ordinal]
             => _record == null
                 ? throw new InvalidOperationException(Resources.NoData)
@@ -116,7 +119,7 @@ namespace Microsoft.Data.Sqlite
         /// <summary>
         ///     Advances to the next row in the result set.
         /// </summary>
-        /// <returns>true if there are more rows; otherwise, false.</returns>
+        /// <returns><see langword="true" /> if there are more rows; otherwise, <see langword="false" />.</returns>
         public override bool Read()
             => _closed
                 ? throw new InvalidOperationException(Resources.DataReaderClosed(nameof(Read)))
@@ -125,7 +128,10 @@ namespace Microsoft.Data.Sqlite
         /// <summary>
         ///     Advances to the next result set for batched statements.
         /// </summary>
-        /// <returns>true if there are more result sets; otherwise, false.</returns>
+        /// <returns><see langword="true" /> if there are more result sets; otherwise, <see langword="false" />.</returns>
+        /// <exception cref="SqliteException">A SQLite error occurs during execution.</exception>
+        /// <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/batching">Batching</seealso>
+        /// <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/database-errors">Database Errors</seealso>
         public override bool NextResult()
         {
             if (_closed)
@@ -142,18 +148,18 @@ namespace Microsoft.Data.Sqlite
             sqlite3_stmt stmt;
             int rc;
 
-            while (_stmtEnumerator.MoveNext())
+            while (_stmtEnumerator!.MoveNext())
             {
                 try
                 {
                     stmt = _stmtEnumerator.Current;
 
-                    _timer.Start();
+                    var timer = SharedStopwatch.StartNew();
 
                     while (IsBusy(rc = sqlite3_step(stmt)))
                     {
                         if (_command.CommandTimeout != 0
-                            && _timer.ElapsedMilliseconds >= _command.CommandTimeout * 1000L)
+                            && (_totalElapsedTime + timer.Elapsed).TotalMilliseconds >= _command.CommandTimeout * 1000L)
                         {
                             break;
                         }
@@ -164,14 +170,14 @@ namespace Microsoft.Data.Sqlite
                         Thread.Sleep(150);
                     }
 
-                    _timer.Stop();
+                    _totalElapsedTime += timer.Elapsed;
 
-                    SqliteException.ThrowExceptionForRC(rc, _command.Connection.Handle);
+                    SqliteException.ThrowExceptionForRC(rc, _command.Connection!.Handle);
 
                     // It's a SELECT statement
                     if (sqlite3_column_count(stmt) != 0)
                     {
-                        _record = new SqliteDataRecord(stmt, rc != SQLITE_DONE, _command.Connection);
+                        _record = new SqliteDataRecord(stmt, rc != SQLITE_DONE, _command.Connection, AddChanges);
 
                         return true;
                     }
@@ -185,14 +191,7 @@ namespace Microsoft.Data.Sqlite
                     sqlite3_reset(stmt);
 
                     var changes = sqlite3_changes(_command.Connection.Handle);
-                    if (_recordsAffected == -1)
-                    {
-                        _recordsAffected = changes;
-                    }
-                    else
-                    {
-                        _recordsAffected += changes;
-                    }
+                    AddChanges(changes);
                 }
                 catch
                 {
@@ -209,9 +208,19 @@ namespace Microsoft.Data.Sqlite
         }
 
         private static bool IsBusy(int rc)
-            => rc == SQLITE_LOCKED
-               || rc == SQLITE_BUSY
-               || rc == SQLITE_LOCKED_SHAREDCACHE;
+            => rc is SQLITE_LOCKED or SQLITE_BUSY or SQLITE_LOCKED_SHAREDCACHE;
+
+        private void AddChanges(int changes)
+        {
+            if (_recordsAffected == -1)
+            {
+                _recordsAffected = changes;
+            }
+            else
+            {
+                _recordsAffected += changes;
+            }
+        }
 
         /// <summary>
         ///     Closes the data reader.
@@ -223,11 +232,12 @@ namespace Microsoft.Data.Sqlite
         ///     Releases any resources used by the data reader and closes it.
         /// </summary>
         /// <param name="disposing">
-        ///     true to release managed and unmanaged resources; false to release only unmanaged resources.
+        ///     <see langword="true" /> to release managed and unmanaged resources;
+        ///     <see langword="false" /> to release only unmanaged resources.
         /// </param>
         protected override void Dispose(bool disposing)
         {
-            if (!disposing)
+            if (!disposing || _closed)
             {
                 return;
             }
@@ -235,6 +245,7 @@ namespace Microsoft.Data.Sqlite
             _command.DataReader = null;
 
             _record?.Dispose();
+            _record = null;
 
             if (_stmtEnumerator != null)
             {
@@ -242,7 +253,6 @@ namespace Microsoft.Data.Sqlite
                 {
                     while (NextResult())
                     {
-                        _record.Dispose();
                     }
                 }
                 catch
@@ -256,7 +266,7 @@ namespace Microsoft.Data.Sqlite
 
             if (_closeConnection)
             {
-                _command.Connection.Close();
+                _command.Connection!.Close();
             }
         }
 
@@ -291,7 +301,7 @@ namespace Microsoft.Data.Sqlite
         /// <param name="ordinal">The zero-based column ordinal.</param>
         /// <returns>The data type name of the column.</returns>
         /// <remarks>Due to SQLite's dynamic type system, this may not reflect the actual type of the value.</remarks>
-        /// <seealso href="http://sqlite.org/datatype3.html">Datatypes In SQLite Version 3</seealso>
+        /// <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/types">Data Types</seealso>
         public override string GetDataTypeName(int ordinal)
             => _closed
                 ? throw new InvalidOperationException(Resources.DataReaderClosed(nameof(GetDataTypeName)))
@@ -304,6 +314,9 @@ namespace Microsoft.Data.Sqlite
         /// </summary>
         /// <param name="ordinal">The zero-based column ordinal.</param>
         /// <returns>The data type of the column.</returns>
+#if NET8_0_OR_GREATER
+        [return: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicFields)]
+#endif
         public override Type GetFieldType(int ordinal)
             => _closed
                 ? throw new InvalidOperationException(Resources.DataReaderClosed(nameof(GetFieldType)))
@@ -315,7 +328,7 @@ namespace Microsoft.Data.Sqlite
         ///     Gets a value indicating whether the specified column is <see cref="DBNull" />.
         /// </summary>
         /// <param name="ordinal">The zero-based column ordinal.</param>
-        /// <returns>true if the specified column is <see cref="DBNull" />; otherwise, false.</returns>
+        /// <returns><see langword="true" /> if the specified column is <see cref="DBNull" />; otherwise, <see langword="false" />.</returns>
         public override bool IsDBNull(int ordinal)
             => _closed
                 ? throw new InvalidOperationException(Resources.DataReaderClosed(nameof(IsDBNull)))
@@ -500,7 +513,7 @@ namespace Microsoft.Data.Sqlite
         /// <param name="bufferOffset">The index to which the data will be copied.</param>
         /// <param name="length">The maximum number of bytes to read.</param>
         /// <returns>The actual number of bytes read.</returns>
-        public override long GetBytes(int ordinal, long dataOffset, byte[] buffer, int bufferOffset, int length)
+        public override long GetBytes(int ordinal, long dataOffset, byte[]? buffer, int bufferOffset, int length)
             => _closed
                 ? throw new InvalidOperationException(Resources.DataReaderClosed(nameof(GetBytes)))
                 : _record == null
@@ -516,7 +529,7 @@ namespace Microsoft.Data.Sqlite
         /// <param name="bufferOffset">The index to which the data will be copied.</param>
         /// <param name="length">The maximum number of characters to read.</param>
         /// <returns>The actual number of characters read.</returns>
-        public override long GetChars(int ordinal, long dataOffset, char[] buffer, int bufferOffset, int length)
+        public override long GetChars(int ordinal, long dataOffset, char[]? buffer, int bufferOffset, int length)
             => _closed
                 ? throw new InvalidOperationException(Resources.DataReaderClosed(nameof(GetChars)))
                 : _record == null
@@ -530,6 +543,7 @@ namespace Microsoft.Data.Sqlite
         /// </summary>
         /// <param name="ordinal">The zero-based column ordinal.</param>
         /// <returns>The returned object.</returns>
+        /// <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/blob-io">BLOB I/O</seealso>
         public override Stream GetStream(int ordinal)
             => _closed
                 ? throw new InvalidOperationException(Resources.DataReaderClosed(nameof(GetStream)))
@@ -538,11 +552,24 @@ namespace Microsoft.Data.Sqlite
                     : _record.GetStream(ordinal);
 
         /// <summary>
+        ///     Retrieves data as a <see cref="TextReader" />.
+        /// </summary>
+        /// <param name="ordinal">The zero-based column ordinal.</param>
+        /// <returns>The returned object.</returns>
+        public override TextReader GetTextReader(int ordinal)
+            => _closed
+                ? throw new InvalidOperationException(Resources.DataReaderClosed(nameof(GetTextReader)))
+                : _record == null
+                    ? throw new InvalidOperationException(Resources.NoData)
+                    : _record.GetTextReader(ordinal);
+
+        /// <summary>
         ///     Gets the value of the specified column.
         /// </summary>
         /// <typeparam name="T">The type of the value.</typeparam>
         /// <param name="ordinal">The zero-based column ordinal.</param>
         /// <returns>The value of the column.</returns>
+        /// <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/types">Data Types</seealso>
         public override T GetFieldValue<T>(int ordinal)
             => _closed
                 ? throw new InvalidOperationException(Resources.DataReaderClosed(nameof(GetFieldValue)))
@@ -555,6 +582,7 @@ namespace Microsoft.Data.Sqlite
         /// </summary>
         /// <param name="ordinal">The zero-based column ordinal.</param>
         /// <returns>The value of the column.</returns>
+        /// <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/types">Data Types</seealso>
         public override object GetValue(int ordinal)
             => _closed
                 ? throw new InvalidOperationException(Resources.DataReaderClosed(nameof(GetValue)))
@@ -567,7 +595,8 @@ namespace Microsoft.Data.Sqlite
         /// </summary>
         /// <param name="values">An array into which the values are copied.</param>
         /// <returns>The number of values copied into the array.</returns>
-        public override int GetValues(object[] values)
+        /// <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/types">Data Types</seealso>
+        public override int GetValues(object?[] values)
             => _closed
                 ? throw new InvalidOperationException(Resources.DataReaderClosed(nameof(GetValues)))
                 : _record == null
@@ -578,6 +607,7 @@ namespace Microsoft.Data.Sqlite
         ///     Returns a System.Data.DataTable that describes the column metadata of the System.Data.Common.DbDataReader.
         /// </summary>
         /// <returns>A System.Data.DataTable that describes the column metadata.</returns>
+        /// <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/metadata">Metadata</seealso>
         public override DataTable GetSchemaTable()
         {
             if (_closed)
@@ -592,78 +622,79 @@ namespace Microsoft.Data.Sqlite
 
             var schemaTable = new DataTable("SchemaTable");
 
-            var ColumnName = new DataColumn(SchemaTableColumn.ColumnName, typeof(string));
-            var ColumnOrdinal = new DataColumn(SchemaTableColumn.ColumnOrdinal, typeof(int));
-            var ColumnSize = new DataColumn(SchemaTableColumn.ColumnSize, typeof(int));
-            var NumericPrecision = new DataColumn(SchemaTableColumn.NumericPrecision, typeof(short));
-            var NumericScale = new DataColumn(SchemaTableColumn.NumericScale, typeof(short));
+            var columnNameColumn = new DataColumn(SchemaTableColumn.ColumnName, typeof(string));
+            var columnOrdinalColumn = new DataColumn(SchemaTableColumn.ColumnOrdinal, typeof(int));
+            var columnSizeColumn = new DataColumn(SchemaTableColumn.ColumnSize, typeof(int));
+            var numericPrecisionColumn = new DataColumn(SchemaTableColumn.NumericPrecision, typeof(short));
+            var numericScaleColumn = new DataColumn(SchemaTableColumn.NumericScale, typeof(short));
+            var dataTypeColumn = CreateDataTypeColumn();
+            var dataTypeNameColumn = new DataColumn("DataTypeName", typeof(string));
 
-            var DataType = new DataColumn(SchemaTableColumn.DataType, typeof(Type));
-            var DataTypeName = new DataColumn("DataTypeName", typeof(string));
+            var isLongColumn = new DataColumn(SchemaTableColumn.IsLong, typeof(bool));
+            var allowDBNullColumn = new DataColumn(SchemaTableColumn.AllowDBNull, typeof(bool));
 
-            var IsLong = new DataColumn(SchemaTableColumn.IsLong, typeof(bool));
-            var AllowDBNull = new DataColumn(SchemaTableColumn.AllowDBNull, typeof(bool));
+            var isUniqueColumn = new DataColumn(SchemaTableColumn.IsUnique, typeof(bool));
+            var isKeyColumn = new DataColumn(SchemaTableColumn.IsKey, typeof(bool));
+            var isAutoIncrementColumn = new DataColumn(SchemaTableOptionalColumn.IsAutoIncrement, typeof(bool));
 
-            var IsUnique = new DataColumn(SchemaTableColumn.IsUnique, typeof(bool));
-            var IsKey = new DataColumn(SchemaTableColumn.IsKey, typeof(bool));
-            var IsAutoIncrement = new DataColumn(SchemaTableOptionalColumn.IsAutoIncrement, typeof(bool));
+            var baseCatalogNameColumn = new DataColumn(SchemaTableOptionalColumn.BaseCatalogName, typeof(string));
+            var baseSchemaNameColumn = new DataColumn(SchemaTableColumn.BaseSchemaName, typeof(string));
+            var baseTableNameColumn = new DataColumn(SchemaTableColumn.BaseTableName, typeof(string));
+            var baseColumnNameColumn = new DataColumn(SchemaTableColumn.BaseColumnName, typeof(string));
 
-            var BaseCatalogName = new DataColumn(SchemaTableOptionalColumn.BaseCatalogName, typeof(string));
-            var BaseSchemaName = new DataColumn(SchemaTableColumn.BaseSchemaName, typeof(string));
-            var BaseTableName = new DataColumn(SchemaTableColumn.BaseTableName, typeof(string));
-            var BaseColumnName = new DataColumn(SchemaTableColumn.BaseColumnName, typeof(string));
-
-            var BaseServerName = new DataColumn(SchemaTableOptionalColumn.BaseServerName, typeof(string));
-            var IsAliased = new DataColumn(SchemaTableColumn.IsAliased, typeof(bool));
-            var IsExpression = new DataColumn(SchemaTableColumn.IsExpression, typeof(bool));
+            var baseServerNameColumn = new DataColumn(SchemaTableOptionalColumn.BaseServerName, typeof(string));
+            var isAliasedColumn = new DataColumn(SchemaTableColumn.IsAliased, typeof(bool));
+            var isExpressionColumn = new DataColumn(SchemaTableColumn.IsExpression, typeof(bool));
 
             var columns = schemaTable.Columns;
 
-            columns.Add(ColumnName);
-            columns.Add(ColumnOrdinal);
-            columns.Add(ColumnSize);
-            columns.Add(NumericPrecision);
-            columns.Add(NumericScale);
-            columns.Add(IsUnique);
-            columns.Add(IsKey);
-            columns.Add(BaseServerName);
-            columns.Add(BaseCatalogName);
-            columns.Add(BaseColumnName);
-            columns.Add(BaseSchemaName);
-            columns.Add(BaseTableName);
-            columns.Add(DataType);
-            columns.Add(DataTypeName);
-            columns.Add(AllowDBNull);
-            columns.Add(IsAliased);
-            columns.Add(IsExpression);
-            columns.Add(IsAutoIncrement);
-            columns.Add(IsLong);
+            columns.Add(columnNameColumn);
+            columns.Add(columnOrdinalColumn);
+            columns.Add(columnSizeColumn);
+            columns.Add(numericPrecisionColumn);
+            columns.Add(numericScaleColumn);
+            columns.Add(isUniqueColumn);
+            columns.Add(isKeyColumn);
+            columns.Add(baseServerNameColumn);
+            columns.Add(baseCatalogNameColumn);
+            columns.Add(baseColumnNameColumn);
+            columns.Add(baseSchemaNameColumn);
+            columns.Add(baseTableNameColumn);
+            columns.Add(dataTypeColumn);
+            columns.Add(dataTypeNameColumn);
+            columns.Add(allowDBNullColumn);
+            columns.Add(isAliasedColumn);
+            columns.Add(isExpressionColumn);
+            columns.Add(isAutoIncrementColumn);
+            columns.Add(isLongColumn);
 
             for (var i = 0; i < FieldCount; i++)
             {
                 var schemaRow = schemaTable.NewRow();
-                schemaRow[ColumnName] = GetName(i);
-                schemaRow[ColumnOrdinal] = i;
-                schemaRow[ColumnSize] = -1;
-                schemaRow[NumericPrecision] = DBNull.Value;
-                schemaRow[NumericScale] = DBNull.Value;
-                schemaRow[BaseServerName] = _command.Connection.DataSource;
+                schemaRow[columnNameColumn] = GetName(i);
+                schemaRow[columnOrdinalColumn] = i;
+                schemaRow[columnSizeColumn] = -1;
+                schemaRow[numericPrecisionColumn] = DBNull.Value;
+                schemaRow[numericScaleColumn] = DBNull.Value;
+                schemaRow[baseServerNameColumn] = _command.Connection!.DataSource;
                 var databaseName = sqlite3_column_database_name(_record.Handle, i).utf8_to_string();
-                schemaRow[BaseCatalogName] = databaseName;
+                schemaRow[baseCatalogNameColumn] = databaseName;
                 var columnName = sqlite3_column_origin_name(_record.Handle, i).utf8_to_string();
-                schemaRow[BaseColumnName] = columnName;
-                schemaRow[BaseSchemaName] = DBNull.Value;
+                schemaRow[baseColumnNameColumn] = columnName;
+                schemaRow[baseSchemaNameColumn] = DBNull.Value;
                 var tableName = sqlite3_column_table_name(_record.Handle, i).utf8_to_string();
-                schemaRow[BaseTableName] = tableName;
-                schemaRow[DataType] = GetFieldType(i);
+                schemaRow[baseTableNameColumn] = tableName;
+                schemaRow[dataTypeColumn] = GetFieldType(i);
                 var dataTypeName = GetDataTypeName(i);
-                schemaRow[DataTypeName] = dataTypeName;
-                schemaRow[IsAliased] = columnName != GetName(i);
-                schemaRow[IsExpression] = columnName == null;
-                schemaRow[IsLong] = DBNull.Value;
+                schemaRow[dataTypeNameColumn] = dataTypeName;
+                var isAliased = columnName != GetName(i);
+                schemaRow[isAliasedColumn] = isAliased;
+                schemaRow[isExpressionColumn] = columnName == null;
+                schemaRow[isLongColumn] = DBNull.Value;
 
-                if (!string.IsNullOrEmpty(tableName)
-                    && !string.IsNullOrEmpty(columnName))
+                var eponymousVirtualTable = false;
+                if (tableName != null
+                    && columnName != null)
                 {
                     using (var command = _command.Connection.CreateCommand())
                     {
@@ -675,37 +706,43 @@ namespace Microsoft.Data.Sqlite
                         command.Parameters.AddWithValue("$table", tableName);
                         command.Parameters.AddWithValue("$column", columnName);
 
-                        var cnt = (long)command.ExecuteScalar();
-                        schemaRow[IsUnique] = cnt != 0;
+                        var cnt = (long)command.ExecuteScalar()!;
+                        schemaRow[isUniqueColumn] = !isAliased && cnt != 0;
 
                         command.Parameters.Clear();
                         var columnType = "typeof(\"" + columnName.Replace("\"", "\"\"") + "\")";
                         command.CommandText = new StringBuilder()
                             .AppendLine($"SELECT {columnType}")
-                            .AppendLine($"FROM \"{tableName}\"")
+                            .AppendLine($"FROM \"{tableName.Replace("\"", "\"\"")}\"")
                             .AppendLine($"WHERE {columnType} != 'null'")
                             .AppendLine($"GROUP BY {columnType}")
                             .AppendLine("ORDER BY count() DESC")
                             .AppendLine("LIMIT 1;").ToString();
 
-                        var type = (string)command.ExecuteScalar();
-                        schemaRow[DataType] =
+                        var type = (string?)command.ExecuteScalar();
+                        schemaRow[dataTypeColumn] =
                             (type != null)
                                 ? SqliteDataRecord.GetFieldType(type)
                                 : SqliteDataRecord.GetFieldTypeFromSqliteType(
                                     SqliteDataRecord.Sqlite3AffinityType(dataTypeName));
+
+                        command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE name = $name AND type IN ('table', 'view')";
+                        command.Parameters.AddWithValue("$name", tableName);
+
+                        eponymousVirtualTable = (long)command.ExecuteScalar()! == 0L;
                     }
 
-                    if (!string.IsNullOrEmpty(databaseName))
+                    if (databaseName != null
+                        && !eponymousVirtualTable)
                     {
                         var rc = sqlite3_table_column_metadata(
                             _command.Connection.Handle, databaseName, tableName, columnName, out var dataType, out var collSeq,
                             out var notNull, out var primaryKey, out var autoInc);
                         SqliteException.ThrowExceptionForRC(rc, _command.Connection.Handle);
 
-                        schemaRow[IsKey] = primaryKey != 0;
-                        schemaRow[AllowDBNull] = notNull == 0;
-                        schemaRow[IsAutoIncrement] = autoInc != 0;
+                        schemaRow[isKeyColumn] = primaryKey != 0;
+                        schemaRow[allowDBNullColumn] = isAliased || notNull == 0;
+                        schemaRow[isAutoIncrementColumn] = autoInc != 0;
                     }
                 }
 
@@ -713,6 +750,19 @@ namespace Microsoft.Data.Sqlite
             }
 
             return schemaTable;
+
+#if NET6_0_OR_GREATER
+            [UnconditionalSuppressMessage("Trimming", "IL2111:Method with parameters or return value with `DynamicallyAccessedMembersAttribute`"
+                + " is accessed via reflection. Trimmer can't guarantee availability of the requirements of the method.",
+                Justification = "This is about System.Type.TypeInitializer.get. It is accessed via reflection"
+                + " as the type parameter in DataColumn is annotated with DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.PublicProperties" +
+                " However, reflection is only used for nullable columns.")]
+#endif
+            static DataColumn CreateDataTypeColumn()
+                => new(SchemaTableColumn.DataType, typeof(Type))
+                {
+                    AllowDBNull = false
+                };
         }
     }
 }

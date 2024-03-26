@@ -1,30 +1,52 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Microsoft.Data.Sqlite.Properties;
 using SQLitePCL;
 using static SQLitePCL.raw;
 
 namespace Microsoft.Data.Sqlite
 {
+    
     internal class SqliteDataRecord : SqliteValueReader, IDisposable
     {
-        private readonly SqliteConnection _connection;
-        private readonly byte[][] _blobCache;
-        private readonly int?[] _typeCache;
-        private bool _stepped;
+        internal class RowIdInfo
+        {
+            public int Ordinal { get; set; }
+            public string TableName { get; set; }
 
-        public SqliteDataRecord(sqlite3_stmt stmt, bool hasRows, SqliteConnection connection)
+            public RowIdInfo(int ordinal, string tableName)
+            {
+                Ordinal = ordinal;
+                TableName = tableName;
+            }
+        }
+
+        private readonly SqliteConnection _connection;
+        private readonly Action<int> _addChanges;
+        private byte[][]? _blobCache;
+        private int?[]? _typeCache;
+        private Dictionary<string, int>? _columnNameOrdinalCache;
+        private string[]? _columnNameCache;
+        private bool _stepped;
+        readonly Dictionary<string, RowIdInfo> RowIds = new Dictionary<string, RowIdInfo>();
+
+        private bool _alreadyThrown;
+        private bool _alreadyAddedChanges;
+
+        public SqliteDataRecord(sqlite3_stmt stmt, bool hasRows, SqliteConnection connection, Action<int> addChanges)
         {
             Handle = stmt;
             HasRows = hasRows;
             _connection = connection;
-            _blobCache = new byte[FieldCount][];
-            _typeCache = new int?[FieldCount];
+            _addChanges = addChanges;
         }
 
         public virtual object this[string name]
@@ -48,7 +70,7 @@ namespace Microsoft.Data.Sqlite
         public override object GetValue(int ordinal)
             => !_stepped || sqlite3_data_count(Handle) == 0
                 ? throw new InvalidOperationException(Resources.NoData)
-                : base.GetValue(ordinal);
+                : base.GetValue(ordinal)!;
 
         protected override double GetDoubleCore(int ordinal)
             => sqlite3_column_double(Handle, ordinal);
@@ -58,6 +80,24 @@ namespace Microsoft.Data.Sqlite
 
         protected override string GetStringCore(int ordinal)
             => sqlite3_column_text(Handle, ordinal).utf8_to_string();
+
+        public override T GetFieldValue<T>(int ordinal)
+        {
+            if (typeof(T) == typeof(Stream))
+            {
+                return (T)(object)GetStream(ordinal);
+            }
+
+            if (typeof(T) == typeof(TextReader))
+            {
+                return (T)(object)GetTextReader(ordinal);
+            }
+
+            return base.GetFieldValue<T>(ordinal)!;
+        }
+
+        protected override byte[] GetBlob(int ordinal)
+            => base.GetBlob(ordinal)!;
 
         protected override byte[] GetBlobCore(int ordinal)
             => sqlite3_column_blob(Handle, ordinal).ToArray();
@@ -82,7 +122,7 @@ namespace Microsoft.Data.Sqlite
 
         public virtual string GetName(int ordinal)
         {
-            var name = sqlite3_column_name(Handle, ordinal).utf8_to_string();
+            var name = _columnNameCache?[ordinal] ?? sqlite3_column_name(Handle, ordinal).utf8_to_string();
             if (name == null
                 && (ordinal < 0 || ordinal >= FieldCount))
             {
@@ -90,17 +130,48 @@ namespace Microsoft.Data.Sqlite
                 throw new ArgumentOutOfRangeException(nameof(ordinal), ordinal, message: null);
             }
 
-            return name;
+            _columnNameCache ??= new string[FieldCount];
+            _columnNameCache[ordinal] = name!;
+
+            return name!;
         }
 
         public virtual int GetOrdinal(string name)
         {
-            for (var i = 0; i < FieldCount; i++)
+            if (_columnNameOrdinalCache == null)
             {
-                if (GetName(i) == name)
+                _columnNameOrdinalCache = new Dictionary<string, int>();
+                for (var i = 0; i < FieldCount; i++)
                 {
-                    return i;
+                    _columnNameOrdinalCache[GetName(i)] = i;
                 }
+            }
+
+            if (_columnNameOrdinalCache.TryGetValue(name, out var ordinal))
+            {
+                return ordinal;
+            }
+
+            KeyValuePair<string, int>? match = null;
+            foreach (var item in _columnNameOrdinalCache)
+            {
+                if (string.Equals(name, item.Key, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (match != null)
+                    {
+                        throw new InvalidOperationException(
+                            Resources.AmbiguousColumnName(name, match.Value.Key, item.Key));
+                    }
+
+                    match = item;
+                }
+            }
+
+            if (match != null)
+            {
+                _columnNameOrdinalCache.Add(name, match.Value.Value);
+
+                return match.Value.Value;
             }
 
             // NB: Message is provided by framework
@@ -132,28 +203,33 @@ namespace Microsoft.Data.Sqlite
                     return "TEXT";
 
                 default:
-                    Debug.Assert(
-                        sqliteType == SQLITE_BLOB || sqliteType == SQLITE_NULL,
-                        "Unexpected column type: " + sqliteType);
+                    Debug.Assert(sqliteType is SQLITE_BLOB or SQLITE_NULL, "Unexpected column type: " + sqliteType);
                     return "BLOB";
             }
         }
 
+#if NET6_0_OR_GREATER
+        [return: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicFields)]
+#endif
         public virtual Type GetFieldType(int ordinal)
         {
             var sqliteType = GetSqliteType(ordinal);
             if (sqliteType == SQLITE_NULL)
             {
-                sqliteType = _typeCache[ordinal] ?? Sqlite3AffinityType(GetDataTypeName(ordinal));
+                sqliteType = _typeCache?[ordinal] ?? Sqlite3AffinityType(GetDataTypeName(ordinal));
             }
             else
             {
+                _typeCache ??= new int?[FieldCount];
                 _typeCache[ordinal] = sqliteType;
             }
 
             return GetFieldTypeFromSqliteType(sqliteType);
         }
 
+#if NET6_0_OR_GREATER
+        [return: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicFields)]
+#endif
         internal static Type GetFieldTypeFromSqliteType(int sqliteType)
         {
             switch (sqliteType)
@@ -168,13 +244,14 @@ namespace Microsoft.Data.Sqlite
                     return typeof(string);
 
                 default:
-                    Debug.Assert(
-                        sqliteType == SQLITE_BLOB || sqliteType == SQLITE_NULL,
-                        "Unexpected column type: " + sqliteType);
+                    Debug.Assert(sqliteType is SQLITE_BLOB or SQLITE_NULL, "Unexpected column type: " + sqliteType);
                     return typeof(byte[]);
             }
         }
 
+#if NET6_0_OR_GREATER
+        [return: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicFields)]
+#endif
         public static Type GetFieldType(string type)
         {
             switch (type)
@@ -189,33 +266,51 @@ namespace Microsoft.Data.Sqlite
                     return typeof(string);
 
                 default:
-                    Debug.Assert(type == "blob" || type == null, "Unexpected column type: " + type);
+                    Debug.Assert(type is "blob" or null, "Unexpected column type: " + type);
                     return typeof(byte[]);
             }
         }
 
-        public virtual long GetBytes(int ordinal, long dataOffset, byte[] buffer, int bufferOffset, int length)
+        public virtual long GetBytes(int ordinal, long dataOffset, byte[]? buffer, int bufferOffset, int length)
         {
-            var blob = GetCachedBlob(ordinal);
+            using var stream = GetStream(ordinal);
 
-            long bytesToRead = blob.Length - dataOffset;
-            if (buffer != null)
+            if (buffer == null)
             {
-                bytesToRead = Math.Min(bytesToRead, length);
-                Array.Copy(blob, dataOffset, buffer, bufferOffset, bytesToRead);
+                return stream.Length;
             }
 
-            return bytesToRead;
+            stream.Position = dataOffset;
+
+            return stream.Read(buffer, bufferOffset, length);
         }
 
-        public virtual long GetChars(int ordinal, long dataOffset, char[] buffer, int bufferOffset, int length)
+        public virtual long GetChars(int ordinal, long dataOffset, char[]? buffer, int bufferOffset, int length)
         {
-            var text = GetString(ordinal);
+            using var reader = new StreamReader(GetStream(ordinal), Encoding.UTF8);
 
-            int charsToRead = text.Length - (int)dataOffset;
-            charsToRead = Math.Min(charsToRead, length);
-            text.CopyTo((int)dataOffset, buffer, bufferOffset, charsToRead);
-            return charsToRead;
+            if (buffer == null)
+            {
+                // TODO: Consider using a stackalloc buffer and reading blocks instead
+                var charCount = 0;
+                while (reader.Read() != -1)
+                {
+                    charCount++;
+                }
+
+                return charCount;
+            }
+
+            for (var position = 0; position < dataOffset; position++)
+            {
+                if (reader.Read() == -1)
+                {
+                    // NB: Message is provided by the framework
+                    throw new ArgumentOutOfRangeException(nameof(dataOffset), dataOffset, message: null);
+                }
+            }
+
+            return reader.Read(buffer, bufferOffset, length);
         }
 
         public virtual Stream GetStream(int ordinal)
@@ -229,62 +324,93 @@ namespace Microsoft.Data.Sqlite
             var blobDatabaseName = sqlite3_column_database_name(Handle, ordinal).utf8_to_string();
             var blobTableName = sqlite3_column_table_name(Handle, ordinal).utf8_to_string();
 
-            var rowidOrdinal = -1;
-            for (var i = 0; i < FieldCount; i++)
+            RowIdInfo? rowIdForOrdinal = null;
+            string rowidkey = $"{blobDatabaseName}_{blobTableName}";
+            if (!RowIds.TryGetValue(rowidkey, out rowIdForOrdinal))
             {
-                if (i == ordinal)
+                var pkColumns = -1L;
+                for (var i = 0; i < FieldCount; i++)
                 {
-                    continue;
+                    if (i == ordinal)
+                    {
+                        continue;
+                    }
+
+                    var databaseName = sqlite3_column_database_name(Handle, i).utf8_to_string();
+                    if (databaseName != blobDatabaseName)
+                    {
+                        continue;
+                    }
+
+                    var tableName = sqlite3_column_table_name(Handle, i).utf8_to_string();
+                    if (tableName != blobTableName)
+                    {
+                        continue;
+                    }
+
+                    var columnName = sqlite3_column_origin_name(Handle, i).utf8_to_string();
+                    if (columnName == "rowid")
+                    {
+                        rowIdForOrdinal = new RowIdInfo(i, tableName);
+                        RowIds.Add(rowidkey, rowIdForOrdinal);
+                        break;
+                    }
+
+                    var rc = sqlite3_table_column_metadata(
+                        _connection.Handle,
+                        databaseName,
+                        tableName,
+                        columnName,
+                        out var dataType,
+                        out var collSeq,
+                        out var notNull,
+                        out var primaryKey,
+                        out var autoInc);
+                    SqliteException.ThrowExceptionForRC(rc, _connection.Handle);
+                    if (string.Equals(dataType, "INTEGER", StringComparison.OrdinalIgnoreCase)
+                        && primaryKey != 0)
+                    {
+                        if (pkColumns < 0L)
+                        {
+                            using (var command = _connection.CreateCommand())
+                            {
+                                command.CommandText = "SELECT COUNT(*) FROM pragma_table_info($table) WHERE pk != 0;";
+                                command.Parameters.AddWithValue("$table", tableName);
+
+                                pkColumns = (long)command.ExecuteScalar()!;
+                            }
+                        }
+
+                        if (pkColumns == 1L)
+                        {
+                            rowIdForOrdinal = new RowIdInfo(i, tableName);
+                            RowIds.Add(rowidkey, rowIdForOrdinal);
+                            break;
+                        }
+                    }
                 }
 
-                var databaseName = sqlite3_column_database_name(Handle, i).utf8_to_string();
-                if (databaseName != blobDatabaseName)
-                {
-                    continue;
-                }
-
-                var tableName = sqlite3_column_table_name(Handle, i).utf8_to_string();
-                if (tableName != blobTableName)
-                {
-                    continue;
-                }
-
-                var columnName = sqlite3_column_origin_name(Handle, i).utf8_to_string();
-                if (columnName == "rowid")
-                {
-                    rowidOrdinal = i;
-                    break;
-                }
-
-                var rc = sqlite3_table_column_metadata(
-                    _connection.Handle,
-                    databaseName,
-                    tableName,
-                    columnName,
-                    out var dataType,
-                    out var collSeq,
-                    out var notNull,
-                    out var primaryKey,
-                    out var autoInc);
-                SqliteException.ThrowExceptionForRC(rc, _connection.Handle);
-                if (string.Equals(dataType, "INTEGER", StringComparison.OrdinalIgnoreCase)
-                    && primaryKey != 0)
-                {
-                    rowidOrdinal = i;
-                    break;
-                }
+                //Debug.Assert(rowIdForOrdinal!=null);
+                //debug assertion no more needed:
+                //rowIdForOrdinal == null => matching rowid not found, MemoryStream returned
+                //rowIdForOrdinal != null => matching rowid found, SqliteBlob returned
             }
 
-            if (rowidOrdinal < 0)
+            if (rowIdForOrdinal == null)
             {
                 return new MemoryStream(GetCachedBlob(ordinal), false);
             }
 
             var blobColumnName = sqlite3_column_origin_name(Handle, ordinal).utf8_to_string();
-            var rowid = GetInt32(rowidOrdinal);
+            var rowid = GetInt64(rowIdForOrdinal.Ordinal);
 
-            return new SqliteBlob(_connection, blobTableName, blobColumnName, rowid, readOnly: true);
+            return new SqliteBlob(_connection, blobDatabaseName, blobTableName, blobColumnName, rowid, readOnly: true);
         }
+
+        public virtual TextReader GetTextReader(int ordinal)
+            => IsDBNull(ordinal)
+                ? new StringReader(string.Empty)
+                : new StreamReader(GetStream(ordinal), Encoding.UTF8);
 
         public bool Read()
         {
@@ -300,16 +426,59 @@ namespace Microsoft.Data.Sqlite
                 return false;
             }
 
-            var rc = sqlite3_step(Handle);
-            SqliteException.ThrowExceptionForRC(rc, _connection.Handle);
+            int rc;
+            try
+            {
+                rc = sqlite3_step(Handle);
+                SqliteException.ThrowExceptionForRC(rc, _connection.Handle);
+            }
+            catch
+            {
+                _alreadyThrown = true;
 
-            Array.Clear(_blobCache, 0, _blobCache.Length);
+                throw;
+            }
 
-            return rc != SQLITE_DONE;
+            if (_blobCache != null)
+            {
+                Array.Clear(_blobCache, 0, _blobCache.Length);
+            }
+
+            if (rc != SQLITE_DONE)
+            {
+                return true;
+            }
+            
+            AddChanges();
+            _alreadyAddedChanges = true;
+
+            return false;
         }
 
         public void Dispose()
-            => sqlite3_reset(Handle);
+        {
+            var rc = sqlite3_reset(Handle);
+            if (!_alreadyThrown)
+            {
+                SqliteException.ThrowExceptionForRC(rc, _connection.Handle);
+            }
+
+            if (!_alreadyAddedChanges)
+            {
+                AddChanges();
+            }
+        }
+
+        private void AddChanges()
+        {
+            if (sqlite3_stmt_readonly(Handle) != 0)
+            {
+                return;
+            }
+
+            var changes = sqlite3_changes(_connection.Handle);
+            _addChanges(changes);
+        }
 
         private byte[] GetCachedBlob(int ordinal)
         {
@@ -320,10 +489,11 @@ namespace Microsoft.Data.Sqlite
                 throw new ArgumentOutOfRangeException(nameof(ordinal), ordinal, message: null);
             }
 
-            var blob = _blobCache[ordinal];
+            var blob = _blobCache?[ordinal];
             if (blob == null)
             {
                 blob = GetBlob(ordinal);
+                _blobCache ??= new byte[FieldCount][];
                 _blobCache[ordinal] = blob;
             }
 
@@ -342,16 +512,16 @@ namespace Microsoft.Data.Sqlite
             {
                 name => Contains(name, "INT") ? SQLITE_INTEGER : (int?)null,
                 name => Contains(name, "CHAR")
-                        || Contains(name, "CLOB")
-                        || Contains(name, "TEXT")
-                    ? SQLITE_TEXT
-                    : (int?)null,
+                    || Contains(name, "CLOB")
+                    || Contains(name, "TEXT")
+                        ? SQLITE_TEXT
+                        : (int?)null,
                 name => Contains(name, "BLOB") ? SQLITE_BLOB : (int?)null,
                 name => Contains(name, "REAL")
-                        || Contains(name, "FLOA")
-                        || Contains(name, "DOUB")
-                    ? SQLITE_FLOAT
-                    : (int?)null
+                    || Contains(name, "FLOA")
+                    || Contains(name, "DOUB")
+                        ? SQLITE_FLOAT
+                        : (int?)null
             };
 
             return typeRules.Select(r => r(dataTypeName)).FirstOrDefault(r => r != null) ?? SQLITE_TEXT; // code NUMERICAL affinity as TEXT

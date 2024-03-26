@@ -1,36 +1,48 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.EntityFrameworkCore.Infrastructure;
+namespace Microsoft.EntityFrameworkCore.TestModels.ConcurrencyModel;
 
-namespace Microsoft.EntityFrameworkCore.TestModels.ConcurrencyModel
+#nullable disable
+
+public class Chassis
 {
-    public class Chassis
+    public class ChassisProxy(
+        ILazyLoader loader,
+        int teamId,
+        string name)
+        : Chassis(loader, teamId, name), IF1Proxy
     {
-        private readonly ILazyLoader _loader;
-        private Team _team;
+        public bool CreatedCalled { get; set; }
+        public bool InitializingCalled { get; set; }
+        public bool InitializedCalled { get; set; }
+    }
 
-        public Chassis()
-        {
-        }
+    private readonly ILazyLoader _loader;
+    private Team _team;
 
-        private Chassis(
-            ILazyLoader loader,
-            int teamId,
-            string name)
-        {
-            _loader = loader;
-            TeamId = teamId;
-            Name = name;
-        }
+    public Chassis()
+    {
+    }
 
-        public int TeamId { get; set; }
-        public string Name { get; set; }
+    private Chassis(
+        ILazyLoader loader,
+        int teamId,
+        string name)
+    {
+        _loader = loader;
+        TeamId = teamId;
+        Name = name;
 
-        public virtual Team Team
-        {
-            get => _loader.Load(this, ref _team);
-            set => _team = value;
-        }
+        Assert.IsType<ChassisProxy>(this);
+    }
+
+    public int TeamId { get; set; }
+    public string Name { get; set; }
+
+    public virtual Team Team
+    {
+        get => _loader.Load(this, ref _team);
+        set => _team = value;
     }
 }

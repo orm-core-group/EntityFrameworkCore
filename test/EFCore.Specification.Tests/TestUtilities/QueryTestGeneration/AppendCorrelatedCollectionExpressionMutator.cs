@@ -1,59 +1,48 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
+namespace Microsoft.EntityFrameworkCore.TestUtilities.QueryTestGeneration;
 
-namespace Microsoft.EntityFrameworkCore.TestUtilities.QueryTestGeneration
+public class AppendCorrelatedCollectionExpressionMutator(DbContext context) : ExpressionMutator(context)
 {
-    public class AppendCorrelatedCollectionExpressionMutator : ExpressionMutator
+    private bool ContainsCollectionNavigation(Type type)
+        => Context.Model.FindEntityType(type)?.GetNavigations().Any(n => n.IsCollection) ?? false;
+
+    public override bool IsValid(Expression expression)
+        => IsQueryableResult(expression)
+            && IsEntityType(expression.Type.GetGenericArguments()[0])
+            && ContainsCollectionNavigation(expression.Type.GetGenericArguments()[0]);
+
+    public override Expression Apply(Expression expression, Random random)
     {
-        public AppendCorrelatedCollectionExpressionMutator(DbContext context)
-            : base(context)
-        {
-        }
+        var typeArgument = expression.Type.GetGenericArguments()[0];
+        var navigations = Context.Model.FindEntityType(typeArgument)!.GetNavigations().Where(n => n.IsCollection).ToList();
 
-        private bool ContainsCollectionNavigation(Type type)
-            => Context.Model.FindEntityType(type)?.GetNavigations().Any(n => n.IsCollection()) ?? false;
+        var i = random.Next(navigations.Count);
+        var navigation = navigations[i];
 
-        public override bool IsValid(Expression expression)
-            => IsQueryableResult(expression)
-               && IsEntityType(expression.Type.GetGenericArguments()[0])
-               && ContainsCollectionNavigation(expression.Type.GetGenericArguments()[0]);
+        var collectionElementType = navigation.ForeignKey.DeclaringEntityType.ClrType;
+        var listType = typeof(List<>).MakeGenericType(collectionElementType);
 
-        public override Expression Apply(Expression expression, Random random)
-        {
-            var typeArgument = expression.Type.GetGenericArguments()[0];
-            var navigations = Context.Model.FindEntityType(typeArgument).GetNavigations().Where(n => n.IsCollection()).ToList();
+        var select = QueryableMethods.Select.MakeGenericMethod(typeArgument, listType);
+        var where = EnumerableMethods.Where.MakeGenericMethod(collectionElementType);
+        var toList = EnumerableMethods.ToList.MakeGenericMethod(collectionElementType);
 
-            var i = random.Next(navigations.Count);
-            var navigation = navigations[i];
+        var outerPrm = Expression.Parameter(typeArgument, "outerPrm");
+        var innerPrm = Expression.Parameter(collectionElementType, "innerPrm");
 
-            var collectionElementType = navigation.ForeignKey.DeclaringEntityType.ClrType;
-            var listType = typeof(List<>).MakeGenericType(collectionElementType);
+        var outerLambdaBody = Expression.Call(
+            toList,
+            Expression.Call(
+                where,
+                Expression.Property(outerPrm, navigation.PropertyInfo!),
+                Expression.Lambda(Expression.Constant(true), innerPrm)));
 
-            var select = SelectMethodInfo.MakeGenericMethod(typeArgument, listType);
-            var where = EnumerableWhereMethodInfo.MakeGenericMethod(collectionElementType);
-            var toList = ToListMethodInfo.MakeGenericMethod(collectionElementType);
+        var resultExpression = Expression.Call(
+            select,
+            expression,
+            Expression.Lambda(outerLambdaBody, outerPrm));
 
-            var outerPrm = Expression.Parameter(typeArgument, "outerPrm");
-            var innerPrm = Expression.Parameter(collectionElementType, "innerPrm");
-
-            var outerLambdaBody = Expression.Call(
-                toList,
-                Expression.Call(
-                    where,
-                    Expression.Property(outerPrm, navigation.PropertyInfo),
-                    Expression.Lambda(Expression.Constant(true), innerPrm)));
-
-            var resultExpression = Expression.Call(
-                select,
-                expression,
-                Expression.Lambda(outerLambdaBody, outerPrm));
-
-            return resultExpression;
-        }
+        return resultExpression;
     }
 }

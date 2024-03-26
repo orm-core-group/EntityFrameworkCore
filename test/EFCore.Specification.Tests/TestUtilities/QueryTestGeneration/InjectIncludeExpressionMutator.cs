@@ -1,117 +1,102 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 
-namespace Microsoft.EntityFrameworkCore.TestUtilities.QueryTestGeneration
+namespace Microsoft.EntityFrameworkCore.TestUtilities.QueryTestGeneration;
+
+#nullable disable
+
+public class InjectIncludeExpressionMutator(DbContext context) : ExpressionMutator(context)
 {
-    public class InjectIncludeExpressionMutator : ExpressionMutator
+    private ExpressionFinder _expressionFinder;
+
+    public override bool IsValid(Expression expression)
     {
-        public InjectIncludeExpressionMutator(DbContext context)
-            : base(context)
+        _expressionFinder = new ExpressionFinder(this);
+        if (IsQueryableResult(expression))
         {
+            _expressionFinder.TryAddType(expression.Type.GetGenericArguments()[0]);
+            _expressionFinder.Visit(expression);
         }
 
-        private ExpressionFinder _expressionFinder;
+        return _expressionFinder.FoundExpressions.Any();
+    }
 
-        public override bool IsValid(Expression expression)
+    public override Expression Apply(Expression expression, Random random)
+    {
+        var i = random.Next(_expressionFinder.FoundExpressions.Count);
+        var expr = _expressionFinder.FoundExpressions[i];
+
+        var entityType = expr.Type.GetGenericArguments()[0];
+        var navigations = Context.Model.FindEntityType(entityType)?.GetNavigations().ToList();
+
+        var prm = Expression.Parameter(entityType, "prm");
+
+        if (navigations != null
+            && navigations.Any())
         {
-            _expressionFinder = new ExpressionFinder(this);
-            if (IsQueryableResult(expression))
-            {
-                _expressionFinder.TryAddType(expression.Type.GetGenericArguments()[0]);
-                _expressionFinder.Visit(expression);
-            }
+            var j = random.Next(navigations.Count);
+            var navigation = navigations[j];
 
-            return _expressionFinder.FoundExpressions.Any();
+            var includeMethod = IncludeMethodInfo.MakeGenericMethod(entityType, navigation.ClrType);
+
+            var injector = new ExpressionInjector(
+                _expressionFinder.FoundExpressions[i],
+                e => Expression.Call(
+                    includeMethod,
+                    e,
+                    Expression.Lambda(Expression.Property(prm, navigation.Name), prm)));
+
+            return injector.Visit(expression);
         }
 
-        public override Expression Apply(Expression expression, Random random)
+        return expression;
+    }
+
+    private class ExpressionFinder(InjectIncludeExpressionMutator mutator) : ExpressionVisitor
+    {
+        private readonly InjectIncludeExpressionMutator _mutator = mutator;
+
+        private readonly List<IEntityType> _topLevelEntityTypes = [];
+        public readonly List<Expression> FoundExpressions = [];
+
+        private int _depth;
+
+        private const int MaxDepth = 5;
+
+        public void TryAddType(Type type)
         {
-            var i = random.Next(_expressionFinder.FoundExpressions.Count);
-            var expr = _expressionFinder.FoundExpressions[i];
-
-            var entityType = expr.Type.GetGenericArguments()[0];
-            var navigations = Context.Model.FindEntityType(entityType)?.GetNavigations().ToList();
-
-            var prm = Expression.Parameter(entityType, "prm");
-
-            if (navigations != null
-                && navigations.Any())
+            if (!type.IsValueType
+                && _depth < MaxDepth)
             {
-                var j = random.Next(navigations.Count);
-                var navigation = navigations[j];
-
-                var includeMethod = IncludeMethodInfo.MakeGenericMethod(entityType, navigation.ClrType);
-
-                var injector = new ExpressionInjector(
-                    _expressionFinder.FoundExpressions[i],
-                    e => Expression.Call(
-                        includeMethod,
-                        e,
-                        Expression.Lambda(Expression.Property(prm, navigation.Name), prm)));
-
-                return injector.Visit(expression);
-            }
-
-            return expression;
-        }
-
-        private class ExpressionFinder : ExpressionVisitor
-        {
-            private readonly InjectIncludeExpressionMutator _mutator;
-
-            private readonly List<IEntityType> _topLevelEntityTypes = new List<IEntityType>();
-
-            public ExpressionFinder(InjectIncludeExpressionMutator mutator)
-            {
-                _mutator = mutator;
-            }
-
-            public readonly List<Expression> FoundExpressions = new List<Expression>();
-
-            private int _depth;
-
-            private const int MaxDepth = 5;
-
-            public void TryAddType(Type type)
-            {
-                if (!type.IsValueType
-                    && _depth < MaxDepth)
+                var entityType = _mutator.Context.Model.FindEntityType(type);
+                if (entityType != null)
                 {
-                    var entityType = _mutator.Context.Model.FindEntityType(type);
-                    if (entityType != null)
+                    _topLevelEntityTypes.Add(entityType);
+                }
+                else
+                {
+                    var properties = type.GetProperties().ToList();
+                    foreach (var property in properties)
                     {
-                        _topLevelEntityTypes.Add(entityType);
-                    }
-                    else
-                    {
-                        var properties = type.GetProperties().ToList();
-                        foreach (var property in properties)
-                        {
-                            _depth++;
-                            TryAddType(property.PropertyType);
-                            _depth--;
-                        }
+                        _depth++;
+                        TryAddType(property.PropertyType);
+                        _depth--;
                     }
                 }
             }
+        }
 
-            protected override Expression VisitConstant(ConstantExpression node)
+        protected override Expression VisitConstant(ConstantExpression node)
+        {
+            if (node.Type.IsGenericType
+                && node.Type.GetGenericTypeDefinition() == typeof(EntityQueryable<>))
             {
-                if (node.Type.IsGenericType
-                    && node.Type.GetGenericTypeDefinition() == typeof(EntityQueryable<>))
-                {
-                    FoundExpressions.Add(node);
-                }
-
-                return base.VisitConstant(node);
+                FoundExpressions.Add(node);
             }
+
+            return base.VisitConstant(node);
         }
     }
 }

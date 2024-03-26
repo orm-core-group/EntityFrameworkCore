@@ -1,20 +1,19 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-namespace Microsoft.Data.Sqlite
+namespace Microsoft.Data.Sqlite;
+
+internal static class SqliteConnectionExtensions
 {
-    internal static class SqliteConnectionExtensions
+    public static SqliteDataReader ExecuteReader(
+        this SqliteConnection connection,
+        string commandText,
+        params SqliteParameter[] parameters)
     {
-        public static SqliteDataReader ExecuteReader(
-            this SqliteConnection connection,
-            string commandText,
-            params SqliteParameter[] parameters)
-        {
-            var command = connection.CreateCommand();
-            command.CommandText = commandText;
-            command.Parameters.AddRange(parameters);
+        var command = connection.CreateCommand();
+        command.CommandText = commandText;
+        command.Parameters.AddRange(parameters);
 
-            return command.ExecuteReader();
-        }
+        return command.ExecuteReader();
     }
 }

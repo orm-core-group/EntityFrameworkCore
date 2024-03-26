@@ -1,21 +1,16 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.EntityFrameworkCore.Benchmarks.Models.Orders;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Microsoft.EntityFrameworkCore.Benchmarks.Query
-{
-    public class QueryCompilationSqlServerTests : QueryCompilationTests
-    {
-        public override IServiceCollection AddProviderServices(IServiceCollection services)
-        {
-            return services.AddEntityFrameworkSqlServer();
-        }
+namespace Microsoft.EntityFrameworkCore.Benchmarks.Query;
 
-        public override OrdersFixtureBase CreateFixture()
-        {
-            return new OrdersSqlServerFixture("Perf_Query_Compilation");
-        }
-    }
+public class QueryCompilationSqlServerTests : QueryCompilationTests
+{
+    public override IServiceCollection AddProviderServices(IServiceCollection services)
+        => services.AddEntityFrameworkSqlServer();
+
+    public override OrdersFixtureBase CreateFixture()
+        => new OrdersSqlServerFixture("Perf_Query_Compilation");
 }

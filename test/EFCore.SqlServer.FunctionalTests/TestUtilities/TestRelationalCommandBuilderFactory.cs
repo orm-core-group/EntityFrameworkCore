@@ -1,226 +1,226 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore.Internal;
-using Microsoft.EntityFrameworkCore.Storage;
+namespace Microsoft.EntityFrameworkCore.TestUtilities;
 
-namespace Microsoft.EntityFrameworkCore.TestUtilities
+public class TestRelationalCommandBuilderFactory(
+    RelationalCommandBuilderDependencies dependencies) : IRelationalCommandBuilderFactory
 {
-    public class TestRelationalCommandBuilderFactory : IRelationalCommandBuilderFactory
+    public RelationalCommandBuilderDependencies Dependencies { get; } = dependencies;
+
+    public virtual IRelationalCommandBuilder Create()
+        => new TestRelationalCommandBuilder(Dependencies);
+
+    private class TestRelationalCommandBuilder(
+        RelationalCommandBuilderDependencies dependencies) : IRelationalCommandBuilder
     {
-        public TestRelationalCommandBuilderFactory(
-            RelationalCommandBuilderDependencies dependencies)
+        private readonly List<IRelationalParameter> _parameters = [];
+
+        public IndentedStringBuilder Instance { get; } = new();
+
+        public RelationalCommandBuilderDependencies Dependencies { get; } = dependencies;
+
+        public IReadOnlyList<IRelationalParameter> Parameters
+            => _parameters;
+
+        public IRelationalCommandBuilder AddParameter(IRelationalParameter parameter)
         {
-            Dependencies = dependencies;
+            _parameters.Add(parameter);
+
+            return this;
         }
 
-        public RelationalCommandBuilderDependencies Dependencies { get; }
-
-        public virtual IRelationalCommandBuilder Create()
-            => new TestRelationalCommandBuilder(Dependencies);
-
-        private class TestRelationalCommandBuilder : IRelationalCommandBuilder
+        public IRelationalCommandBuilder RemoveParameterAt(int index)
         {
-            private readonly List<IRelationalParameter> _parameters = new List<IRelationalParameter>();
+            _parameters.RemoveAt(index);
 
-            public TestRelationalCommandBuilder(
-                RelationalCommandBuilderDependencies dependencies)
-            {
-                Dependencies = dependencies;
-            }
-
-            public IndentedStringBuilder Instance { get; } = new IndentedStringBuilder();
-
-            public RelationalCommandBuilderDependencies Dependencies { get; }
-
-            public IReadOnlyList<IRelationalParameter> Parameters => _parameters;
-
-            public IRelationalCommandBuilder AddParameter(IRelationalParameter parameter)
-            {
-                _parameters.Add(parameter);
-
-                return this;
-            }
-
-            public IRelationalTypeMappingSource TypeMappingSource => Dependencies.TypeMappingSource;
-
-            public IRelationalCommand Build()
-                => new TestRelationalCommand(
-                    Dependencies,
-                    Instance.ToString(),
-                    Parameters);
-
-            public IRelationalCommandBuilder Append(object value)
-            {
-                Instance.Append(value);
-
-                return this;
-            }
-
-            public IRelationalCommandBuilder AppendLine()
-            {
-                Instance.AppendLine();
-
-                return this;
-            }
-
-            public IRelationalCommandBuilder IncrementIndent()
-            {
-                Instance.IncrementIndent();
-
-                return this;
-            }
-
-            public IRelationalCommandBuilder DecrementIndent()
-            {
-                Instance.DecrementIndent();
-
-                return this;
-            }
-
-            public int CommandTextLength => Instance.Length;
+            return this;
         }
 
-        private class TestRelationalCommand : IRelationalCommand
+        [Obsolete("Code trying to add parameter should add type mapped parameter using TypeMappingSource directly.")]
+        public IRelationalTypeMappingSource TypeMappingSource
+            => Dependencies.TypeMappingSource;
+
+        public IRelationalCommand Build()
+            => new TestRelationalCommand(
+                Dependencies,
+                Instance.ToString(),
+                Parameters);
+
+        public IRelationalCommandBuilder Append(string value)
         {
-            private readonly RelationalCommand _realRelationalCommand;
+            Instance.Append(value);
 
-            public TestRelationalCommand(
-                RelationalCommandBuilderDependencies dependencies,
-                string commandText,
-                IReadOnlyList<IRelationalParameter> parameters)
+            return this;
+        }
+
+        public IRelationalCommandBuilder AppendLine()
+        {
+            Instance.AppendLine();
+
+            return this;
+        }
+
+        public IRelationalCommandBuilder IncrementIndent()
+        {
+            Instance.IncrementIndent();
+
+            return this;
+        }
+
+        public IRelationalCommandBuilder DecrementIndent()
+        {
+            Instance.DecrementIndent();
+
+            return this;
+        }
+
+        public int CommandTextLength
+            => Instance.Length;
+    }
+
+    private class TestRelationalCommand(
+        RelationalCommandBuilderDependencies dependencies,
+        string commandText,
+        IReadOnlyList<IRelationalParameter> parameters) : IRelationalCommand
+    {
+        private readonly RelationalCommand _realRelationalCommand = new RelationalCommand(dependencies, commandText, parameters);
+
+        public string CommandText
+            => _realRelationalCommand.CommandText;
+
+        public IReadOnlyList<IRelationalParameter> Parameters
+            => _realRelationalCommand.Parameters;
+
+        public int ExecuteNonQuery(RelationalCommandParameterObject parameterObject)
+        {
+            var connection = parameterObject.Connection;
+            var errorNumber = PreExecution(connection);
+
+            var result = _realRelationalCommand.ExecuteNonQuery(parameterObject);
+            if (errorNumber.HasValue)
             {
-                _realRelationalCommand = new RelationalCommand(dependencies, commandText, parameters);
+                connection.DbConnection.Close();
+                throw SqlExceptionFactory.CreateSqlException(errorNumber.Value);
             }
 
-            public string CommandText => _realRelationalCommand.CommandText;
+            return result;
+        }
 
-            public IReadOnlyList<IRelationalParameter> Parameters => _realRelationalCommand.Parameters;
+        public Task<int> ExecuteNonQueryAsync(
+            RelationalCommandParameterObject parameterObject,
+            CancellationToken cancellationToken = default)
+        {
+            var connection = parameterObject.Connection;
+            var errorNumber = PreExecution(connection);
 
-            public int ExecuteNonQuery(RelationalCommandParameterObject parameterObject)
+            var result = _realRelationalCommand.ExecuteNonQueryAsync(parameterObject, cancellationToken);
+            if (errorNumber.HasValue)
             {
-                var connection = parameterObject.Connection;
-                var errorNumber = PreExecution(connection);
-
-                var result = _realRelationalCommand.ExecuteNonQuery(parameterObject);
-                if (errorNumber.HasValue)
-                {
-                    connection.DbConnection.Close();
-                    throw SqlExceptionFactory.CreateSqlException(errorNumber.Value);
-                }
-
-                return result;
+                connection.DbConnection.Close();
+                throw SqlExceptionFactory.CreateSqlException(errorNumber.Value);
             }
 
-            public Task<int> ExecuteNonQueryAsync(
-                RelationalCommandParameterObject parameterObject,
-                CancellationToken cancellationToken = new CancellationToken())
+            return result;
+        }
+
+        public object? ExecuteScalar(RelationalCommandParameterObject parameterObject)
+        {
+            var connection = parameterObject.Connection;
+            var errorNumber = PreExecution(connection);
+
+            var result = _realRelationalCommand.ExecuteScalar(parameterObject);
+            if (errorNumber.HasValue)
             {
-                var connection = parameterObject.Connection;
-                var errorNumber = PreExecution(connection);
-
-                var result = _realRelationalCommand.ExecuteNonQueryAsync(parameterObject, cancellationToken);
-                if (errorNumber.HasValue)
-                {
-                    connection.DbConnection.Close();
-                    throw SqlExceptionFactory.CreateSqlException(errorNumber.Value);
-                }
-
-                return result;
+                connection.DbConnection.Close();
+                throw SqlExceptionFactory.CreateSqlException(errorNumber.Value);
             }
 
-            public object ExecuteScalar(RelationalCommandParameterObject parameterObject)
+            return result;
+        }
+
+        public async Task<object?> ExecuteScalarAsync(
+            RelationalCommandParameterObject parameterObject,
+            CancellationToken cancellationToken = default)
+        {
+            var connection = parameterObject.Connection;
+            var errorNumber = PreExecution(connection);
+
+            var result = await _realRelationalCommand.ExecuteScalarAsync(parameterObject, cancellationToken);
+            if (errorNumber.HasValue)
             {
-                var connection = parameterObject.Connection;
-                var errorNumber = PreExecution(connection);
-
-                var result = _realRelationalCommand.ExecuteScalar(parameterObject);
-                if (errorNumber.HasValue)
-                {
-                    connection.DbConnection.Close();
-                    throw SqlExceptionFactory.CreateSqlException(errorNumber.Value);
-                }
-
-                return result;
+                connection.DbConnection.Close();
+                throw SqlExceptionFactory.CreateSqlException(errorNumber.Value);
             }
 
-            public async Task<object> ExecuteScalarAsync(
-                RelationalCommandParameterObject parameterObject,
-                CancellationToken cancellationToken = new CancellationToken())
+            return result;
+        }
+
+        public RelationalDataReader ExecuteReader(RelationalCommandParameterObject parameterObject)
+        {
+            var connection = parameterObject.Connection;
+            var errorNumber = PreExecution(connection);
+
+            var result = _realRelationalCommand.ExecuteReader(parameterObject);
+            if (errorNumber.HasValue)
             {
-                var connection = parameterObject.Connection;
-                var errorNumber = PreExecution(connection);
-
-                var result = await _realRelationalCommand.ExecuteScalarAsync(parameterObject, cancellationToken);
-                if (errorNumber.HasValue)
-                {
-                    connection.DbConnection.Close();
-                    throw SqlExceptionFactory.CreateSqlException(errorNumber.Value);
-                }
-
-                return result;
+                connection.DbConnection.Close();
+                result.Dispose(); // Normally, in non-test case, reader is disposed by using in caller code
+                throw SqlExceptionFactory.CreateSqlException(errorNumber.Value);
             }
 
-            public RelationalDataReader ExecuteReader(RelationalCommandParameterObject parameterObject)
+            return result;
+        }
+
+        public async Task<RelationalDataReader> ExecuteReaderAsync(
+            RelationalCommandParameterObject parameterObject,
+            CancellationToken cancellationToken = default)
+        {
+            var connection = parameterObject.Connection;
+            var errorNumber = PreExecution(connection);
+
+            var result = await _realRelationalCommand.ExecuteReaderAsync(parameterObject);
+            if (errorNumber.HasValue)
             {
-                var connection = parameterObject.Connection;
-                var errorNumber = PreExecution(connection);
-
-                var result = _realRelationalCommand.ExecuteReader(parameterObject);
-                if (errorNumber.HasValue)
-                {
-                    connection.DbConnection.Close();
-                    result.Dispose(); // Normally, in non-test case, reader is disposed by using in caller code
-                    throw SqlExceptionFactory.CreateSqlException(errorNumber.Value);
-                }
-
-                return result;
+                connection.DbConnection.Close();
+                result.Dispose(); // Normally, in non-test case, reader is disposed by using in caller code
+                throw SqlExceptionFactory.CreateSqlException(errorNumber.Value);
             }
 
-            public async Task<RelationalDataReader> ExecuteReaderAsync(
-                RelationalCommandParameterObject parameterObject,
-                CancellationToken cancellationToken = new CancellationToken())
+            return result;
+        }
+
+        public DbCommand CreateDbCommand(
+            RelationalCommandParameterObject parameterObject,
+            Guid commandId,
+            DbCommandMethod commandMethod)
+            => _realRelationalCommand.CreateDbCommand(parameterObject, commandId, commandMethod);
+
+        public void PopulateFrom(IRelationalCommandTemplate commandTemplate)
+            => _realRelationalCommand.PopulateFrom(commandTemplate);
+
+        private int? PreExecution(IRelationalConnection connection)
+        {
+            int? errorNumber = null;
+            var testConnection = (TestSqlServerConnection)connection;
+
+            testConnection.ExecutionCount++;
+            if (testConnection.ExecutionFailures.Count > 0)
             {
-                var connection = parameterObject.Connection;
-                var errorNumber = PreExecution(connection);
-
-                var result = await _realRelationalCommand.ExecuteReaderAsync(parameterObject, cancellationToken);
-                if (errorNumber.HasValue)
+                var fail = testConnection.ExecutionFailures.Dequeue();
+                if (fail.HasValue)
                 {
-                    connection.DbConnection.Close();
-                    result.Dispose(); // Normally, in non-test case, reader is disposed by using in caller code
-                    throw SqlExceptionFactory.CreateSqlException(errorNumber.Value);
-                }
-
-                return result;
-            }
-
-            private int? PreExecution(IRelationalConnection connection)
-            {
-                int? errorNumber = null;
-                var testConnection = (TestSqlServerConnection)connection;
-
-                testConnection.ExecutionCount++;
-                if (testConnection.ExecutionFailures.Count > 0)
-                {
-                    var fail = testConnection.ExecutionFailures.Dequeue();
-                    if (fail.HasValue)
+                    if (fail.Value)
                     {
-                        if (fail.Value)
-                        {
-                            testConnection.DbConnection.Close();
-                            throw SqlExceptionFactory.CreateSqlException(testConnection.ErrorNumber);
-                        }
-
-                        errorNumber = testConnection.ErrorNumber;
+                        testConnection.DbConnection.Close();
+                        throw SqlExceptionFactory.CreateSqlException(testConnection.ErrorNumber);
                     }
-                }
 
-                return errorNumber;
+                    errorNumber = testConnection.ErrorNumber;
+                }
             }
+
+            return errorNumber;
         }
     }
 }

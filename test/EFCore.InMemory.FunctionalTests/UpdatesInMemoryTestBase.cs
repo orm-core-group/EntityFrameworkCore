@@ -1,46 +1,48 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.InMemory.Internal;
 using Microsoft.EntityFrameworkCore.TestModels.UpdatesModel;
-using Xunit;
 
-namespace Microsoft.EntityFrameworkCore
+namespace Microsoft.EntityFrameworkCore;
+
+public abstract class UpdatesInMemoryTestBase<TFixture> : UpdatesTestBase<TFixture>
+    where TFixture : UpdatesInMemoryTestBase<TFixture>.UpdatesInMemoryFixtureBase
 {
-    public abstract class UpdatesInMemoryTestBase<TFixture> : UpdatesTestBase<TFixture>
-        where TFixture : UpdatesInMemoryFixtureBase
+    protected UpdatesInMemoryTestBase(TFixture fixture)
+        : base(fixture)
     {
-        protected UpdatesInMemoryTestBase(TFixture fixture)
-            : base(fixture)
-        {
-        }
+    }
 
-        [ConditionalFact(Skip = "Issue #14042")]
-        public override void Mutation_of_tracked_values_does_not_mutate_values_in_store()
-        {
-        }
+    protected override string UpdateConcurrencyMessage
+        => InMemoryStrings.UpdateConcurrencyException;
 
-        protected override string UpdateConcurrencyMessage
-            => InMemoryStrings.UpdateConcurrencyException;
-
-        protected override void ExecuteWithStrategyInTransaction(
-            Action<UpdatesContext> testOperation,
-            Action<UpdatesContext> nestedTestOperation1 = null,
-            Action<UpdatesContext> nestedTestOperation2 = null)
-        {
-            base.ExecuteWithStrategyInTransaction(testOperation, nestedTestOperation1, nestedTestOperation2);
-            Fixture.Reseed();
-        }
-
-        protected override async Task ExecuteWithStrategyInTransactionAsync(
-            Func<UpdatesContext, Task> testOperation,
-            Func<UpdatesContext, Task> nestedTestOperation1 = null,
-            Func<UpdatesContext, Task> nestedTestOperation2 = null)
+    protected override async Task ExecuteWithStrategyInTransactionAsync(
+        Func<UpdatesContext, Task> testOperation,
+        Func<UpdatesContext, Task> nestedTestOperation1 = null,
+        Func<UpdatesContext, Task> nestedTestOperation2 = null)
+    {
+        try
         {
             await base.ExecuteWithStrategyInTransactionAsync(testOperation, nestedTestOperation1, nestedTestOperation2);
-            Fixture.Reseed();
         }
+        finally
+        {
+            await Fixture.ReseedAsync();
+        }
+    }
+
+    // Issue #29875
+    public override Task Can_change_type_of_pk_to_pk_dependent_by_replacing_with_new_dependent(bool async)
+        => Assert.ThrowsAsync<DbUpdateConcurrencyException>(
+            () => base.Can_change_type_of_pk_to_pk_dependent_by_replacing_with_new_dependent(async));
+
+    public abstract class UpdatesInMemoryFixtureBase : UpdatesFixtureBase
+    {
+        protected override ITestStoreFactory TestStoreFactory
+            => InMemoryTestStoreFactory.Instance;
+
+        public override DbContextOptionsBuilder AddOptions(DbContextOptionsBuilder builder)
+            => base.AddOptions(builder).ConfigureWarnings(w => w.Log(InMemoryEventId.TransactionIgnoredWarning));
     }
 }

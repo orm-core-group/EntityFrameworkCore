@@ -1,38 +1,25 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.EntityFrameworkCore.TestUtilities;
-using Xunit;
+namespace Microsoft.EntityFrameworkCore;
 
-namespace Microsoft.EntityFrameworkCore
+#nullable disable
+
+public class WithConstructorsSqlServerTest(WithConstructorsSqlServerTest.WithConstructorsSqlServerFixture fixture) : WithConstructorsTestBase<WithConstructorsSqlServerTest.WithConstructorsSqlServerFixture>(fixture)
 {
-    public class WithConstructorsSqlServerTest : WithConstructorsTestBase<WithConstructorsSqlServerTest.WithConstructorsSqlServerFixture>
+    protected override void UseTransaction(DatabaseFacade facade, IDbContextTransaction transaction)
+        => facade.UseTransaction(transaction.GetDbTransaction());
+
+    public class WithConstructorsSqlServerFixture : WithConstructorsFixtureBase
     {
-        public WithConstructorsSqlServerTest(WithConstructorsSqlServerFixture fixture)
-            : base(fixture)
+        protected override ITestStoreFactory TestStoreFactory
+            => SqlServerTestStoreFactory.Instance;
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder, DbContext context)
         {
-        }
+            base.OnModelCreating(modelBuilder, context);
 
-        [ConditionalFact(Skip = "Issue #16323")]
-        public override void Query_with_keyless_type()
-            => base.Query_with_keyless_type();
-
-        protected override void UseTransaction(DatabaseFacade facade, IDbContextTransaction transaction)
-            => facade.UseTransaction(transaction.GetDbTransaction());
-
-        public class WithConstructorsSqlServerFixture : WithConstructorsFixtureBase
-        {
-            protected override ITestStoreFactory TestStoreFactory => SqlServerTestStoreFactory.Instance;
-
-            protected override void OnModelCreating(ModelBuilder modelBuilder, DbContext context)
-            {
-                base.OnModelCreating(modelBuilder, context);
-
-                modelBuilder.Entity<BlogQuery>().HasNoKey().ToQuery(
-                    () => context.Set<BlogQuery>().FromSqlRaw("SELECT * FROM Blog"));
-            }
+            modelBuilder.Entity<BlogQuery>().HasNoKey().ToSqlQuery("SELECT * FROM Blog");
         }
     }
 }

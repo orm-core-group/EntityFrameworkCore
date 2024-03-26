@@ -1,175 +1,158 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Transactions;
-using Xunit;
 
-namespace Microsoft.EntityFrameworkCore.TestUtilities
+namespace Microsoft.EntityFrameworkCore.TestUtilities;
+
+public abstract class TestStore(string name, bool shared) : IDisposable
 {
-    public abstract class TestStore : IDisposable
+    private static readonly TestStoreIndex GlobalTestStoreIndex = new();
+    public IServiceProvider? ServiceProvider { get; protected set; }
+
+    public string Name { get; protected set; } = name;
+    public bool Shared { get; } = shared;
+
+    public virtual async Task<TestStore> InitializeAsync(
+        IServiceProvider? serviceProvider,
+        Func<DbContext>? createContext,
+        Func<DbContext, Task>? seed = null,
+        Func<DbContext, Task>? clean = null)
     {
-        private readonly bool _shared;
-        private static readonly TestStoreIndex _globalTestStoreIndex = new TestStoreIndex();
-        public IServiceProvider ServiceProvider { get; protected set; }
-
-        protected TestStore(string name, bool shared)
+        ServiceProvider = serviceProvider;
+        if (createContext == null)
         {
-            Name = name;
-            _shared = shared;
+            createContext = CreateDefaultContext;
         }
 
-        public string Name { get; protected set; }
-
-        public virtual TestStore Initialize(
-            IServiceProvider serviceProvider,
-            Func<DbContext> createContext,
-            Action<DbContext> seed = null,
-            Action<DbContext> clean = null)
+        if (Shared)
         {
-            ServiceProvider = serviceProvider;
-            if (createContext == null)
-            {
-                createContext = CreateDefaultContext;
-            }
-
-            if (_shared)
-            {
-                GetTestStoreIndex(serviceProvider).CreateShared(GetType().Name + Name, () => Initialize(createContext, seed, clean));
-            }
-            else
-            {
-                Initialize(createContext, seed, clean);
-            }
-
-            return this;
+            await GetTestStoreIndex(serviceProvider).CreateSharedAsync(
+                GetType().Name + Name, async () => await InitializeAsync(createContext, seed, clean));
+        }
+        else
+        {
+            await GetTestStoreIndex(serviceProvider).CreateNonSharedAsync(
+                GetType().Name + Name, async () => await InitializeAsync(createContext, seed, clean));
         }
 
-        public virtual TestStore Initialize(
-            IServiceProvider serviceProvider,
-            Func<TestStore, DbContext> createContext,
-            Action<DbContext> seed = null,
-            Action<DbContext> clean = null)
-            => Initialize(serviceProvider, () => createContext(this), seed, clean);
+        return this;
+    }
 
-        public virtual TestStore Initialize<TContext>(
-            IServiceProvider serviceProvider,
-            Func<TestStore, TContext> createContext,
-            Action<TContext> seed = null,
-            Action<TContext> clean = null)
-            where TContext : DbContext
-            => Initialize(
-                serviceProvider,
-                createContext,
-                seed == null ? (Action<DbContext>)null : c => seed((TContext)c),
-                clean == null ? (Action<DbContext>)null : c => clean((TContext)c));
+    public virtual Task<TestStore> InitializeAsync(
+        IServiceProvider serviceProvider,
+        Func<TestStore, DbContext> createContext,
+        Func<DbContext, Task>? seed = null,
+        Func<DbContext, Task>? clean = null)
+        => InitializeAsync(serviceProvider, () => createContext(this), seed, clean);
 
-        protected virtual void Initialize(Func<DbContext> createContext, Action<DbContext> seed, Action<DbContext> clean)
+    public virtual Task<TestStore> InitializeAsync<TContext>(
+        IServiceProvider serviceProvider,
+        Func<TestStore, TContext> createContext,
+        Func<TContext, Task>? seed = null,
+        Func<TContext, Task>? clean = null)
+        where TContext : DbContext
+        => InitializeAsync(
+            serviceProvider,
+            () => createContext(this),
+            // ReSharper disable twice RedundantCast
+            seed == null ? (Func<DbContext, Task>?)null : c => seed((TContext)c),
+            clean == null ? (Func<DbContext, Task>?)null : c => clean((TContext)c));
+
+    protected virtual async Task InitializeAsync(Func<DbContext> createContext, Func<DbContext, Task>? seed, Func<DbContext, Task>? clean)
+    {
+        using var context = createContext();
+        if (clean != null)
         {
-            using (var context = createContext())
-            {
-                clean?.Invoke(context);
-
-                Clean(context);
-
-                seed?.Invoke(context);
-            }
+            await clean(context);
         }
 
-        public abstract DbContextOptionsBuilder AddProviderOptions(DbContextOptionsBuilder builder);
-        public abstract void Clean(DbContext context);
+        await CleanAsync(context);
 
-        public virtual Task CleanAsync(DbContext context)
+        if (seed != null)
         {
-            Clean(context);
-            return Task.CompletedTask;
+            await seed(context);
+        }
+    }
+
+    public abstract DbContextOptionsBuilder AddProviderOptions(DbContextOptionsBuilder builder);
+
+    public virtual Task CleanAsync(DbContext context)
+        => Task.CompletedTask;
+
+    protected virtual DbContext CreateDefaultContext()
+        => new(AddProviderOptions(new DbContextOptionsBuilder().EnableServiceProviderCaching(false)).Options);
+
+    protected virtual TestStoreIndex GetTestStoreIndex(IServiceProvider? serviceProvider)
+        => GlobalTestStoreIndex;
+
+    public virtual void Dispose()
+    {
+    }
+
+    public virtual Task DisposeAsync()
+    {
+        Dispose();
+        return Task.CompletedTask;
+    }
+
+    private static readonly SemaphoreSlim _transactionSyncRoot = new(1);
+
+    public static IDisposable CreateTransactionScope(bool useTransaction = true)
+    {
+        if (useTransaction)
+        {
+            _transactionSyncRoot.Wait(TimeSpan.FromMinutes(1));
+            var listener = new DistributedTransactionListener();
+            var transaction = new CommittableTransaction(TimeSpan.FromMinutes(10));
+            transaction.TransactionCompleted += (_, __) => _transactionSyncRoot.Release();
+
+            return new CompositeDisposable(
+                listener,
+                transaction,
+                new TransactionScope(transaction, TimeSpan.FromMinutes(10), TransactionScopeAsyncFlowOption.Enabled));
         }
 
-        protected virtual DbContext CreateDefaultContext()
-            => new DbContext(AddProviderOptions(new DbContextOptionsBuilder().EnableServiceProviderCaching(false)).Options);
+        return new TransactionScope(TransactionScopeOption.Suppress, TransactionScopeAsyncFlowOption.Enabled);
+    }
 
-        protected virtual TestStoreIndex GetTestStoreIndex(IServiceProvider serviceProvider) => _globalTestStoreIndex;
-
-        public virtual void Dispose()
+    private class DistributedTransactionListener : IDisposable
+    {
+        public DistributedTransactionListener()
         {
+            TransactionManager.DistributedTransactionStarted += DistributedTransactionStarted;
         }
 
-        public virtual Task DisposeAsync()
+        private void DistributedTransactionStarted(object? sender, TransactionEventArgs e)
+            => Assert.Fail("Distributed transaction started");
+
+        public void Dispose()
+            => TransactionManager.DistributedTransactionStarted -= DistributedTransactionStarted;
+    }
+
+    private class CompositeDisposable(params IDisposable[] disposables) : IDisposable
+    {
+        private readonly IDisposable[] _disposables = disposables;
+
+        public void Dispose()
         {
-            Dispose();
-            return Task.CompletedTask;
-        }
-
-        private static readonly SemaphoreSlim _transactionSyncRoot = new SemaphoreSlim(1);
-
-        public static IDisposable CreateTransactionScope(bool useTransaction = true)
-        {
-            if (useTransaction)
+            var exceptions = new List<Exception>();
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var i = _disposables.Length - 1; i >= 0; i--)
             {
-                _transactionSyncRoot.Wait(TimeSpan.FromMinutes(1));
-                var listener = new DistributedTransactionListener();
-                var transaction = new CommittableTransaction(TimeSpan.FromMinutes(10));
-                transaction.TransactionCompleted += (_, __) => _transactionSyncRoot.Release();
-
-                return new CompositeDisposable(
-                    listener,
-                    transaction,
-                    new TransactionScope(transaction, TimeSpan.FromMinutes(10), TransactionScopeAsyncFlowOption.Enabled));
-            }
-
-            return new TransactionScope(TransactionScopeOption.Suppress, TransactionScopeAsyncFlowOption.Enabled);
-        }
-
-        private class DistributedTransactionListener : IDisposable
-        {
-            public DistributedTransactionListener()
-            {
-                TransactionManager.DistributedTransactionStarted += DistributedTransactionStarted;
-            }
-
-            private void DistributedTransactionStarted(object sender, TransactionEventArgs e)
-            {
-                Assert.False(true, "Distributed transaction started");
-            }
-
-            public void Dispose()
-            {
-                TransactionManager.DistributedTransactionStarted -= DistributedTransactionStarted;
-            }
-        }
-
-        private class CompositeDisposable : IDisposable
-        {
-            private readonly IDisposable[] _disposables;
-
-            public CompositeDisposable(params IDisposable[] disposables)
-            {
-                _disposables = disposables;
-            }
-
-            public void Dispose()
-            {
-                var exceptions = new List<Exception>();
-                // ReSharper disable once ForCanBeConvertedToForeach
-                for (var i = _disposables.Length - 1; i >= 0; i--)
+                try
                 {
-                    try
-                    {
-                        _disposables[i].Dispose();
-                    }
-                    catch (Exception e)
-                    {
-                        exceptions.Add(e);
-                    }
+                    _disposables[i].Dispose();
                 }
-
-                if (exceptions.Count > 0)
+                catch (Exception e)
                 {
-                    throw new AggregateException(exceptions);
+                    exceptions.Add(e);
                 }
+            }
+
+            if (exceptions.Count > 0)
+            {
+                throw new AggregateException(exceptions);
             }
         }
     }

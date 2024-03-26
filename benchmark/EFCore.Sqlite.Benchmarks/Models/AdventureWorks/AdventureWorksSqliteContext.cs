@@ -1,20 +1,10 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-namespace Microsoft.EntityFrameworkCore.Benchmarks.Models.AdventureWorks
+namespace Microsoft.EntityFrameworkCore.Benchmarks.Models.AdventureWorks;
+
+public class AdventureWorksSqliteContext : AdventureWorksContextBase
 {
-    public class AdventureWorksSqliteContext : AdventureWorksContextBase
-    {
-        private readonly string _connectionString;
-
-        public AdventureWorksSqliteContext(string connectionString)
-        {
-            _connectionString = connectionString;
-        }
-
-        protected override void ConfigureProvider(DbContextOptionsBuilder optionsBuilder)
-        {
-            optionsBuilder.UseSqlite(_connectionString);
-        }
-    }
+    protected override void ConfigureProvider(DbContextOptionsBuilder optionsBuilder)
+        => optionsBuilder.UseSqlite(AdventureWorksSqliteFixture.ConnectionString);
 }

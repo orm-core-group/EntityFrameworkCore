@@ -1,58 +1,65 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using static Microsoft.EntityFrameworkCore.Tools.AnsiConstants;
 
-namespace Microsoft.EntityFrameworkCore.Tools
+namespace Microsoft.EntityFrameworkCore.Tools;
+
+internal static class Reporter
 {
-    internal static class Reporter
+    public const string ErrorPrefix = "error:   ";
+    public const string WarningPrefix = "warn:    ";
+    public const string InfoPrefix = "info:    ";
+    public const string DataPrefix = "data:    ";
+    public const string VerbosePrefix = "verbose: ";
+
+    public static bool IsVerbose { get; set; }
+    public static bool NoColor { get; set; }
+    public static bool PrefixOutput { get; set; }
+
+    [return: NotNullIfNotNull("value")]
+    public static string? Colorize(string? value, Func<string?, string> colorizeFunc)
+        => NoColor ? value : colorizeFunc(value);
+
+    public static void WriteError(string? message)
+        => WriteLine(Prefix(ErrorPrefix, Colorize(message, x => Bold + Red + x + Reset)));
+
+    public static void WriteWarning(string? message)
+        => WriteLine(Prefix(WarningPrefix, Colorize(message, x => Bold + Yellow + x + Reset)));
+
+    public static void WriteInformation(string? message)
+        => WriteLine(Prefix(InfoPrefix, message));
+
+    public static void WriteData(string? message)
+        => WriteLine(Prefix(DataPrefix, Colorize(message, x => Bold + Gray + x + Reset)));
+
+    public static void WriteVerbose(string? message)
     {
-        public static bool IsVerbose { get; set; }
-        public static bool NoColor { get; set; }
-        public static bool PrefixOutput { get; set; }
-
-        public static string Colorize(string value, Func<string, string> colorizeFunc)
-            => NoColor ? value : colorizeFunc(value);
-
-        public static void WriteError(string message)
-            => WriteLine(Prefix("error:   ", Colorize(message, x => Bold + Red + x + Reset)));
-
-        public static void WriteWarning(string message)
-            => WriteLine(Prefix("warn:    ", Colorize(message, x => Bold + Yellow + x + Reset)));
-
-        public static void WriteInformation(string message)
-            => WriteLine(Prefix("info:    ", message));
-
-        public static void WriteData(string message)
-            => WriteLine(Prefix("data:    ", Colorize(message, x => Bold + Gray + x + Reset)));
-
-        public static void WriteVerbose(string message)
+        if (IsVerbose)
         {
-            if (IsVerbose)
-            {
-                WriteLine(Prefix("verbose: ", Colorize(message, x => Bold + Black + x + Reset)));
-            }
+            WriteLine(Prefix(VerbosePrefix, Colorize(message, x => Bold + Black + x + Reset)));
         }
+    }
 
-        private static string Prefix(string prefix, string value)
-            => PrefixOutput
-                ? string.Join(
+    private static string? Prefix(string prefix, string? value)
+        => PrefixOutput
+            ? value == null
+                ? prefix
+                : string.Join(
                     Environment.NewLine,
-                    value.Split(new[] { Environment.NewLine }, StringSplitOptions.None).Select(l => prefix + l))
-                : value;
+                    value.Split([Environment.NewLine], StringSplitOptions.None).Select(l => prefix + l))
+            : value;
 
-        private static void WriteLine(string value)
+    private static void WriteLine(string? value)
+    {
+        if (NoColor)
         {
-            if (NoColor)
-            {
-                Console.WriteLine(value);
-            }
-            else
-            {
-                AnsiConsole.WriteLine(value);
-            }
+            Console.WriteLine(value);
+        }
+        else
+        {
+            AnsiConsole.WriteLine(value);
         }
     }
 }

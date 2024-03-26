@@ -1,535 +1,290 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Castle.DynamicProxy;
-using Castle.DynamicProxy.Generators;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
 using Microsoft.EntityFrameworkCore.Internal;
-using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.EntityFrameworkCore.TestUtilities;
-using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
-namespace Microsoft.EntityFrameworkCore
+namespace Microsoft.EntityFrameworkCore;
+
+public class LazyLoadingProxyTests
 {
-    public class LazyLoadingProxyTests
+    [ConditionalFact]
+    public void Throws_if_sealed_class()
     {
-        [ConditionalFact]
-        public void Materialization_uses_parameterless_constructor()
-        {
-            using (var context = new NeweyContext(nameof(Materialization_uses_parameterless_constructor)))
-            {
-                context.Add(new March82GGtp());
-                context.SaveChanges();
-            }
+        using var context = new LazyContext<LazySealedEntity>();
+        Assert.Equal(
+            ProxiesStrings.ItsASeal(nameof(LazySealedEntity)),
+            Assert.Throws<InvalidOperationException>(
+                () => context.Model).Message);
+    }
 
-            using (var context = new NeweyContext(nameof(Materialization_uses_parameterless_constructor)))
-            {
-                Assert.Same(typeof(March82GGtp), context.Set<March82GGtp>().Single().GetType().BaseType);
-            }
+    [ConditionalFact]
+    public void Throws_if_non_virtual_navigation_to_non_owned_type()
+    {
+        using var context = new LazyContext<LazyNonVirtualNavEntity>();
+        Assert.Equal(
+            ProxiesStrings.NonVirtualProperty(nameof(LazyNonVirtualNavEntity.SelfRef), nameof(LazyNonVirtualNavEntity)),
+            Assert.Throws<InvalidOperationException>(
+                () => context.Model).Message);
+    }
+
+    [ConditionalFact]
+    public void Does_not_throw_if_non_virtual_navigation_to_non_owned_type_is_allowed()
+    {
+        using var context = new LazyContextIgnoreVirtuals<LazyNonVirtualNavEntity>();
+        Assert.NotNull(
+            context.Model.FindEntityType(typeof(LazyNonVirtualNavEntity))!.FindNavigation(nameof(LazyNonVirtualNavEntity.SelfRef)));
+    }
+
+    [ConditionalFact]
+    public void Does_not_throw_if_field_navigation_to_non_owned_type_is_allowed()
+    {
+        using var context = new LazyContextAllowingFieldNavigation();
+        Assert.NotNull(
+            context.Model.FindEntityType(typeof(LazyFieldNavEntity))!.FindNavigation(nameof(LazyFieldNavEntity.SelfRef)));
+    }
+
+    [ConditionalFact]
+    public void Does_not_throw_if_non_virtual_navigation_is_set_to_not_eager_load()
+    {
+        using var context = new LazyContextDisabledNavigation();
+        Assert.NotNull(
+            context.Model.FindEntityType(typeof(LazyNonVirtualNavEntity))!.FindNavigation(nameof(LazyNonVirtualNavEntity.SelfRef)));
+    }
+
+    [ConditionalFact]
+    public void Does_not_throw_if_field_navigation_is_set_to_not_eager_load()
+    {
+        using var context = new LazyContextDisabledFieldNavigation();
+        Assert.NotNull(
+            context.Model.FindEntityType(typeof(LazyFieldNavEntity))!.FindNavigation(nameof(LazyFieldNavEntity.SelfRef)));
+    }
+
+    [ConditionalFact]
+    public void Does_not_throw_if_non_virtual_navigation_to_owned_type()
+    {
+        using var context = new LazyContext<LazyNonVirtualOwnedNavEntity>();
+        Assert.NotNull(
+            context.Model.FindEntityType(typeof(LazyNonVirtualOwnedNavEntity))!.FindNavigation(
+                nameof(LazyNonVirtualOwnedNavEntity.NavigationToOwned)));
+    }
+
+    [ConditionalFact]
+    public void Does_not_throw_if_field_navigation_to_owned_type()
+    {
+        using var context = new LazyContextOwnedFieldNavigation();
+        Assert.NotNull(
+            context.Model.FindEntityType(typeof(LazyFieldOwnedNavEntity))!.FindNavigation(
+                nameof(LazyFieldOwnedNavEntity.NavigationToOwned)));
+    }
+
+    [ConditionalFact]
+    public void Throws_if_no_field_found()
+    {
+        using var context = new LazyContext<LazyHiddenFieldEntity>();
+        Assert.Equal(
+            CoreStrings.NoBackingFieldLazyLoading(nameof(LazyHiddenFieldEntity.SelfRef), nameof(LazyHiddenFieldEntity)),
+            Assert.Throws<InvalidOperationException>(
+                () => context.Model).Message);
+    }
+
+    [ConditionalFact]
+    public void Throws_when_context_is_disposed()
+    {
+        var serviceProvider = new ServiceCollection()
+            .AddEntityFrameworkInMemoryDatabase()
+            .AddEntityFrameworkProxies()
+            .AddDbContext<JammieDodgerContext>(
+                (p, b) =>
+                    b.UseInMemoryDatabase("Jammie")
+                        .UseInternalServiceProvider(p)
+                        .UseLazyLoadingProxies())
+            .BuildServiceProvider(validateScopes: true);
+
+        using (var scope = serviceProvider.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetService<JammieDodgerContext>();
+            context.Add(new Phone());
+            context.SaveChanges();
         }
 
-        [ConditionalFact]
-        public void Materialization_uses_parameterized_constructor()
+        Phone phone;
+        using (var scope = serviceProvider.CreateScope())
         {
-            using (var context = new NeweyContext(nameof(Materialization_uses_parameterized_constructor)))
-            {
-                context.Add(new March881(77, "Leyton House"));
-                context.SaveChanges();
-            }
-
-            using (var context = new NeweyContext(nameof(Materialization_uses_parameterized_constructor)))
-            {
-                var proxy = context.Set<March881>().Single();
-
-                Assert.Same(typeof(March881), proxy.GetType().BaseType);
-                Assert.Equal(77, proxy.Id);
-                Assert.Equal("Leyton House", proxy.Sponsor);
-            }
+            var context = scope.ServiceProvider.GetService<JammieDodgerContext>();
+            phone = context.Set<Phone>().Single();
         }
 
-        [ConditionalFact]
-        public void Materialization_uses_parameterized_constructor_taking_context()
+        Assert.Equal(
+            CoreStrings.WarningAsErrorTemplate(
+                CoreEventId.LazyLoadOnDisposedContextWarning.ToString(),
+                CoreResources.LogLazyLoadOnDisposedContext(new TestLogger<TestLoggingDefinitions>())
+                    .GenerateMessage("PhoneProxy", "Texts"),
+                "CoreEventId.LazyLoadOnDisposedContextWarning"),
+            Assert.Throws<InvalidOperationException>(
+                () => phone.Texts).Message);
+    }
+
+    private class LazyContextIgnoreVirtuals<TEntity> : TestContext<TEntity>
+        where TEntity : class
+    {
+        public LazyContextIgnoreVirtuals()
+            : base(dbName: "LazyLoadingContext", useLazyLoading: true, useChangeDetection: false, ignoreNonVirtualNavigations: true)
         {
-            using (var context = new NeweyContext(nameof(Materialization_uses_parameterized_constructor_taking_context)))
-            {
-                context.Add(new WilliamsFw14(context, 6, "Canon"));
-                context.SaveChanges();
-            }
+        }
+    }
 
-            using (var context = new NeweyContext(nameof(Materialization_uses_parameterized_constructor_taking_context)))
-            {
-                var proxy = context.Set<WilliamsFw14>().Single();
+    private class LazyContext<TEntity> : TestContext<TEntity>
+        where TEntity : class
+    {
+        public LazyContext()
+            : base(dbName: "LazyLoadingContext", useLazyLoading: true, useChangeDetection: false)
+        {
+        }
+    }
 
-                Assert.Same(typeof(WilliamsFw14), proxy.GetType().BaseType);
-                Assert.Same(context, proxy.Context);
-                Assert.Equal(6, proxy.Id);
-                Assert.Equal("Canon", proxy.Sponsor);
-            }
+    private class LazyContextDisabledNavigation : TestContext<LazyNonVirtualNavEntity>
+    {
+        public LazyContextDisabledNavigation()
+            : base(dbName: "LazyLoadingContext", useLazyLoading: true, useChangeDetection: false)
+        {
         }
 
-        [ConditionalFact]
-        public void CreateProxy_uses_parameterless_constructor()
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            using (var context = new NeweyContext())
-            {
-                Assert.Same(typeof(March82GGtp), context.CreateProxy<March82GGtp>().GetType().BaseType);
-            }
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<LazyNonVirtualNavEntity>().Navigation(e => e.SelfRef).EnableLazyLoading(false);
+        }
+    }
+
+    private class LazyContextAllowingFieldNavigation : TestContext<LazyFieldNavEntity>
+    {
+        public LazyContextAllowingFieldNavigation()
+            : base(dbName: "LazyLoadingContext", useLazyLoading: true, useChangeDetection: false, ignoreNonVirtualNavigations: true)
+        {
         }
 
-        [ConditionalFact]
-        public void CreateProxy_uses_parameterized_constructor()
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            using (var context = new NeweyContext())
-            {
-                var proxy = context.CreateProxy<March881>(77, "Leyton House");
+            base.OnModelCreating(modelBuilder);
 
-                Assert.Same(typeof(March881), proxy.GetType().BaseType);
-                Assert.Equal(77, proxy.Id);
-                Assert.Equal("Leyton House", proxy.Sponsor);
-            }
+            modelBuilder.Entity<LazyFieldNavEntity>().HasOne(e => e.SelfRef).WithOne();
+        }
+    }
+
+    private class LazyContextDisabledFieldNavigation : TestContext<LazyFieldNavEntity>
+    {
+        public LazyContextDisabledFieldNavigation()
+            : base(dbName: "LazyLoadingContext", useLazyLoading: true, useChangeDetection: false)
+        {
         }
 
-        [ConditionalFact]
-        public void CreateProxy_uses_parameterized_constructor_taking_context()
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            using (var context = new NeweyContext())
-            {
-                var proxy = context.CreateProxy<WilliamsFw14>(context, 6, "Canon");
+            base.OnModelCreating(modelBuilder);
 
-                Assert.Same(typeof(WilliamsFw14), proxy.GetType().BaseType);
-                Assert.Same(context, proxy.Context);
-                Assert.Equal(6, proxy.Id);
-                Assert.Equal("Canon", proxy.Sponsor);
-            }
+            modelBuilder.Entity<LazyFieldNavEntity>().HasOne(e => e.SelfRef).WithOne();
+            modelBuilder.Entity<LazyFieldNavEntity>().Navigation(e => e.SelfRef).EnableLazyLoading(false);
+        }
+    }
+
+    private class LazyContextOwnedFieldNavigation : TestContext<LazyFieldOwnedNavEntity>
+    {
+        public LazyContextOwnedFieldNavigation()
+            : base(dbName: "LazyLoadingContext", useLazyLoading: true, useChangeDetection: false)
+        {
         }
 
-        [ConditionalFact]
-        public void Proxies_only_created_if_Use_called()
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            using (var context = new NeweyContext(nameof(Proxies_only_created_if_Use_called), false))
-            {
-                context.Add(new March82GGtp());
-                context.SaveChanges();
-            }
+            base.OnModelCreating(modelBuilder);
 
-            using (var context = new NeweyContext(nameof(Proxies_only_created_if_Use_called), false))
-            {
-                Assert.Same(typeof(March82GGtp), context.Set<March82GGtp>().Single().GetType());
-            }
-
-            using (var context = new NeweyContext(nameof(Proxies_only_created_if_Use_called)))
-            {
-                Assert.Same(typeof(March82GGtp), context.Set<March82GGtp>().Single().GetType().BaseType);
-            }
+            modelBuilder.Entity<LazyFieldOwnedNavEntity>().OwnsOne(e => e.NavigationToOwned).WithOwner(e => e.Owner);
         }
+    }
 
-        [ConditionalFact]
-        public void Proxy_services_must_be_available()
+    public sealed class LazySealedEntity
+    {
+        public int Id { get; set; }
+    }
+
+    public class LazyNonVirtualNavEntity
+    {
+        public int Id { get; set; }
+
+        public LazyNonVirtualNavEntity SelfRef { get; set; }
+    }
+
+    public class LazyFieldNavEntity
+    {
+        public int Id { get; set; }
+
+        public LazyFieldNavEntity SelfRef;
+    }
+
+    public class LazyNonVirtualOwnedNavEntity
+    {
+        public int Id { get; set; }
+
+        public OwnedNavEntity NavigationToOwned { get; set; }
+    }
+
+    [Owned]
+    public class OwnedNavEntity
+    {
+        public int Id { get; set; }
+
+        public string Name { get; set; }
+
+        public LazyNonVirtualOwnedNavEntity Owner { get; set; }
+    }
+
+    public class LazyFieldOwnedNavEntity
+    {
+        public int Id { get; set; }
+
+        public OwnedFieldNavEntity NavigationToOwned;
+    }
+
+    [Owned]
+    public class OwnedFieldNavEntity
+    {
+        public int Id { get; set; }
+
+        public string Name { get; set; }
+
+        public LazyFieldOwnedNavEntity Owner;
+    }
+
+    public class LazyHiddenFieldEntity
+    {
+        private LazyHiddenFieldEntity _hiddenBackingField;
+
+        public int Id { get; set; }
+
+        // ReSharper disable once ConvertToAutoProperty
+        public virtual LazyHiddenFieldEntity SelfRef
         {
-            var withoutProxies = new ServiceCollection()
-                .AddEntityFrameworkInMemoryDatabase()
-                .BuildServiceProvider();
-
-            using (var context = new NeweyContext(withoutProxies, nameof(Proxy_services_must_be_available), false))
-            {
-                context.Add(new March82GGtp());
-                context.SaveChanges();
-            }
-
-            using (var context = new NeweyContext(withoutProxies, nameof(Proxy_services_must_be_available), false))
-            {
-                Assert.Same(typeof(March82GGtp), context.Set<March82GGtp>().Single().GetType());
-            }
-
-            using (var context = new NeweyContext(nameof(Proxy_services_must_be_available)))
-            {
-                Assert.Same(typeof(March82GGtp), context.Set<March82GGtp>().Single().GetType().BaseType);
-            }
-
-            using (var context = new NeweyContext(withoutProxies, nameof(Proxy_services_must_be_available)))
-            {
-                Assert.Equal(
-                    ProxiesStrings.ProxyServicesMissing,
-                    Assert.Throws<InvalidOperationException>(
-                        () => context.Model).Message);
-            }
+            get => _hiddenBackingField;
+            set => _hiddenBackingField = value;
         }
+    }
 
-        [ConditionalFact]
-        public void Throws_if_sealed_class()
-        {
-            using (var context = new NeweyContextN1())
-            {
-                Assert.Equal(
-                    ProxiesStrings.ItsASeal(nameof(McLarenMp418)),
-                    Assert.Throws<InvalidOperationException>(
-                        () => context.Model).Message);
-            }
-        }
+    private class JammieDodgerContext(DbContextOptions options) : DbContext(options)
+    {
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+            => modelBuilder.Entity<Phone>();
+    }
 
-        [ConditionalFact]
-        public void Throws_if_non_virtual_navigation()
-        {
-            using (var context = new NeweyContextN2())
-            {
-                Assert.Equal(
-                    ProxiesStrings.NonVirtualNavigation(nameof(McLarenMp419.SelfRef), nameof(McLarenMp419)),
-                    Assert.Throws<InvalidOperationException>(
-                        () => context.Model).Message);
-            }
-        }
+    public class Phone
+    {
+        public int Id { get; set; }
+        public virtual ICollection<Text> Texts { get; set; }
+    }
 
-        [ConditionalFact]
-        public void Throws_if_no_field_found()
-        {
-            using (var context = new NeweyContextN3())
-            {
-                Assert.Equal(
-                    CoreStrings.NoBackingFieldLazyLoading(nameof(MarchCg901.SelfRef), nameof(MarchCg901)),
-                    Assert.Throws<InvalidOperationException>(
-                        () => context.Model).Message);
-            }
-        }
-
-        [ConditionalFact]
-        public void Throws_if_type_not_available_to_Castle()
-        {
-            using (var context = new NeweyContextN4())
-            {
-                Assert.Throws<GeneratorException>(() => context.CreateProxy<McLarenMp421>());
-            }
-        }
-
-        [ConditionalFact]
-        public void Throws_if_constructor_not_available_to_Castle()
-        {
-            using (var context = new NeweyContextN5())
-            {
-                Assert.Throws<InvalidProxyConstructorArgumentsException>(() => context.CreateProxy<RedBullRb3>());
-            }
-        }
-
-        [ConditionalFact]
-        public void CreateProxy_throws_if_constructor_args_do_not_match()
-        {
-            using (var context = new NeweyContext())
-            {
-                Assert.Throws<InvalidProxyConstructorArgumentsException>(() => context.CreateProxy<March881>(77, 88));
-            }
-        }
-
-        [ConditionalFact]
-        public void CreateProxy_throws_if_wrong_number_of_constructor_args()
-        {
-            using (var context = new NeweyContext())
-            {
-                Assert.Throws<InvalidProxyConstructorArgumentsException>(() => context.CreateProxy<March881>(77, 88, 99));
-            }
-        }
-
-        [ConditionalFact]
-        public void Throws_if_create_proxy_for_non_mapped_type()
-        {
-            using (var context = new NeweyContextN())
-            {
-                Assert.Equal(
-                    CoreStrings.EntityTypeNotFound(nameof(March82GGtp)),
-                    Assert.Throws<InvalidOperationException>(
-                        () => context.CreateProxy<March82GGtp>()).Message);
-            }
-        }
-
-        [ConditionalFact]
-        public void Throws_if_create_proxy_when_proxies_not_used()
-        {
-            using (var context = new NeweyContextN6())
-            {
-                Assert.Equal(
-                    ProxiesStrings.ProxiesNotEnabled(nameof(RedBullRb3)),
-                    Assert.Throws<InvalidOperationException>(
-                        () => context.CreateProxy<RedBullRb3>()).Message);
-            }
-        }
-
-        [ConditionalFact]
-        public void Throws_if_create_proxy_when_proxies_not_enabled()
-        {
-            using (var context = new NeweyContextN7())
-            {
-                Assert.Equal(
-                    ProxiesStrings.ProxiesNotEnabled(nameof(RedBullRb3)),
-                    Assert.Throws<InvalidOperationException>(
-                        () => context.CreateProxy<RedBullRb3>()).Message);
-            }
-        }
-
-        [ConditionalFact]
-        public void Throws_when_context_is_disposed()
-        {
-            var serviceProvider = new ServiceCollection()
-                .AddEntityFrameworkInMemoryDatabase()
-                .AddEntityFrameworkProxies()
-                .AddDbContext<JammieDodgerContext>(
-                    (p, b) =>
-                        b.UseInMemoryDatabase("Jammie")
-                            .UseInternalServiceProvider(p)
-                            .UseLazyLoadingProxies())
-                .BuildServiceProvider();
-
-            using (var scope = serviceProvider.CreateScope())
-            {
-                var context = scope.ServiceProvider.GetService<JammieDodgerContext>();
-                context.Add(new Phone());
-                context.SaveChanges();
-            }
-
-            Phone phone;
-            using (var scope = serviceProvider.CreateScope())
-            {
-                var context = scope.ServiceProvider.GetService<JammieDodgerContext>();
-                phone = context.Set<Phone>().Single();
-            }
-
-            Assert.Equal(
-                CoreStrings.WarningAsErrorTemplate(
-                    CoreEventId.LazyLoadOnDisposedContextWarning.ToString(),
-                    CoreResources.LogLazyLoadOnDisposedContext(new TestLogger<TestLoggingDefinitions>())
-                        .GenerateMessage("Texts", "PhoneProxy"),
-                    "CoreEventId.LazyLoadOnDisposedContextWarning"),
-                Assert.Throws<InvalidOperationException>(
-                    () => phone.Texts).Message);
-        }
-
-        private class JammieDodgerContext : DbContext
-        {
-            public JammieDodgerContext(DbContextOptions options)
-                : base(options)
-            {
-            }
-
-            protected override void OnModelCreating(ModelBuilder modelBuilder)
-                => modelBuilder.Entity<Phone>();
-        }
-
-        public class Phone
-        {
-            public int Id { get; set; }
-            public virtual ICollection<Text> Texts { get; set; }
-        }
-
-        public class Text
-        {
-            public int Id { get; set; }
-        }
-
-        public class March82GGtp
-        {
-            public int Id { get; set; }
-        }
-
-        public class March881
-        {
-            public March881(int id, string sponsor)
-            {
-                Id = id;
-                Sponsor = sponsor;
-            }
-
-            public int Id { get; }
-            public string Sponsor { get; }
-        }
-
-        public class WilliamsFw14
-        {
-            public WilliamsFw14(DbContext context, int id, string sponsor)
-            {
-                Context = context;
-                Id = id;
-                Sponsor = sponsor;
-            }
-
-            public DbContext Context { get; }
-            public int Id { get; }
-            public string Sponsor { get; }
-        }
-
-        private class NeweyContext : DbContext
-        {
-            private readonly IServiceProvider _internalServiceProvider;
-            private static readonly InMemoryDatabaseRoot _dbRoot = new InMemoryDatabaseRoot();
-            private readonly bool _useProxies;
-            private readonly string _dbName;
-
-            public NeweyContext(string dbName = null, bool useProxies = true)
-            {
-                _internalServiceProvider
-                    = new ServiceCollection()
-                        .AddEntityFrameworkInMemoryDatabase()
-                        .AddEntityFrameworkProxies()
-                        .BuildServiceProvider();
-
-                _dbName = dbName;
-                _useProxies = useProxies;
-            }
-
-            public NeweyContext(IServiceProvider internalServiceProvider, string dbName = null, bool useProxies = true)
-                : this(dbName, useProxies)
-            {
-                _internalServiceProvider = internalServiceProvider;
-            }
-
-            protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-            {
-                if (_useProxies)
-                {
-                    optionsBuilder.UseLazyLoadingProxies();
-                }
-
-                if (_internalServiceProvider != null)
-                {
-                    optionsBuilder.UseInternalServiceProvider(_internalServiceProvider);
-                }
-
-                optionsBuilder.UseInMemoryDatabase(_dbName ?? nameof(NeweyContext), _dbRoot);
-            }
-
-            protected override void OnModelCreating(ModelBuilder modelBuilder)
-            {
-                modelBuilder.Entity<March82GGtp>();
-
-                modelBuilder.Entity<March881>(
-                    b =>
-                    {
-                        b.Property(e => e.Id);
-                        b.Property(e => e.Sponsor);
-                    });
-
-                modelBuilder.Entity<WilliamsFw14>(
-                    b =>
-                    {
-                        b.Property(e => e.Id);
-                        b.Property(e => e.Sponsor);
-                    });
-            }
-        }
-
-        public sealed class McLarenMp418
-        {
-            public int Id { get; set; }
-        }
-
-        private class NeweyContextN : DbContext
-        {
-            protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-                => optionsBuilder
-                    .UseLazyLoadingProxies()
-                    .UseInternalServiceProvider(
-                        new ServiceCollection()
-                            .AddEntityFrameworkInMemoryDatabase()
-                            .AddEntityFrameworkProxies()
-                            .BuildServiceProvider())
-                    .UseInMemoryDatabase(Guid.NewGuid().ToString());
-        }
-
-        private class NeweyContextN1 : NeweyContextN
-        {
-            protected override void OnModelCreating(ModelBuilder modelBuilder)
-                => modelBuilder.Entity<McLarenMp418>();
-        }
-
-        public class McLarenMp419
-        {
-            public int Id { get; set; }
-
-            public McLarenMp419 SelfRef { get; set; }
-        }
-
-        private class NeweyContextN2 : NeweyContextN
-        {
-            protected override void OnModelCreating(ModelBuilder modelBuilder)
-                => modelBuilder.Entity<McLarenMp419>();
-        }
-
-        public class MarchCg901
-        {
-            private MarchCg901 _hiddenBackingField;
-
-            public int Id { get; set; }
-
-            // ReSharper disable once ConvertToAutoProperty
-            public virtual MarchCg901 SelfRef
-            {
-                get => _hiddenBackingField;
-                set => _hiddenBackingField = value;
-            }
-        }
-
-        private class NeweyContextN3 : NeweyContextN
-        {
-            protected override void OnModelCreating(ModelBuilder modelBuilder)
-                => modelBuilder.Entity<MarchCg901>();
-        }
-
-        internal class McLarenMp421
-        {
-            public int Id { get; set; }
-        }
-
-        private class NeweyContextN4 : NeweyContextN
-        {
-            protected override void OnModelCreating(ModelBuilder modelBuilder)
-                => modelBuilder.Entity<McLarenMp421>();
-        }
-
-        public class RedBullRb3
-        {
-            internal RedBullRb3()
-            {
-            }
-
-            public int Id { get; set; }
-        }
-
-        private class NeweyContextN5 : NeweyContextN
-        {
-            protected override void OnModelCreating(ModelBuilder modelBuilder)
-                => modelBuilder.Entity<RedBullRb3>();
-        }
-
-        private class NeweyContextN6 : DbContext
-        {
-            protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-                => optionsBuilder
-                    .UseInternalServiceProvider(
-                        new ServiceCollection()
-                            .AddEntityFrameworkInMemoryDatabase()
-                            .AddEntityFrameworkProxies()
-                            .BuildServiceProvider())
-                    .UseInMemoryDatabase(Guid.NewGuid().ToString());
-
-            protected override void OnModelCreating(ModelBuilder modelBuilder)
-                => modelBuilder.Entity<March82GGtp>();
-        }
-
-        private class NeweyContextN7 : DbContext
-        {
-            protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-                => optionsBuilder
-                    .UseLazyLoadingProxies(false)
-                    .UseInternalServiceProvider(
-                        new ServiceCollection()
-                            .AddEntityFrameworkInMemoryDatabase()
-                            .AddEntityFrameworkProxies()
-                            .BuildServiceProvider())
-                    .UseInMemoryDatabase(Guid.NewGuid().ToString());
-
-            protected override void OnModelCreating(ModelBuilder modelBuilder)
-                => modelBuilder.Entity<March82GGtp>();
-        }
+    public class Text
+    {
+        public int Id { get; set; }
     }
 }

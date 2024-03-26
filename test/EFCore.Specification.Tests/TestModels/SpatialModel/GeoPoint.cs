@@ -1,17 +1,10 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-namespace Microsoft.EntityFrameworkCore.TestModels.SpatialModel
+namespace Microsoft.EntityFrameworkCore.TestModels.SpatialModel;
+
+public struct GeoPoint(double lat, double lon)
 {
-    public struct GeoPoint
-    {
-        public GeoPoint(double lat, double lon)
-        {
-            Lat = lat;
-            Lon = lon;
-        }
-
-        public double Lat { get; }
-        public double Lon { get; }
-    }
+    public double Lat { get; } = lat;
+    public double Lon { get; } = lon;
 }

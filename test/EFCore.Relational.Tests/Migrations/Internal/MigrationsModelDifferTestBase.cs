@@ -1,128 +1,131 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Migrations.Operations;
-using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.EntityFrameworkCore.TestUtilities;
-using Microsoft.EntityFrameworkCore.Update;
 using Microsoft.EntityFrameworkCore.Update.Internal;
-using Xunit;
 
-namespace Microsoft.EntityFrameworkCore.Migrations.Internal
+namespace Microsoft.EntityFrameworkCore.Migrations.Internal;
+
+public abstract class MigrationsModelDifferTestBase
 {
-    public abstract class MigrationsModelDifferTestBase
+    protected void Execute(
+        Action<ModelBuilder> buildSourceAction,
+        Action<ModelBuilder> buildTargetAction,
+        Action<IReadOnlyList<MigrationOperation>> assertAction,
+        bool skipSourceConventions = false)
+        => Execute(m => { }, buildSourceAction, buildTargetAction, assertAction, null, skipSourceConventions);
+
+    protected void Execute(
+        Action<ModelBuilder> buildCommonAction,
+        Action<ModelBuilder> buildSourceAction,
+        Action<ModelBuilder> buildTargetAction,
+        Action<IReadOnlyList<MigrationOperation>> assertAction,
+        bool skipSourceConventions = false)
+        => Execute(buildCommonAction, buildSourceAction, buildTargetAction, assertAction, null, skipSourceConventions);
+
+    protected void Execute(
+        Action<ModelBuilder> buildCommonAction,
+        Action<ModelBuilder> buildSourceAction,
+        Action<ModelBuilder> buildTargetAction,
+        Action<IReadOnlyList<MigrationOperation>> assertActionUp,
+        Action<IReadOnlyList<MigrationOperation>> assertActionDown,
+        bool skipSourceConventions = false)
+        => Execute(
+            buildCommonAction, buildSourceAction, buildTargetAction, assertActionUp, assertActionDown, null, skipSourceConventions);
+
+    protected void Execute(
+        Action<ModelBuilder> buildCommonAction,
+        Action<ModelBuilder> buildSourceAction,
+        Action<ModelBuilder> buildTargetAction,
+        Action<IReadOnlyList<MigrationOperation>> assertActionUp,
+        Action<IReadOnlyList<MigrationOperation>> assertActionDown,
+        Action<DbContextOptionsBuilder> builderOptionsAction,
+        bool skipSourceConventions = false,
+        bool enableSensitiveLogging = true)
     {
-        protected void Execute(
-            Action<ModelBuilder> buildSourceAction,
-            Action<ModelBuilder> buildTargetAction,
-            Action<IReadOnlyList<MigrationOperation>> assertAction)
-            => Execute(m => { }, buildSourceAction, buildTargetAction, assertAction, null);
+        var sourceModelBuilder = CreateModelBuilder(skipSourceConventions);
+        buildCommonAction(sourceModelBuilder);
+        buildSourceAction(sourceModelBuilder);
 
-        protected void Execute(
-            Action<ModelBuilder> buildCommonAction,
-            Action<ModelBuilder> buildSourceAction,
-            Action<ModelBuilder> buildTargetAction,
-            Action<IReadOnlyList<MigrationOperation>> assertAction)
-            => Execute(buildCommonAction, buildSourceAction, buildTargetAction, assertAction, null);
+        var targetModelBuilder = CreateModelBuilder(skipConventions: false);
+        buildCommonAction(targetModelBuilder);
+        buildTargetAction(targetModelBuilder);
 
-        protected void Execute(
-            Action<ModelBuilder> buildCommonAction,
-            Action<ModelBuilder> buildSourceAction,
-            Action<ModelBuilder> buildTargetAction,
-            Action<IReadOnlyList<MigrationOperation>> assertActionUp,
-            Action<IReadOnlyList<MigrationOperation>> assertActionDown)
+        var sourceModel = sourceModelBuilder.FinalizeModel(designTime: true, skipValidation: true);
+        var targetModel = targetModelBuilder.FinalizeModel(designTime: true, skipValidation: true);
+
+        var targetOptionsBuilder = TestHelpers
+            .AddProviderOptions(new DbContextOptionsBuilder())
+            .UseModel(targetModel);
+
+        if (enableSensitiveLogging)
         {
-            var sourceModelBuilder = CreateModelBuilder();
-            buildCommonAction(sourceModelBuilder);
-            buildSourceAction(sourceModelBuilder);
-            sourceModelBuilder.FinalizeModel();
-
-            var targetModelBuilder = CreateModelBuilder();
-            buildCommonAction(targetModelBuilder);
-            buildTargetAction(targetModelBuilder);
-            targetModelBuilder.FinalizeModel();
-
-            var modelDiffer = CreateModelDiffer(targetModelBuilder.Model);
-
-            var operationsUp = modelDiffer.GetDifferences(sourceModelBuilder.Model, targetModelBuilder.Model);
-            assertActionUp(operationsUp);
-
-            if (assertActionDown != null)
-            {
-                modelDiffer = CreateModelDiffer(sourceModelBuilder.Model);
-
-                var operationsDown = modelDiffer.GetDifferences(targetModelBuilder.Model, sourceModelBuilder.Model);
-                assertActionDown(operationsDown);
-            }
+            targetOptionsBuilder = targetOptionsBuilder.EnableSensitiveDataLogging();
         }
 
-        protected void AssertMultidimensionalArray<T>(T[,] values, params Action<T>[] assertions)
-            => Assert.Collection(ToOnedimensionalArray(values), assertions);
-
-        protected static T[] ToOnedimensionalArray<T>(T[,] values, bool firstDimension = false)
+        if (builderOptionsAction != null)
         {
-            Debug.Assert(
-                values.GetLength(firstDimension ? 1 : 0) == 1,
-                $"Length of dimension {(firstDimension ? 1 : 0)} is not 1.");
-
-            var result = new T[values.Length];
-            for (var i = 0; i < values.Length; i++)
-            {
-                result[i] = firstDimension
-                    ? values[i, 0]
-                    : values[0, i];
-            }
-
-            return result;
+            builderOptionsAction(targetOptionsBuilder);
         }
 
-        protected static T[][] ToJaggedArray<T>(T[,] twoDimensionalArray, bool firstDimension = false)
+        var modelDiffer = CreateModelDiffer(targetOptionsBuilder.Options);
+
+        var operationsUp = modelDiffer.GetDifferences(sourceModel.GetRelationalModel(), targetModel.GetRelationalModel());
+        assertActionUp(operationsUp);
+
+        if (assertActionDown != null)
         {
-            var rowsFirstIndex = twoDimensionalArray.GetLowerBound(0);
-            var rowsLastIndex = twoDimensionalArray.GetUpperBound(0);
-            var numberOfRows = rowsLastIndex - rowsFirstIndex + 1;
-
-            var columnsFirstIndex = twoDimensionalArray.GetLowerBound(1);
-            var columnsLastIndex = twoDimensionalArray.GetUpperBound(1);
-            var numberOfColumns = columnsLastIndex - columnsFirstIndex + 1;
-
-            var jaggedArray = new T[numberOfRows][];
-            for (var i = 0; i < numberOfRows; i++)
-            {
-                jaggedArray[i] = new T[numberOfColumns];
-
-                for (var j = 0; j < numberOfColumns; j++)
-                {
-                    jaggedArray[i][j] = twoDimensionalArray[i + rowsFirstIndex, j + columnsFirstIndex];
-                }
-            }
-
-            return jaggedArray;
+            var operationsDown = modelDiffer.GetDifferences(targetModel.GetRelationalModel(), sourceModel.GetRelationalModel());
+            assertActionDown(operationsDown);
         }
 
-        protected abstract TestHelpers TestHelpers { get; }
-        protected virtual ModelBuilder CreateModelBuilder() => TestHelpers.CreateConventionBuilder(skipValidation: true);
+        var noopOperations = modelDiffer.GetDifferences(sourceModel.GetRelationalModel(), sourceModel.GetRelationalModel());
+        Assert.Empty(noopOperations);
 
-        protected virtual MigrationsModelDiffer CreateModelDiffer(IModel model)
-        {
-            var ctx = TestHelpers.CreateContext(
-                TestHelpers.AddProviderOptions(new DbContextOptionsBuilder())
-                    .UseModel(model).EnableSensitiveDataLogging().Options);
-            return new MigrationsModelDiffer(
-                new TestRelationalTypeMappingSource(
-                    TestServiceFactory.Instance.Create<TypeMappingSourceDependencies>(),
-                    TestServiceFactory.Instance.Create<RelationalTypeMappingSourceDependencies>()),
-                new MigrationsAnnotationProvider(
-                    new MigrationsAnnotationProviderDependencies()),
-                ctx.GetService<IChangeDetector>(),
-                ctx.GetService<IUpdateAdapterFactory>(),
-                ctx.GetService<CommandBatchPreparerDependencies>());
-        }
+        noopOperations = modelDiffer.GetDifferences(targetModel.GetRelationalModel(), targetModel.GetRelationalModel());
+        Assert.Empty(noopOperations);
     }
+
+    protected void AssertMultidimensionalArray<T>(T[,] values, params Action<T>[] assertions)
+        => Assert.Collection(values.Cast<T>(), assertions);
+
+    protected static T[][] ToJaggedArray<T>(T[,] twoDimensionalArray, bool firstDimension = false)
+    {
+        var rowsFirstIndex = twoDimensionalArray.GetLowerBound(0);
+        var rowsLastIndex = twoDimensionalArray.GetUpperBound(0);
+        var numberOfRows = rowsLastIndex - rowsFirstIndex + 1;
+
+        var columnsFirstIndex = twoDimensionalArray.GetLowerBound(1);
+        var columnsLastIndex = twoDimensionalArray.GetUpperBound(1);
+        var numberOfColumns = columnsLastIndex - columnsFirstIndex + 1;
+
+        var jaggedArray = new T[numberOfRows][];
+        for (var i = 0; i < numberOfRows; i++)
+        {
+            jaggedArray[i] = new T[numberOfColumns];
+
+            for (var j = 0; j < numberOfColumns; j++)
+            {
+                jaggedArray[i][j] = twoDimensionalArray[i + rowsFirstIndex, j + columnsFirstIndex];
+            }
+        }
+
+        return jaggedArray;
+    }
+
+    protected abstract TestHelpers TestHelpers { get; }
+
+    protected virtual TestHelpers.TestModelBuilder CreateModelBuilder(bool skipConventions)
+        => TestHelpers.CreateConventionBuilder(configureConventions: skipConventions ? c => c.RemoveAllConventions() : null);
+
+    protected virtual MigrationsModelDiffer CreateModelDiffer(DbContextOptions options)
+        => new(
+            new TestRelationalTypeMappingSource(
+                TestServiceFactory.Instance.Create<TypeMappingSourceDependencies>(),
+                TestServiceFactory.Instance.Create<RelationalTypeMappingSourceDependencies>()),
+            new MigrationsAnnotationProvider(
+                new MigrationsAnnotationProviderDependencies()),
+            new RelationalAnnotationProvider(
+                new RelationalAnnotationProviderDependencies()),
+            TestServiceFactory.Instance.Create<IRowIdentityMapFactory>(),
+            TestHelpers.CreateContext(options).GetService<CommandBatchPreparerDependencies>());
 }

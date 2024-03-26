@@ -1,123 +1,106 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
+using System.Diagnostics.CodeAnalysis;
 
-namespace Microsoft.EntityFrameworkCore.TestUtilities.QueryTestGeneration
+namespace Microsoft.EntityFrameworkCore.TestUtilities.QueryTestGeneration;
+
+public class InjectThenByPropertyExpressionMutator(DbContext context) : ExpressionMutator(context)
 {
-    public class InjectThenByPropertyExpressionMutator : ExpressionMutator
+    private ExpressionFinder _expressionFinder = null!;
+
+    public override bool IsValid(Expression expression)
     {
-        private ExpressionFinder _expressionFinder;
+        _expressionFinder = new ExpressionFinder(this);
+        _expressionFinder.Visit(expression);
 
-        public InjectThenByPropertyExpressionMutator(DbContext context)
-            : base(context)
+        return _expressionFinder.FoundExpressions.Any();
+    }
+
+    public override Expression Apply(Expression expression, Random random)
+    {
+        var i = random.Next(_expressionFinder.FoundExpressions.Count);
+        var expressionToInject = _expressionFinder.FoundExpressions.ToList()[i].Key;
+        var j = random.Next(_expressionFinder.FoundExpressions[expressionToInject].Count);
+        var property = _expressionFinder.FoundExpressions[expressionToInject][j];
+
+        var typeArgument = expressionToInject.Type.GetGenericArguments()[0];
+
+        var isDescending = random.Next(3) == 0;
+        var thenBy = isDescending
+            ? QueryableMethods.ThenByDescending.MakeGenericMethod(typeArgument, property.PropertyType)
+            : QueryableMethods.ThenBy.MakeGenericMethod(typeArgument, property.PropertyType);
+
+        var prm = Expression.Parameter(typeArgument, "prm");
+        var lambdaBody = (Expression)Expression.Property(prm, property);
+
+        if (property.PropertyType.IsValueType
+            && !(property.PropertyType.IsGenericType && property.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>)))
         {
+            var nullablePropertyType = typeof(Nullable<>).MakeGenericType(property.PropertyType);
+
+            thenBy = isDescending
+                ? QueryableMethods.ThenByDescending.MakeGenericMethod(typeArgument, nullablePropertyType)
+                : QueryableMethods.ThenBy.MakeGenericMethod(typeArgument, nullablePropertyType);
+
+            lambdaBody = Expression.Convert(lambdaBody, nullablePropertyType);
         }
 
-        public override bool IsValid(Expression expression)
+        if (typeArgument == typeof(string))
         {
-            _expressionFinder = new ExpressionFinder(this);
-            _expressionFinder.Visit(expression);
-
-            return _expressionFinder.FoundExpressions.Any();
+            // string.Length - make it nullable in case we access optional argument
+            thenBy = QueryableMethods.OrderBy.MakeGenericMethod(typeArgument, typeof(int?));
+            lambdaBody = Expression.Convert(lambdaBody, typeof(int?));
         }
 
-        public override Expression Apply(Expression expression, Random random)
+        var lambda = Expression.Lambda(lambdaBody, prm);
+        var injector = new ExpressionInjector(expressionToInject, e => Expression.Call(thenBy, e, lambda));
+
+        return injector.Visit(expression);
+    }
+
+    private class ExpressionFinder(InjectThenByPropertyExpressionMutator mutator) : ExpressionVisitor
+    {
+        private List<PropertyInfo> GetValidPropertiesForOrderBy(Expression expression)
+            => expression.Type.GetGenericArguments()[0].GetProperties().Where(p => !p.GetMethod!.IsStatic)
+                .Where(p => IsOrderedableType(p.PropertyType)).ToList();
+
+        private bool _insideThenInclude;
+
+        public Dictionary<Expression, List<PropertyInfo>> FoundExpressions { get; } = new();
+
+        [return: NotNullIfNotNull(nameof(expression))]
+        public override Expression? Visit(Expression? expression)
         {
-            var i = random.Next(_expressionFinder.FoundExpressions.Count);
-            var expressionToInject = _expressionFinder.FoundExpressions.ToList()[i].Key;
-            var j = random.Next(_expressionFinder.FoundExpressions[expressionToInject].Count);
-            var property = _expressionFinder.FoundExpressions[expressionToInject][j];
-
-            var typeArgument = expressionToInject.Type.GetGenericArguments()[0];
-
-            var isDescending = random.Next(3) == 0;
-            var thenBy = isDescending
-                ? ThenByDescendingMethodInfo.MakeGenericMethod(typeArgument, property.PropertyType)
-                : ThenByMethodInfo.MakeGenericMethod(typeArgument, property.PropertyType);
-
-            var prm = Expression.Parameter(typeArgument, "prm");
-            var lambdaBody = (Expression)Expression.Property(prm, property);
-
-            if (property.PropertyType.IsValueType
-                && !(property.PropertyType.IsGenericType && property.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>)))
+            // can't inject OrderBy inside of include - would have to rewrite the ThenInclude method to one that accepts ordered input
+            var insideThenInclude = default(bool?);
+            if (expression is MethodCallExpression { Method.Name: "ThenInclude" or "ThenIncludeDescending" })
             {
-                var nullablePropertyType = typeof(Nullable<>).MakeGenericType(property.PropertyType);
-
-                thenBy = isDescending
-                    ? ThenByDescendingMethodInfo.MakeGenericMethod(typeArgument, nullablePropertyType)
-                    : ThenByMethodInfo.MakeGenericMethod(typeArgument, nullablePropertyType);
-
-                lambdaBody = Expression.Convert(lambdaBody, nullablePropertyType);
+                insideThenInclude = _insideThenInclude;
+                _insideThenInclude = true;
             }
 
-            if (typeArgument == typeof(string))
+            if (!_insideThenInclude
+                && expression is not (null or ConstantExpression)
+                && IsOrderedQueryableResult(expression)
+                && !FoundExpressions.ContainsKey(expression))
             {
-                // string.Length - make it nullable in case we access optional argument
-                thenBy = OrderByMethodInfo.MakeGenericMethod(typeArgument, typeof(int?));
-                lambdaBody = Expression.Convert(lambdaBody, typeof(int?));
+                var validProperties = GetValidPropertiesForOrderBy(expression);
+                validProperties = mutator.FilterPropertyInfos(expression.Type.GetGenericArguments()[0], validProperties);
+
+                if (validProperties.Any())
+                {
+                    FoundExpressions.Add(expression, validProperties);
+                }
             }
 
-            var lambda = Expression.Lambda(lambdaBody, prm);
-            var injector = new ExpressionInjector(expressionToInject, e => Expression.Call(thenBy, e, lambda));
-
-            return injector.Visit(expression);
-        }
-
-        private class ExpressionFinder : ExpressionVisitor
-        {
-            private List<PropertyInfo> GetValidPropertiesForOrderBy(Expression expression)
-                => expression.Type.GetGenericArguments()[0].GetProperties().Where(p => !p.GetMethod.IsStatic)
-                    .Where(p => IsOrderedableType(p.PropertyType)).ToList();
-
-            private bool _insideThenInclude;
-            private readonly InjectThenByPropertyExpressionMutator _mutator;
-
-            public ExpressionFinder(InjectThenByPropertyExpressionMutator mutator)
+            try
             {
-                _mutator = mutator;
+                return base.Visit(expression);
             }
-
-            public Dictionary<Expression, List<PropertyInfo>> FoundExpressions { get; } = new Dictionary<Expression, List<PropertyInfo>>();
-
-            public override Expression Visit(Expression expression)
+            finally
             {
-                // can't inject OrderBy inside of include - would have to rewrite the ThenInclude method to one that accepts ordered input
-                var insideThenInclude = default(bool?);
-                if (expression is MethodCallExpression methodCallExpression
-                    && (methodCallExpression.Method.Name == "ThenInclude" || methodCallExpression.Method.Name == "ThenIncludeDescending"))
-                {
-                    insideThenInclude = _insideThenInclude;
-                    _insideThenInclude = true;
-                }
-
-                if (!_insideThenInclude
-                    && expression != null
-                    && !(expression is ConstantExpression)
-                    && IsOrderedQueryableResult(expression)
-                    && !FoundExpressions.ContainsKey(expression))
-                {
-                    var validProperties = GetValidPropertiesForOrderBy(expression);
-                    validProperties = _mutator.FilterPropertyInfos(expression.Type.GetGenericArguments()[0], validProperties);
-
-                    if (validProperties.Any())
-                    {
-                        FoundExpressions.Add(expression, validProperties);
-                    }
-                }
-
-                try
-                {
-                    return base.Visit(expression);
-                }
-                finally
-                {
-                    _insideThenInclude = insideThenInclude ?? _insideThenInclude;
-                }
+                _insideThenInclude = insideThenInclude ?? _insideThenInclude;
             }
         }
     }

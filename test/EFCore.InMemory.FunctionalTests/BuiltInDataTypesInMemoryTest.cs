@@ -1,37 +1,43 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
-
-using System;
-using Microsoft.EntityFrameworkCore.TestUtilities;
-using Xunit;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
 // ReSharper disable InconsistentNaming
-namespace Microsoft.EntityFrameworkCore
+
+namespace Microsoft.EntityFrameworkCore;
+
+public class BuiltInDataTypesInMemoryTest(BuiltInDataTypesInMemoryTest.BuiltInDataTypesInMemoryFixture fixture)
+    : BuiltInDataTypesTestBase<BuiltInDataTypesInMemoryTest.BuiltInDataTypesInMemoryFixture>(fixture)
 {
-    public class BuiltInDataTypesInMemoryTest : BuiltInDataTypesTestBase<BuiltInDataTypesInMemoryTest.BuiltInDataTypesInMemoryFixture>
+    public override Task Optional_datetime_reading_null_from_database()
+        => Task.CompletedTask;
+
+    public class BuiltInDataTypesInMemoryFixture : BuiltInDataTypesFixtureBase
     {
-        public BuiltInDataTypesInMemoryTest(BuiltInDataTypesInMemoryFixture fixture)
-            : base(fixture)
-        {
-        }
+        protected override ITestStoreFactory TestStoreFactory
+            => InMemoryTestStoreFactory.Instance;
 
-        public class BuiltInDataTypesInMemoryFixture : BuiltInDataTypesFixtureBase
-        {
-            protected override ITestStoreFactory TestStoreFactory => InMemoryTestStoreFactory.Instance;
+        public override bool StrictEquality
+            => true;
 
-            public override bool StrictEquality => true;
+        public override bool SupportsAnsi
+            => false;
 
-            public override bool SupportsAnsi => false;
+        public override bool SupportsUnicodeToAnsiConversion
+            => true;
 
-            public override bool SupportsUnicodeToAnsiConversion => true;
+        public override bool SupportsLargeStringComparisons
+            => true;
 
-            public override bool SupportsLargeStringComparisons => true;
+        public override bool SupportsBinaryKeys
+            => false;
 
-            public override bool SupportsBinaryKeys => false;
+        public override bool SupportsDecimalComparisons
+            => true;
 
-            public override bool SupportsDecimalComparisons => true;
+        public override DateTime DefaultDateTime
+            => new();
 
-            public override DateTime DefaultDateTime => new DateTime();
-        }
+        public override bool PreservesDateTimeKind
+            => true;
     }
 }

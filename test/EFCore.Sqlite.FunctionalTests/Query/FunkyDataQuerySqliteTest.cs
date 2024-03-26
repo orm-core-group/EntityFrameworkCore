@@ -1,22 +1,47 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.EntityFrameworkCore.TestUtilities;
+namespace Microsoft.EntityFrameworkCore.Query;
 
-namespace Microsoft.EntityFrameworkCore.Query
+#nullable disable
+
+public class FunkyDataQuerySqliteTest : FunkyDataQueryTestBase<FunkyDataQuerySqliteTest.FunkyDataQuerySqliteFixture>
 {
-    public class FunkyDataQuerySqliteTest : FunkyDataQueryTestBase<FunkyDataQuerySqliteTest.FunkyDataQuerySqliteFixture>
+    public FunkyDataQuerySqliteTest(FunkyDataQuerySqliteFixture fixture, ITestOutputHelper testOutputHelper)
+        : base(fixture)
     {
-        public FunkyDataQuerySqliteTest(FunkyDataQuerySqliteFixture fixture)
-            : base(fixture)
-        {
-        }
+        Fixture.TestSqlLoggerFactory.Clear();
+        Fixture.TestSqlLoggerFactory.SetTestOutputHelper(testOutputHelper);
+    }
 
-        public class FunkyDataQuerySqliteFixture : FunkyDataQueryFixtureBase
-        {
-            public TestSqlLoggerFactory TestSqlLoggerFactory => (TestSqlLoggerFactory)ListLoggerFactory;
+    public override async Task String_Contains_and_StartsWith_with_same_parameter(bool async)
+    {
+        await base.String_Contains_and_StartsWith_with_same_parameter(async);
 
-            protected override ITestStoreFactory TestStoreFactory => SqliteTestStoreFactory.Instance;
-        }
+        AssertSql(
+            """
+@__s_0='B' (Size = 1)
+@__s_0_startswith='B%' (Size = 2)
+
+SELECT "f"."Id", "f"."FirstName", "f"."LastName", "f"."NullableBool"
+FROM "FunkyCustomers" AS "f"
+WHERE ("f"."FirstName" IS NOT NULL AND instr("f"."FirstName", @__s_0) > 0) OR "f"."LastName" LIKE @__s_0_startswith ESCAPE '\'
+""");
+    }
+
+    protected override QueryAsserter CreateQueryAsserter(FunkyDataQuerySqliteFixture fixture)
+        => new RelationalQueryAsserter(
+            fixture, RewriteExpectedQueryExpression, RewriteServerQueryExpression);
+
+    private void AssertSql(params string[] expected)
+        => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);
+
+    public class FunkyDataQuerySqliteFixture : FunkyDataQueryFixtureBase, ITestSqlLoggerFactory
+    {
+        public TestSqlLoggerFactory TestSqlLoggerFactory
+            => (TestSqlLoggerFactory)ListLoggerFactory;
+
+        protected override ITestStoreFactory TestStoreFactory
+            => SqliteTestStoreFactory.Instance;
     }
 }

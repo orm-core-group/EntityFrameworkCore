@@ -1,26 +1,69 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using Xunit;
+using Microsoft.EntityFrameworkCore.Internal;
 
-namespace Microsoft.EntityFrameworkCore.Design
+namespace Microsoft.EntityFrameworkCore.Design;
+
+public class DbContextActivatorTest
 {
-    public class DbContextActivatorTest
+    [ConditionalFact]
+    public void CreateInstance_works()
+        => Assert.IsType<TestContext>(DbContextActivator.CreateInstance(typeof(TestContext)));
+
+    [ConditionalFact]
+    public void CreateInstance_with_arguments_works()
+        => Assert.IsType<TestContext>(
+            DbContextActivator.CreateInstance(
+                typeof(TestContext),
+                null,
+                null,
+                ["A", "B"]));
+
+    private class TestContext : DbContext
     {
-        [ConditionalFact]
-        public void CreateInstance_works()
-        {
-            var result = DbContextActivator.CreateInstance(typeof(TestContext));
+        protected override void OnConfiguring(DbContextOptionsBuilder options)
+            => options
+                .EnableServiceProviderCaching(false)
+                .UseInMemoryDatabase(nameof(DbContextActivatorTest));
+    }
 
-            Assert.IsType<TestContext>(result);
+    [ConditionalFact]
+    public void CreateInstance_throws_if_constructor_throws()
+        => Assert.Equal(
+            DesignStrings.CannotCreateContextInstance(typeof(ThrowingTestContext).FullName, "Bang!"),
+            Assert.Throws<OperationException>(() => DbContextActivator.CreateInstance(typeof(ThrowingTestContext))).Message);
+
+    private class ThrowingTestContext : DbContext
+    {
+        public ThrowingTestContext()
+        {
+            throw new Exception("Bang!");
         }
 
-        private class TestContext : DbContext
-        {
-            protected override void OnConfiguring(DbContextOptionsBuilder options)
-                => options
-                    .EnableServiceProviderCaching(false)
-                    .UseInMemoryDatabase(nameof(DbContextActivatorTest));
-        }
+        protected override void OnConfiguring(DbContextOptionsBuilder options)
+            => options
+                .EnableServiceProviderCaching(false)
+                .UseInMemoryDatabase(nameof(DbContextActivatorTest));
+    }
+
+    [ConditionalFact]
+    public void CreateInstance_throws_if_constructor_not_parameterless()
+    {
+        var message = Assert.Throws<OperationException>(
+            () => DbContextActivator.CreateInstance(typeof(ParameterTestContext))).Message;
+
+        Assert.StartsWith(DesignStrings.CannotCreateContextInstance(nameof(ParameterTestContext), "").Substring(0, 10), message);
+        Assert.Contains("Microsoft.EntityFrameworkCore.Design.DbContextActivatorTest+ParameterTestContext", message);
+    }
+
+#pragma warning disable CS9113 // Parameter 'foo' is unread
+    private class ParameterTestContext(string foo) : DbContext
+#pragma warning restore CS9113
+    {
+        protected override void OnConfiguring(DbContextOptionsBuilder options)
+            => options
+                .EnableServiceProviderCaching(false)
+                .UseInMemoryDatabase(nameof(DbContextActivatorTest));
     }
 }

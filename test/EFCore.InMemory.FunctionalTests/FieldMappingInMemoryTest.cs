@@ -1,32 +1,23 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.TestUtilities;
-using Xunit;
+namespace Microsoft.EntityFrameworkCore;
 
-namespace Microsoft.EntityFrameworkCore
+public class FieldMappingInMemoryTest(FieldMappingInMemoryTest.FieldMappingInMemoryFixture fixture)
+    : FieldMappingTestBase<FieldMappingInMemoryTest.FieldMappingInMemoryFixture>(fixture)
 {
-    public class FieldMappingInMemoryTest : FieldMappingTestBase<FieldMappingInMemoryTest.FieldMappingInMemoryFixture>
+    protected override async Task UpdateAsync<TBlog>(string navigation)
     {
-        public FieldMappingInMemoryTest(FieldMappingInMemoryFixture fixture)
-            : base(fixture)
-        {
-        }
+        await base.UpdateAsync<TBlog>(navigation);
+        await Fixture.ReseedAsync();
+    }
 
-        protected override void Update<TBlog>(string navigation)
-        {
-            base.Update<TBlog>(navigation);
+    public class FieldMappingInMemoryFixture : FieldMappingFixtureBase
+    {
+        protected override ITestStoreFactory TestStoreFactory
+            => InMemoryTestStoreFactory.Instance;
 
-            Fixture.Reseed();
-        }
-
-        public class FieldMappingInMemoryFixture : FieldMappingFixtureBase
-        {
-            protected override ITestStoreFactory TestStoreFactory => InMemoryTestStoreFactory.Instance;
-
-            public override DbContextOptionsBuilder AddOptions(DbContextOptionsBuilder builder)
-                => base.AddOptions(builder).ConfigureWarnings(w => w.Log(InMemoryEventId.TransactionIgnoredWarning));
-        }
+        public override DbContextOptionsBuilder AddOptions(DbContextOptionsBuilder builder)
+            => base.AddOptions(builder).ConfigureWarnings(w => w.Log(InMemoryEventId.TransactionIgnoredWarning));
     }
 }

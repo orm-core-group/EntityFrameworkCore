@@ -1,16 +1,16 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-namespace Microsoft.EntityFrameworkCore.Benchmarks.Models.AdventureWorks
+namespace Microsoft.EntityFrameworkCore.Benchmarks.Models.AdventureWorks;
+
+public static class AdventureWorksSqlServerFixture
 {
-    public static class AdventureWorksSqlServerFixture
-    {
-        private static readonly string _connectionString = SqlServerBenchmarkEnvironment.CreateConnectionString("AdventureWorks2014");
+    public static string ConnectionString { get; } = SqlServerBenchmarkEnvironment.CreateConnectionString("AdventureWorks2014");
 
-        // This method is called from timed code, be careful when changing it
-        public static AdventureWorksContextBase CreateContext()
-        {
-            return new AdventureWorksSqlServerContext(_connectionString);
-        }
-    }
+    // This method is called from timed code, be careful when changing it
+    public static AdventureWorksContextBase CreateContext()
+        => new AdventureWorksSqlServerContext();
+
+    public static void ConfigureOptions(DbContextOptionsBuilder optionsBuilder)
+        => optionsBuilder.UseSqlServer(ConnectionString);
 }

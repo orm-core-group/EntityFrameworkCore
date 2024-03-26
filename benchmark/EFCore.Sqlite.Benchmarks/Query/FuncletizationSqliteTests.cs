@@ -1,15 +1,12 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.EntityFrameworkCore.Benchmarks.Models.Orders;
 
-namespace Microsoft.EntityFrameworkCore.Benchmarks.Query
+namespace Microsoft.EntityFrameworkCore.Benchmarks.Query;
+
+public class FuncletizationSqliteTests : FuncletizationTests
 {
-    public class FuncletizationSqliteTests : FuncletizationTests
-    {
-        protected override OrdersFixtureBase CreateFixture()
-        {
-            return new OrdersSqliteFixture("Perf_Query_Funcletization");
-        }
-    }
+    protected override OrdersFixtureBase CreateFixture()
+        => new OrdersSqliteFixture("Perf_Query_Funcletization");
 }

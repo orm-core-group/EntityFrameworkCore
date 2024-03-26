@@ -1,67 +1,180 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.EntityFrameworkCore.Design;
-using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.EntityFrameworkCore.SqlServer.Design.Internal;
-using Microsoft.EntityFrameworkCore.TestUtilities;
-using Microsoft.Extensions.DependencyInjection;
+using System.Runtime.InteropServices;
+using Microsoft.EntityFrameworkCore.Design.Internal;
+using Microsoft.EntityFrameworkCore.Scaffolding.Metadata;
 
-namespace Microsoft.EntityFrameworkCore.Scaffolding.Internal
+namespace Microsoft.EntityFrameworkCore.Scaffolding.Internal;
+
+[Collection(nameof(ModelCodeGeneratorTestCollection))]
+public abstract class ModelCodeGeneratorTestBase
 {
-    public abstract class ModelCodeGeneratorTestBase
+    private readonly ModelCodeGeneratorTestFixture _fixture;
+    private readonly ITestOutputHelper _output;
+
+    protected ModelCodeGeneratorTestBase(ModelCodeGeneratorTestFixture fixture, ITestOutputHelper output)
     {
-        protected void Test(
-            Action<ModelBuilder> buildModel,
-            ModelCodeGenerationOptions options,
-            Action<ScaffoldedModel> assertScaffold,
-            Action<IModel> assertModel)
+        _fixture = fixture;
+        _output = output;
+    }
+
+    protected Task TestAsync(
+        Action<ModelBuilder> buildModel,
+        ModelCodeGenerationOptions options,
+        Action<ScaffoldedModel> assertScaffold,
+        Action<IModel> assertModel,
+        bool skipBuild = false)
+    {
+        var modelBuilder = SqlServerTestHelpers.Instance.CreateConventionBuilder(addServices: AddModelServices);
+        buildModel(modelBuilder);
+
+        var model = modelBuilder.FinalizeModel(designTime: true, skipValidation: true);
+
+        var services = CreateServices();
+        AddScaffoldingServices(services);
+
+        var serviceProvider = services.BuildServiceProvider(validateScopes: true);
+
+        return TestAsync(serviceProvider, model, options, assertScaffold, assertModel, skipBuild);
+    }
+
+    protected Task TestAsync(
+        Func<IServiceProvider, IModel> buildModel,
+        ModelCodeGenerationOptions options,
+        Action<ScaffoldedModel> assertScaffold,
+        Action<IModel> assertModel,
+        bool skipBuild = false)
+    {
+        var designServices = new ServiceCollection();
+        AddModelServices(designServices);
+        var services = CreateServices();
+        AddScaffoldingServices(services);
+        var serviceProvider = services.BuildServiceProvider(validateScopes: true);
+        var model = buildModel(serviceProvider);
+
+        return TestAsync(serviceProvider, model, options, assertScaffold, assertModel, skipBuild);
+    }
+
+    protected async Task TestAsync(
+        IServiceProvider serviceProvider,
+        IModel model,
+        ModelCodeGenerationOptions options,
+        Action<ScaffoldedModel> assertScaffold,
+        Action<IModel> assertModel,
+        bool skipBuild = false)
+    {
+        var generators = serviceProvider.GetServices<IModelCodeGenerator>();
+        var generator = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+            || RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+            || Random.Shared.Next() % 12 != 0
+                ? generators.Last(g => g is CSharpModelGenerator)
+                : generators.Last(g => g is TextTemplatingModelGenerator);
+
+        options.ModelNamespace ??= "TestNamespace";
+        options.ContextName = "TestDbContext";
+        options.ConnectionString = "Initial Catalog=TestDatabase";
+        options.ProjectDir = _fixture.ProjectDir;
+
+        var scaffoldedModel = generator.GenerateModel(
+            model,
+            options);
+        assertScaffold(scaffoldedModel);
+
+        var build = new BuildSource
         {
-            var modelBuilder = SqlServerTestHelpers.Instance.CreateConventionBuilder(skipValidation: true);
-            modelBuilder.Model.RemoveAnnotation(CoreAnnotationNames.ProductVersion);
-            buildModel(modelBuilder);
-            var _ = modelBuilder.Model.GetEntityTypeErrors();
-
-            var model = modelBuilder.FinalizeModel();
-
-            var services = new ServiceCollection()
-                .AddEntityFrameworkDesignTimeServices();
-            new SqlServerDesignTimeServices().ConfigureDesignTimeServices(services);
-
-            var generator = services
-                .BuildServiceProvider()
-                .GetRequiredService<IModelCodeGenerator>();
-
-            options.ModelNamespace = "TestNamespace";
-            options.ContextName = "TestDbContext";
-            options.ConnectionString = "Initial Catalog=TestDatabase";
-
-            var scaffoldedModel = generator.GenerateModel(
-                model,
-                options);
-            assertScaffold(scaffoldedModel);
-
-            var build = new BuildSource
+            References =
             {
-                References =
-                {
-                    BuildReference.ByName("Microsoft.EntityFrameworkCore"),
-                    BuildReference.ByName("Microsoft.EntityFrameworkCore.Relational"),
-                    BuildReference.ByName("Microsoft.EntityFrameworkCore.SqlServer")
-                },
-                Sources = new List<string>(
-                    new[] { scaffoldedModel.ContextFile.Code }.Concat(
-                        scaffoldedModel.AdditionalFiles.Select(f => f.Code)))
-            };
+                BuildReference.ByName("Microsoft.EntityFrameworkCore.Abstractions"),
+                BuildReference.ByName("Microsoft.EntityFrameworkCore"),
+                BuildReference.ByName("Microsoft.EntityFrameworkCore.Relational"),
+                BuildReference.ByName("Microsoft.EntityFrameworkCore.SqlServer")
+            },
+            Sources = new[] { scaffoldedModel.ContextFile }.Concat(scaffoldedModel.AdditionalFiles)
+                .ToDictionary(f => f.Path, f => f.Code),
+            NullableReferenceTypes = options.UseNullableReferenceTypes
+        };
 
-            var assembly = build.BuildInMemory();
-            var context = (DbContext)assembly.CreateInstance("TestNamespace.TestDbContext");
-            var compiledModel = context.Model;
-            assertModel(compiledModel);
+        if (!skipBuild)
+        {
+            var assembly = await build.BuildInMemoryWithWithAnalyzersAsync();
+
+            if (assertModel != null)
+            {
+                var contextNamespace = options.ContextNamespace ?? options.ModelNamespace;
+                var context = (DbContext)assembly.CreateInstance(
+                    !string.IsNullOrEmpty(contextNamespace)
+                        ? contextNamespace + "." + options.ContextName
+                        : options.ContextName);
+
+                var compiledModel = context.GetService<IDesignTimeModel>().Model;
+                assertModel(compiledModel);
+            }
         }
+    }
+
+    protected static DatabaseModel BuildModelWithColumn(string storeType, string sql, object expected)
+    {
+        var dbModel = new DatabaseModel
+        {
+            Tables =
+            {
+                new DatabaseTable
+                {
+                    Database = new DatabaseModel(),
+                    Name = "Table",
+                    Columns =
+                    {
+                        new DatabaseColumn
+                        {
+                            Name = "Column",
+                            StoreType = storeType,
+                            DefaultValueSql = sql,
+                            DefaultValue = expected
+                        }
+                    }
+                }
+            }
+        };
+
+        var table = dbModel.Tables.Single();
+        table.Database = dbModel;
+        table.Columns.Single().Table = table;
+
+        return dbModel;
+    }
+
+    protected IServiceCollection CreateServices()
+    {
+        var testAssembly = MockAssembly.Create();
+        var reporter = new TestOperationReporter(_output);
+        var services = new DesignTimeServicesBuilder(testAssembly, testAssembly, reporter, [])
+            .CreateServiceCollection("Microsoft.EntityFrameworkCore.SqlServer");
+        return services;
+    }
+
+    protected virtual IServiceCollection AddModelServices(IServiceCollection services)
+        => services;
+
+    protected virtual IServiceCollection AddScaffoldingServices(IServiceCollection services)
+        => services;
+
+    protected static void AssertFileContents(
+        string expectedCode,
+        ScaffoldedFile file)
+        => Assert.Equal(expectedCode, file.Code.TrimEnd(), ignoreLineEndingDifferences: true);
+
+    protected static void AssertContains(
+        string expected,
+        string actual)
+    {
+        // Normalize line endings to Environment.Newline
+        expected = expected
+            .Replace("\r\n", "\n")
+            .Replace("\n\r", "\n")
+            .Replace("\r", "\n")
+            .Replace("\n", Environment.NewLine);
+
+        Assert.Contains(expected, actual);
     }
 }

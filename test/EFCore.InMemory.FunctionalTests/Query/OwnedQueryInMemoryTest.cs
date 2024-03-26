@@ -1,22 +1,14 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.EntityFrameworkCore.TestUtilities;
-using Xunit.Abstractions;
+namespace Microsoft.EntityFrameworkCore.Query;
 
-namespace Microsoft.EntityFrameworkCore.Query
+public class OwnedQueryInMemoryTest(OwnedQueryInMemoryTest.OwnedQueryInMemoryFixture fixture)
+    : OwnedQueryTestBase<OwnedQueryInMemoryTest.OwnedQueryInMemoryFixture>(fixture)
 {
-    public class OwnedQueryInMemoryTest : OwnedQueryTestBase<OwnedQueryInMemoryTest.OwnedQueryInMemoryFixture>
+    public class OwnedQueryInMemoryFixture : OwnedQueryFixtureBase
     {
-        public OwnedQueryInMemoryTest(OwnedQueryInMemoryFixture fixture, ITestOutputHelper testOutputHelper)
-            : base(fixture)
-        {
-            //TestLoggerFactory.TestOutputHelper = testOutputHelper;
-        }
-
-        public class OwnedQueryInMemoryFixture : OwnedQueryFixtureBase
-        {
-            protected override ITestStoreFactory TestStoreFactory => InMemoryTestStoreFactory.Instance;
-        }
+        protected override ITestStoreFactory TestStoreFactory
+            => InMemoryTestStoreFactory.Instance;
     }
 }

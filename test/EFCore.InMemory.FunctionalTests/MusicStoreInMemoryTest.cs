@@ -1,30 +1,24 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using Microsoft.EntityFrameworkCore.TestUtilities;
+namespace Microsoft.EntityFrameworkCore;
 
-namespace Microsoft.EntityFrameworkCore
+public class MusicStoreInMemoryTest(MusicStoreInMemoryTest.MusicStoreInMemoryFixture fixture) : MusicStoreTestBase<MusicStoreInMemoryTest.MusicStoreInMemoryFixture>(fixture)
 {
-    public class MusicStoreInMemoryTest : MusicStoreTestBase<MusicStoreInMemoryTest.MusicStoreInMemoryFixture>
+    public class MusicStoreInMemoryFixture : MusicStoreFixtureBase
     {
-        public MusicStoreInMemoryTest(MusicStoreInMemoryFixture fixture)
-            : base(fixture)
+        protected override ITestStoreFactory TestStoreFactory
+            => InMemoryTestStoreFactory.Instance;
+
+        public override IDisposable BeginTransaction(DbContext context)
+            => new InMemoryCleaner(context);
+
+        private class InMemoryCleaner(DbContext context) : IDisposable
         {
-        }
+            private readonly DbContext _context = context;
 
-        public class MusicStoreInMemoryFixture : MusicStoreFixtureBase
-        {
-            protected override ITestStoreFactory TestStoreFactory => InMemoryTestStoreFactory.Instance;
-
-            public override IDisposable BeginTransaction(DbContext context) => new InMemoryCleaner(context);
-
-            private class InMemoryCleaner : IDisposable
-            {
-                private readonly DbContext _context;
-                public InMemoryCleaner(DbContext context) => _context = context;
-                public void Dispose() => _context.Database.EnsureDeleted();
-            }
+            public void Dispose()
+                => _context.Database.EnsureDeleted();
         }
     }
 }

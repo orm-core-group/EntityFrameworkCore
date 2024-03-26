@@ -1,15 +1,12 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.EntityFrameworkCore.Benchmarks.Models.Orders;
 
-namespace Microsoft.EntityFrameworkCore.Benchmarks.Query
+namespace Microsoft.EntityFrameworkCore.Benchmarks.Query;
+
+public class SimpleQuerySqlServerTests : SimpleQueryTests
 {
-    public class SimpleQuerySqlServerTests : SimpleQueryTests
-    {
-        protected override OrdersFixtureBase CreateFixture()
-        {
-            return new OrdersSqlServerFixture("Perf_Query_Simple");
-        }
-    }
+    protected override OrdersFixtureBase CreateFixture()
+        => new OrdersSqlServerFixture("Perf_Query_Simple");
 }

@@ -1,21 +1,22 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
+namespace Microsoft.EntityFrameworkCore.TestModels.TransportationModel;
 
-namespace Microsoft.EntityFrameworkCore.TestModels.TransportationModel
+#nullable disable
+
+public class Engine
 {
-    public class Engine
-    {
-        public string VehicleName { get; set; }
-        public string Description { get; set; }
-        public PoweredVehicle Vehicle { get; set; }
+    public string VehicleName { get; set; }
+    public string Description { get; set; }
+    public int Computed { get; set; }
+    public PoweredVehicle Vehicle { get; set; }
 
-        public override bool Equals(object obj)
-            => obj is Engine other
-               && VehicleName == other.VehicleName
-               && Description == other.Description;
+    public override bool Equals(object obj)
+        => obj is Engine other
+            && VehicleName == other.VehicleName
+            && Description == other.Description;
 
-        public override int GetHashCode() => HashCode.Combine(VehicleName, Description);
-    }
+    public override int GetHashCode()
+        => HashCode.Combine(VehicleName, Description);
 }

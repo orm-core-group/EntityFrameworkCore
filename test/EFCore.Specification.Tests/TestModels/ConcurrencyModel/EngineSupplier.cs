@@ -1,34 +1,41 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore.Infrastructure;
+namespace Microsoft.EntityFrameworkCore.TestModels.ConcurrencyModel;
 
-namespace Microsoft.EntityFrameworkCore.TestModels.ConcurrencyModel
+#nullable disable
+
+public class EngineSupplier
 {
-    public class EngineSupplier
+    public class EngineSupplierProxy(
+        ILazyLoader loader,
+        string name) : EngineSupplier(loader, name), IF1Proxy
     {
-        private readonly ILazyLoader _loader;
-        private ICollection<Engine> _engines;
+        public bool CreatedCalled { get; set; }
+        public bool InitializingCalled { get; set; }
+        public bool InitializedCalled { get; set; }
+    }
 
-        public EngineSupplier()
-        {
-        }
+    private readonly ILazyLoader _loader;
+    private ICollection<Engine> _engines;
 
-        private EngineSupplier(ILazyLoader loader, int id, string name)
-        {
-            _loader = loader;
-            Id = id;
-            Name = name;
-        }
+    public EngineSupplier()
+    {
+    }
 
-        public int Id { get; set; }
-        public string Name { get; set; }
+    private EngineSupplier(ILazyLoader loader, string name)
+    {
+        _loader = loader;
+        Name = name;
 
-        public virtual ICollection<Engine> Engines
-        {
-            get => _loader.Load(this, ref _engines);
-            set => _engines = value;
-        }
+        Assert.IsType<EngineSupplierProxy>(this);
+    }
+
+    public string Name { get; set; }
+
+    public virtual ICollection<Engine> Engines
+    {
+        get => _loader.Load(this, ref _engines);
+        set => _engines = value;
     }
 }

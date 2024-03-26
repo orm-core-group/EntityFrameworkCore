@@ -1,28 +1,36 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.EntityFrameworkCore.Infrastructure;
+namespace Microsoft.EntityFrameworkCore.TestModels.ConcurrencyModel;
 
-namespace Microsoft.EntityFrameworkCore.TestModels.ConcurrencyModel
+#nullable disable
+
+public class TitleSponsor : Sponsor
 {
-    public class TitleSponsor : Sponsor
+    public class TitleSponsorProxy(ILazyLoader loader) : TitleSponsor(loader), IF1Proxy
     {
-        private readonly ILazyLoader _loader;
-        private SponsorDetails _details;
+        public bool CreatedCalled { get; set; }
+        public bool InitializingCalled { get; set; }
+        public bool InitializedCalled { get; set; }
+    }
 
-        public TitleSponsor()
-        {
-        }
+    private readonly ILazyLoader _loader;
+    private SponsorDetails _details;
 
-        private TitleSponsor(ILazyLoader loader)
-        {
-            _loader = loader;
-        }
+    public TitleSponsor()
+    {
+    }
 
-        public SponsorDetails Details
-        {
-            get => _loader.Load(this, ref _details);
-            set => _details = value;
-        }
+    private TitleSponsor(ILazyLoader loader)
+    {
+        _loader = loader;
+
+        Assert.IsType<TitleSponsorProxy>(this);
+    }
+
+    public SponsorDetails Details
+    {
+        get => _loader.Load(this, ref _details);
+        set => _details = value;
     }
 }

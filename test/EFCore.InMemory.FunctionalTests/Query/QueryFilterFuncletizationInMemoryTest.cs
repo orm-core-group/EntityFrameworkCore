@@ -1,30 +1,33 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.EntityFrameworkCore.TestUtilities;
-using Xunit;
-using Xunit.Abstractions;
+namespace Microsoft.EntityFrameworkCore.Query;
 
-namespace Microsoft.EntityFrameworkCore.Query
+public class QueryFilterFuncletizationInMemoryTest(QueryFilterFuncletizationInMemoryTest.QueryFilterFuncletizationInMemoryFixture fixture)
+    : QueryFilterFuncletizationTestBase<QueryFilterFuncletizationInMemoryTest.QueryFilterFuncletizationInMemoryFixture>(fixture)
 {
-    public class QueryFilterFuncletizationInMemoryTest
-        : QueryFilterFuncletizationTestBase<QueryFilterFuncletizationInMemoryTest.QueryFilterFuncletizationInMemoryFixture>
+    public override void DbContext_list_is_parameterized()
     {
-        public QueryFilterFuncletizationInMemoryTest(
-            QueryFilterFuncletizationInMemoryFixture fixture, ITestOutputHelper testOutputHelper)
-            : base(fixture)
-        {
-        }
+        using var context = CreateContext();
+        // Default value of TenantIds is null InExpression over null values throws
+        Assert.Throws<ArgumentNullException>(() => context.Set<ListFilter>().ToList());
 
-        public class QueryFilterFuncletizationInMemoryFixture : QueryFilterFuncletizationFixtureBase
-        {
-            protected override ITestStoreFactory TestStoreFactory => InMemoryTestStoreFactory.Instance;
-        }
+        context.TenantIds = [];
+        var query = context.Set<ListFilter>().ToList();
+        Assert.Empty(query);
 
-        [ConditionalFact(Skip = "issue #17386")]
-        public override void DbContext_list_is_parameterized()
-        {
-            base.DbContext_list_is_parameterized();
-        }
+        context.TenantIds = [1];
+        query = context.Set<ListFilter>().ToList();
+        Assert.Single(query);
+
+        context.TenantIds = [2, 3];
+        query = context.Set<ListFilter>().ToList();
+        Assert.Equal(2, query.Count);
+    }
+
+    public class QueryFilterFuncletizationInMemoryFixture : QueryFilterFuncletizationFixtureBase
+    {
+        protected override ITestStoreFactory TestStoreFactory
+            => InMemoryTestStoreFactory.Instance;
     }
 }

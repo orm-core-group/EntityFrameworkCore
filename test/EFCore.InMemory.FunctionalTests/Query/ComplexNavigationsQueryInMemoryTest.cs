@@ -1,24 +1,16 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Threading.Tasks;
-using Xunit;
-using Xunit.Abstractions;
+namespace Microsoft.EntityFrameworkCore.Query;
 
-namespace Microsoft.EntityFrameworkCore.Query
+public class ComplexNavigationsQueryInMemoryTest(ComplexNavigationsQueryInMemoryFixture fixture)
+    : ComplexNavigationsQueryTestBase<ComplexNavigationsQueryInMemoryFixture>(fixture)
 {
-    public class ComplexNavigationsQueryInMemoryTest : ComplexNavigationsQueryTestBase<ComplexNavigationsQueryInMemoryFixture>
-    {
-        public ComplexNavigationsQueryInMemoryTest(ComplexNavigationsQueryInMemoryFixture fixture, ITestOutputHelper testOutputHelper)
-            : base(fixture)
-        {
-            //TestLoggerFactory.TestOutputHelper = testOutputHelper;
-        }
+    public override Task Join_with_result_selector_returning_queryable_throws_validation_error(bool async)
+        // Expression cannot be used for return type. Issue #23302.
+        => Assert.ThrowsAsync<ArgumentException>(
+            () => base.Join_with_result_selector_returning_queryable_throws_validation_error(async));
 
-        [ConditionalTheory(Skip = "issue #17386")]
-        public override Task Complex_query_with_optional_navigations_and_client_side_evaluation(bool isAsync)
-        {
-            return base.Complex_query_with_optional_navigations_and_client_side_evaluation(isAsync);
-        }
-    }
+    public override Task Correlated_projection_with_first(bool async)
+        => Task.CompletedTask;
 }

@@ -1,539 +1,631 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Internal;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.EntityFrameworkCore.Storage;
+using static System.Linq.Expressions.Expression;
 
-namespace Microsoft.EntityFrameworkCore.Query
+namespace Microsoft.EntityFrameworkCore.Query;
+
+/// <summary>
+///     <para>
+///         A class that compiles the shaper expression for given shaped query expression.
+///     </para>
+///     <para>
+///         This type is typically used by database providers (and other extensions). It is generally
+///         not used in application code.
+///     </para>
+/// </summary>
+/// <remarks>
+///     <para>
+///         Materializer is a code which creates entity instance from the given property values.
+///         It takes into account constructor bindings, fields, property access mode configured in the model when creating the instance.
+///     </para>
+///     <para>
+///         Shaper is a code which generate result for the query from given scalar values based on the structure of projection.
+///         A shaper can contain zero or more materializers inside it.
+///     </para>
+///     <para>
+///         See <see href="https://aka.ms/efcore-docs-providers">Implementation of database providers and extensions</see>
+///         and <see href="https://aka.ms/efcore-docs-how-query-works">How EF Core queries work</see> for more information and examples.
+///     </para>
+/// </remarks>
+public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
 {
-    public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
+    private static readonly PropertyInfo CancellationTokenMemberInfo
+        = typeof(QueryContext).GetTypeInfo().GetProperty(nameof(QueryContext.CancellationToken))!;
+
+    private readonly Expression _cancellationTokenParameter;
+    private readonly EntityMaterializerInjectingExpressionVisitor _entityMaterializerInjectingExpressionVisitor;
+    private readonly ConstantVerifyingExpressionVisitor _constantVerifyingExpressionVisitor;
+
+    /// <summary>
+    ///     Creates a new instance of the <see cref="ShapedQueryCompilingExpressionVisitor" /> class.
+    /// </summary>
+    /// <param name="dependencies">Parameter object containing dependencies for this class.</param>
+    /// <param name="queryCompilationContext">The query compilation context object to use.</param>
+    protected ShapedQueryCompilingExpressionVisitor(
+        ShapedQueryCompilingExpressionVisitorDependencies dependencies,
+        QueryCompilationContext queryCompilationContext)
     {
-        private static readonly MethodInfo _singleMethodInfo
-            = typeof(Enumerable).GetTypeInfo().GetDeclaredMethods(nameof(Enumerable.Single))
-                .Single(mi => mi.GetParameters().Length == 1);
+        Dependencies = dependencies;
+        QueryCompilationContext = queryCompilationContext;
 
-        private static readonly MethodInfo _singleOrDefaultMethodInfo
-            = typeof(Enumerable).GetTypeInfo().GetDeclaredMethods(nameof(Enumerable.SingleOrDefault))
-                .Single(mi => mi.GetParameters().Length == 1);
+        _entityMaterializerInjectingExpressionVisitor =
+            new EntityMaterializerInjectingExpressionVisitor(
+                dependencies.EntityMaterializerSource,
+                queryCompilationContext.QueryTrackingBehavior);
 
-        private static readonly PropertyInfo _cancellationTokenMemberInfo
-            = typeof(QueryContext).GetProperty(nameof(QueryContext.CancellationToken));
+        _constantVerifyingExpressionVisitor = new ConstantVerifyingExpressionVisitor(dependencies.TypeMappingSource);
 
-        private readonly Expression _cancellationTokenParameter;
-        private readonly EntityMaterializerInjectingExpressionVisitor _entityMaterializerInjectingExpressionVisitor;
-        private readonly ConstantVerifyingExpressionVisitor _constantVerifyingExpressionVisitor;
-
-        protected ShapedQueryCompilingExpressionVisitor(
-            ShapedQueryCompilingExpressionVisitorDependencies dependencies,
-            QueryCompilationContext queryCompilationContext)
+        if (queryCompilationContext.IsAsync)
         {
-            Dependencies = dependencies;
-            IsTracking = queryCompilationContext.IsTracking;
+            _cancellationTokenParameter = MakeMemberAccess(
+                QueryCompilationContext.QueryContextParameter,
+                CancellationTokenMemberInfo);
+        }
+        else
+        {
+            _cancellationTokenParameter = null!;
+        }
+    }
 
-            _entityMaterializerInjectingExpressionVisitor =
-                new EntityMaterializerInjectingExpressionVisitor(
-                    dependencies.EntityMaterializerSource,
-                    queryCompilationContext.IsTracking);
+    /// <summary>
+    ///     Dependencies for this service.
+    /// </summary>
+    protected virtual ShapedQueryCompilingExpressionVisitorDependencies Dependencies { get; }
 
-            _constantVerifyingExpressionVisitor = new ConstantVerifyingExpressionVisitor(dependencies.TypeMappingSource);
+    /// <summary>
+    ///     The query compilation context object for current compilation.
+    /// </summary>
+    protected virtual QueryCompilationContext QueryCompilationContext { get; }
 
-            IsAsync = queryCompilationContext.IsAsync;
+    /// <inheritdoc />
+    protected override Expression VisitExtension(Expression extensionExpression)
+    {
+        if (extensionExpression is ShapedQueryExpression shapedQueryExpression)
+        {
+            var serverEnumerable = VisitShapedQuery(shapedQueryExpression);
 
-            if (queryCompilationContext.IsAsync)
+            return shapedQueryExpression.ResultCardinality switch
             {
-                _cancellationTokenParameter = Expression.MakeMemberAccess(
-                    QueryCompilationContext.QueryContextParameter,
-                    _cancellationTokenMemberInfo);
-            }
+                ResultCardinality.Enumerable => serverEnumerable,
+
+                ResultCardinality.Single => QueryCompilationContext.IsAsync
+                    ? Call(
+                        SingleAsyncMethodInfo.MakeGenericMethod(serverEnumerable.Type.GetSequenceType()),
+                        serverEnumerable,
+                        _cancellationTokenParameter)
+                    : Call(
+                        EnumerableMethods.SingleWithoutPredicate.MakeGenericMethod(serverEnumerable.Type.GetSequenceType()),
+                        serverEnumerable),
+
+                ResultCardinality.SingleOrDefault => QueryCompilationContext.IsAsync
+                    ? Call(
+                        SingleOrDefaultAsyncMethodInfo.MakeGenericMethod(serverEnumerable.Type.GetSequenceType()),
+                        serverEnumerable,
+                        _cancellationTokenParameter)
+                    : Call(
+                        EnumerableMethods.SingleOrDefaultWithoutPredicate.MakeGenericMethod(
+                            serverEnumerable.Type.GetSequenceType()),
+                        serverEnumerable),
+
+                _ => base.VisitExtension(extensionExpression)
+            };
         }
 
-        protected virtual ShapedQueryCompilingExpressionVisitorDependencies Dependencies { get; }
+        return base.VisitExtension(extensionExpression);
+    }
 
-        protected virtual bool IsTracking { get; }
+    private static readonly MethodInfo SingleAsyncMethodInfo
+        = typeof(ShapedQueryCompilingExpressionVisitor).GetTypeInfo()
+            .GetDeclaredMethods(nameof(SingleAsync))
+            .Single(mi => mi.GetParameters().Length == 2);
 
-        protected virtual bool IsAsync { get; }
+    private static readonly MethodInfo SingleOrDefaultAsyncMethodInfo
+        = typeof(ShapedQueryCompilingExpressionVisitor).GetTypeInfo()
+            .GetDeclaredMethods(nameof(SingleOrDefaultAsync))
+            .Single(mi => mi.GetParameters().Length == 2);
+
+    private static async Task<TSource> SingleAsync<TSource>(
+        IAsyncEnumerable<TSource> asyncEnumerable,
+        CancellationToken cancellationToken = default)
+    {
+        var enumerator = asyncEnumerable.GetAsyncEnumerator(cancellationToken);
+        await using var _ = enumerator.ConfigureAwait(false);
+
+        if (!await enumerator.MoveNextAsync().ConfigureAwait(false))
+        {
+            throw new InvalidOperationException(CoreStrings.SequenceContainsNoElements);
+        }
+
+        var result = enumerator.Current;
+
+        if (await enumerator.MoveNextAsync().ConfigureAwait(false))
+        {
+            throw new InvalidOperationException(CoreStrings.SequenceContainsMoreThanOneElement);
+        }
+
+        return result;
+    }
+
+    private static async Task<TSource?> SingleOrDefaultAsync<TSource>(
+        IAsyncEnumerable<TSource> asyncEnumerable,
+        CancellationToken cancellationToken = default)
+    {
+        var enumerator = asyncEnumerable.GetAsyncEnumerator(cancellationToken);
+        await using var _ = enumerator.ConfigureAwait(false);
+
+        if (!(await enumerator.MoveNextAsync().ConfigureAwait(false)))
+        {
+            return default;
+        }
+
+        var result = enumerator.Current;
+
+        if (await enumerator.MoveNextAsync().ConfigureAwait(false))
+        {
+            throw new InvalidOperationException(CoreStrings.SequenceContainsMoreThanOneElement);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Visits given shaped query expression to create an expression of enumerable.
+    /// </summary>
+    /// <param name="shapedQueryExpression">The shaped query expression to compile.</param>
+    /// <returns>An expression of enumerable.</returns>
+    protected abstract Expression VisitShapedQuery(ShapedQueryExpression shapedQueryExpression);
+
+    /// <summary>
+    ///     Inject entity materializers in given shaper expression. <see cref="StructuralTypeShaperExpression" /> is replaced with materializer
+    ///     expression for given entity.
+    /// </summary>
+    /// <param name="expression">The expression to inject entity materializers.</param>
+    /// <returns>A expression with entity materializers injected.</returns>
+    protected virtual Expression InjectEntityMaterializers(Expression expression)
+    {
+        VerifyNoClientConstant(expression);
+
+        return _entityMaterializerInjectingExpressionVisitor.Inject(expression);
+    }
+
+    /// <summary>
+    ///     Verifies that the given shaper expression does not contain client side constant which could cause memory leak.
+    /// </summary>
+    /// <param name="expression">An expression to verify.</param>
+    protected virtual void VerifyNoClientConstant(Expression expression)
+        => _constantVerifyingExpressionVisitor.Visit(expression);
+
+    private sealed class ConstantVerifyingExpressionVisitor : ExpressionVisitor
+    {
+        private readonly ITypeMappingSource _typeMappingSource;
+
+        public ConstantVerifyingExpressionVisitor(ITypeMappingSource typeMappingSource)
+        {
+            _typeMappingSource = typeMappingSource;
+        }
+
+        private bool ValidConstant(ConstantExpression constantExpression)
+            => constantExpression.Value == null
+                || _typeMappingSource.FindMapping(constantExpression.Type) != null
+                || constantExpression.Value is Array { Length: 0 };
+
+        protected override Expression VisitConstant(ConstantExpression constantExpression)
+        {
+            if (!ValidConstant(constantExpression))
+            {
+                throw new InvalidOperationException(
+                    CoreStrings.ClientProjectionCapturingConstantInTree(constantExpression.Type.DisplayName()));
+            }
+
+            return constantExpression;
+        }
+
+        protected override Expression VisitMethodCall(MethodCallExpression methodCallExpression)
+        {
+            if (RemoveConvert(methodCallExpression.Object) is ConstantExpression constantInstance
+                && !ValidConstant(constantInstance))
+            {
+                throw new InvalidOperationException(
+                    CoreStrings.ClientProjectionCapturingConstantInMethodInstance(
+                        constantInstance.Type.DisplayName(),
+                        methodCallExpression.Method.Name));
+            }
+
+            foreach (var argument in methodCallExpression.Arguments)
+            {
+                if (RemoveConvert(argument) is ConstantExpression constantArgument
+                    && !ValidConstant(constantArgument))
+                {
+                    throw new InvalidOperationException(
+                        CoreStrings.ClientProjectionCapturingConstantInMethodArgument(
+                            constantArgument.Type.DisplayName(),
+                            methodCallExpression.Method.Name));
+                }
+            }
+
+            return base.VisitMethodCall(methodCallExpression);
+        }
 
         protected override Expression VisitExtension(Expression extensionExpression)
+            => extensionExpression is StructuralTypeShaperExpression or ProjectionBindingExpression
+                ? extensionExpression
+                : base.VisitExtension(extensionExpression);
+
+        private static Expression? RemoveConvert(Expression? expression)
         {
-            if (extensionExpression is ShapedQueryExpression shapedQueryExpression)
+            while (expression is { NodeType: ExpressionType.Convert or ExpressionType.ConvertChecked })
             {
-                var serverEnumerable = VisitShapedQueryExpression(shapedQueryExpression);
-                switch (shapedQueryExpression.ResultCardinality)
-                {
-                    case ResultCardinality.Enumerable:
-                        return serverEnumerable;
-
-                    case ResultCardinality.Single:
-                        return IsAsync
-                            ? Expression.Call(
-                                _singleAsyncMethodInfo.MakeGenericMethod(serverEnumerable.Type.TryGetSequenceType()),
-                                serverEnumerable,
-                                _cancellationTokenParameter)
-                            : Expression.Call(
-                                _singleMethodInfo.MakeGenericMethod(serverEnumerable.Type.TryGetSequenceType()),
-                                serverEnumerable);
-
-                    case ResultCardinality.SingleOrDefault:
-                        return IsAsync
-                            ? Expression.Call(
-                                _singleOrDefaultAsyncMethodInfo.MakeGenericMethod(serverEnumerable.Type.TryGetSequenceType()),
-                                serverEnumerable,
-                                _cancellationTokenParameter)
-                            : Expression.Call(
-                                _singleOrDefaultMethodInfo.MakeGenericMethod(serverEnumerable.Type.TryGetSequenceType()),
-                                serverEnumerable);
-                }
+                expression = RemoveConvert(((UnaryExpression)expression).Operand);
             }
 
-            return base.VisitExtension(extensionExpression);
+            return expression;
+        }
+    }
+
+    private sealed class EntityMaterializerInjectingExpressionVisitor : ExpressionVisitor
+    {
+        private static readonly ConstructorInfo MaterializationContextConstructor
+            = typeof(MaterializationContext).GetConstructors().Single(ci => ci.GetParameters().Length == 2);
+
+        private static readonly PropertyInfo DbContextMemberInfo
+            = typeof(QueryContext).GetTypeInfo().GetProperty(nameof(QueryContext.Context))!;
+
+        private static readonly PropertyInfo EntityMemberInfo
+            = typeof(InternalEntityEntry).GetTypeInfo().GetProperty(nameof(InternalEntityEntry.Entity))!;
+
+        private static readonly PropertyInfo EntityTypeMemberInfo
+            = typeof(InternalEntityEntry).GetTypeInfo().GetProperty(nameof(InternalEntityEntry.EntityType))!;
+
+        private static readonly MethodInfo TryGetEntryMethodInfo
+            = typeof(QueryContext).GetTypeInfo().GetDeclaredMethods(nameof(QueryContext.TryGetEntry))
+                .Single(mi => mi.GetParameters().Length == 4);
+
+        private static readonly MethodInfo StartTrackingMethodInfo
+            = typeof(QueryContext).GetMethod(
+                nameof(QueryContext.StartTracking), [typeof(IEntityType), typeof(object), typeof(ISnapshot).MakeByRefType()])!;
+
+        private static readonly MethodInfo CreateNullKeyValueInNoTrackingQueryMethod
+            = typeof(EntityMaterializerInjectingExpressionVisitor)
+                .GetTypeInfo().GetDeclaredMethod(nameof(CreateNullKeyValueInNoTrackingQuery))!;
+
+        private readonly IEntityMaterializerSource _entityMaterializerSource;
+        private readonly QueryTrackingBehavior _queryTrackingBehavior;
+        private readonly bool _queryStateManager;
+        private readonly ISet<IEntityType> _visitedEntityTypes = new HashSet<IEntityType>();
+        private int _currentEntityIndex;
+
+        public EntityMaterializerInjectingExpressionVisitor(
+            IEntityMaterializerSource entityMaterializerSource,
+            QueryTrackingBehavior queryTrackingBehavior)
+        {
+            _entityMaterializerSource = entityMaterializerSource;
+            _queryTrackingBehavior = queryTrackingBehavior;
+            _queryStateManager =
+                queryTrackingBehavior is QueryTrackingBehavior.TrackAll or QueryTrackingBehavior.NoTrackingWithIdentityResolution;
         }
 
-        private static readonly MethodInfo _singleAsyncMethodInfo
-            = typeof(ShapedQueryCompilingExpressionVisitor).GetTypeInfo()
-                .GetDeclaredMethods(nameof(SingleAsync))
-                .Single(mi => mi.GetParameters().Length == 2);
-
-        private static readonly MethodInfo _singleOrDefaultAsyncMethodInfo
-            = typeof(ShapedQueryCompilingExpressionVisitor).GetTypeInfo()
-                .GetDeclaredMethods(nameof(SingleOrDefaultAsync))
-                .Single(mi => mi.GetParameters().Length == 2);
-
-        private static async Task<TSource> SingleAsync<TSource>(
-            IAsyncEnumerable<TSource> asyncEnumerable,
-            CancellationToken cancellationToken = default)
+        public Expression Inject(Expression expression)
         {
-            await using (var enumerator = asyncEnumerable.GetAsyncEnumerator(cancellationToken))
+            var result = Visit(expression);
+
+            if (_queryTrackingBehavior == QueryTrackingBehavior.TrackAll)
             {
-                if (!await enumerator.MoveNextAsync())
+                foreach (var entityType in _visitedEntityTypes)
                 {
-                    throw new InvalidOperationException("Enumerator failed to MoveNextAsync.");
-                }
-
-                var result = enumerator.Current;
-
-                if (await enumerator.MoveNextAsync())
-                {
-                    throw new InvalidOperationException("Enumerator failed to MoveNextAsync.");
-                }
-
-                return result;
-            }
-        }
-
-        private static async Task<TSource> SingleOrDefaultAsync<TSource>(
-            IAsyncEnumerable<TSource> asyncEnumerable,
-            CancellationToken cancellationToken = default)
-        {
-            await using (var enumerator = asyncEnumerable.GetAsyncEnumerator(cancellationToken))
-            {
-                if (!(await enumerator.MoveNextAsync()))
-                {
-                    return default;
-                }
-
-                var result = enumerator.Current;
-
-                if (await enumerator.MoveNextAsync())
-                {
-                    throw new InvalidOperationException("Enumerator failed to MoveNextAsync.");
-                }
-
-                return result;
-            }
-        }
-
-        protected abstract Expression VisitShapedQueryExpression(ShapedQueryExpression shapedQueryExpression);
-
-        protected virtual Expression InjectEntityMaterializers(Expression expression)
-        {
-            _constantVerifyingExpressionVisitor.Visit(expression);
-
-            return _entityMaterializerInjectingExpressionVisitor.Inject(expression);
-        }
-
-        private class ConstantVerifyingExpressionVisitor : ExpressionVisitor
-        {
-            private readonly ITypeMappingSource _typeMappingSource;
-
-            public ConstantVerifyingExpressionVisitor(ITypeMappingSource typeMappingSource)
-            {
-                _typeMappingSource = typeMappingSource;
-            }
-
-            protected override Expression VisitConstant(ConstantExpression constantExpression)
-            {
-                if (constantExpression.Value == null
-                    || _typeMappingSource.FindMapping(constantExpression.Type) != null)
-                {
-                    return constantExpression;
-                }
-
-                throw new InvalidOperationException(
-                    $"Client projection contains reference to constant expression of type: {constantExpression.Type.DisplayName()}. " +
-                    "This could potentially cause memory leak.");
-            }
-
-            protected override Expression VisitExtension(Expression extensionExpression)
-            {
-                return extensionExpression is EntityShaperExpression
-                       || extensionExpression is ProjectionBindingExpression
-                    ? extensionExpression
-                    : base.VisitExtension(extensionExpression);
-            }
-        }
-
-        private class EntityMaterializerInjectingExpressionVisitor : ExpressionVisitor
-        {
-            private static readonly ConstructorInfo _materializationContextConstructor
-                = typeof(MaterializationContext).GetConstructors().Single(ci => ci.GetParameters().Length == 2);
-
-            private static readonly ConstructorInfo _valueBufferConstructor
-                = typeof(ValueBuffer).GetTypeInfo().DeclaredConstructors.Single(ci => ci.GetParameters().Length == 1);
-
-            private static readonly PropertyInfo _dbContextMemberInfo
-                = typeof(QueryContext).GetProperty(nameof(QueryContext.Context));
-
-            private static readonly PropertyInfo _stateManagerMemberInfo
-                = typeof(QueryContext).GetProperty(nameof(QueryContext.StateManager));
-
-            private static readonly PropertyInfo _entityMemberInfo
-                = typeof(InternalEntityEntry).GetProperty(nameof(InternalEntityEntry.Entity));
-
-            private static readonly PropertyInfo _entityTypeMemberInfo
-                = typeof(InternalEntityEntry).GetProperty(nameof(InternalEntityEntry.EntityType));
-
-            private static readonly MethodInfo _tryGetEntryMethodInfo
-                = typeof(IStateManager).GetTypeInfo().GetDeclaredMethods(nameof(IStateManager.TryGetEntry))
-                    .Single(mi => mi.GetParameters().Length == 4);
-
-            private static readonly MethodInfo _startTrackingMethodInfo
-                = typeof(QueryContext).GetMethod(
-                    nameof(QueryContext.StartTracking), new[] { typeof(IEntityType), typeof(object), typeof(ValueBuffer) });
-
-            private readonly IEntityMaterializerSource _entityMaterializerSource;
-            private readonly bool _trackQueryResults;
-            private readonly ISet<IEntityType> _visitedEntityTypes = new HashSet<IEntityType>();
-            private int _currentEntityIndex;
-
-            public EntityMaterializerInjectingExpressionVisitor(
-                IEntityMaterializerSource entityMaterializerSource, bool trackQueryResults)
-            {
-                _entityMaterializerSource = entityMaterializerSource;
-                _trackQueryResults = trackQueryResults;
-            }
-
-            public Expression Inject(Expression expression)
-            {
-                var result = Visit(expression);
-                if (_trackQueryResults)
-                {
-                    bool containsOwner(IEntityType owner)
-                        => owner != null && (_visitedEntityTypes.Contains(owner) || containsOwner(owner.BaseType));
-
-                    foreach (var entityType in _visitedEntityTypes)
+                    if (entityType.FindOwnership() is IForeignKey ownership
+                        && !ContainsOwner(ownership.PrincipalEntityType))
                     {
-                        if (entityType.FindOwnership() is IForeignKey ownership
-                            && !containsOwner(ownership.PrincipalEntityType))
-                        {
-                            throw new InvalidOperationException(
-                                "A tracking query projects owned entity without corresponding owner in result. " +
-                                "Owned entities cannot be tracked without their owner. " +
-                                "Either include the owner entity in the result or make query non-tracking using AsNoTracking().");
-                        }
+                        throw new InvalidOperationException(CoreStrings.OwnedEntitiesCannotBeTrackedWithoutTheirOwner);
                     }
                 }
 
-                return result;
+                bool ContainsOwner(IEntityType? owner)
+                    => owner != null && (_visitedEntityTypes.Contains(owner) || ContainsOwner(owner.BaseType));
             }
 
-            protected override Expression VisitExtension(Expression extensionExpression)
-                => extensionExpression is EntityShaperExpression entityShaperExpression
-                    ? ProcessEntityShaper(entityShaperExpression)
-                    : base.VisitExtension(extensionExpression);
+            return result;
+        }
 
-            private Expression ProcessEntityShaper(EntityShaperExpression entityShaperExpression)
-            {
-                _currentEntityIndex++;
+        protected override Expression VisitExtension(Expression extensionExpression)
+            => extensionExpression is StructuralTypeShaperExpression shaper
+                ? ProcessEntityShaper(shaper)
+                : base.VisitExtension(extensionExpression);
 
-                var expressions = new List<Expression>();
-                var variables = new List<ParameterExpression>();
+        private Expression ProcessEntityShaper(StructuralTypeShaperExpression shaper)
+        {
+            _currentEntityIndex++;
 
-                var entityType = entityShaperExpression.EntityType;
+            var expressions = new List<Expression>();
+            var variables = new List<ParameterExpression>();
 
-                var materializationContextVariable = Expression.Variable(
-                    typeof(MaterializationContext),
-                    "materializationContext" + _currentEntityIndex);
-                variables.Add(materializationContextVariable);
-                expressions.Add(
-                    Expression.Assign(
-                        materializationContextVariable,
-                        Expression.New(
-                            _materializationContextConstructor,
-                            entityShaperExpression.ValueBufferExpression,
-                            Expression.MakeMemberAccess(
-                                QueryCompilationContext.QueryContextParameter,
-                                _dbContextMemberInfo))));
+            var typeBase = shaper.StructuralType;
+            var clrType = typeBase.ClrType;
 
-                var valueBufferExpression = Expression.Call(materializationContextVariable, MaterializationContext.GetValueBufferMethod);
-
-                var primaryKey = entityType.FindPrimaryKey();
-
-                var concreteEntityTypeVariable = Expression.Variable(
-                    typeof(IEntityType),
-                    "entityType" + _currentEntityIndex);
-                variables.Add(concreteEntityTypeVariable);
-
-                var instanceVariable = Expression.Variable(entityType.ClrType, "instance" + _currentEntityIndex);
-                variables.Add(instanceVariable);
-                expressions.Add(
-                    Expression.Assign(
-                        instanceVariable,
-                        Expression.Constant(null, entityType.ClrType)));
-
-                if (_trackQueryResults
-                    && primaryKey != null)
-                {
-                    var entryVariable = Expression.Variable(typeof(InternalEntityEntry), "entry" + _currentEntityIndex);
-                    var hasNullKeyVariable = Expression.Variable(typeof(bool), "hasNullKey" + _currentEntityIndex);
-                    variables.Add(entryVariable);
-                    variables.Add(hasNullKeyVariable);
-
-                    expressions.Add(
-                        Expression.Assign(
-                            entryVariable,
-                            Expression.Call(
-                                Expression.MakeMemberAccess(
-                                    QueryCompilationContext.QueryContextParameter,
-                                    _stateManagerMemberInfo),
-                                _tryGetEntryMethodInfo,
-                                Expression.Constant(primaryKey),
-                                Expression.NewArrayInit(
-                                    typeof(object),
-                                    primaryKey.Properties
-                                        .Select(
-                                            p => _entityMaterializerSource.CreateReadValueExpression(
-                                                valueBufferExpression,
-                                                typeof(object),
-                                                p.GetIndex(),
-                                                p))),
-                                Expression.Constant(!entityShaperExpression.IsNullable),
-                                hasNullKeyVariable)));
-
-                    expressions.Add(
-                        Expression.IfThen(
-                            Expression.Not(hasNullKeyVariable),
-                            Expression.IfThenElse(
-                                Expression.NotEqual(
-                                    entryVariable,
-                                    Expression.Constant(default(InternalEntityEntry), typeof(InternalEntityEntry))),
-                                Expression.Block(
-                                    Expression.Assign(
-                                        concreteEntityTypeVariable,
-                                        Expression.MakeMemberAccess(entryVariable, _entityTypeMemberInfo)),
-                                    Expression.Assign(
-                                        instanceVariable, Expression.Convert(
-                                            Expression.MakeMemberAccess(entryVariable, _entityMemberInfo),
-                                            entityType.ClrType))),
-                                MaterializeEntity(
-                                    entityType, materializationContextVariable, concreteEntityTypeVariable, instanceVariable,
-                                    entryVariable))));
-                }
-                else
-                {
-                    expressions.Add(
-                        Expression.IfThen(
-                            primaryKey != null
-                                ? primaryKey.Properties.Select(
-                                        p =>
-                                            Expression.NotEqual(
-                                                _entityMaterializerSource.CreateReadValueExpression(
-                                                    valueBufferExpression,
-                                                    typeof(object),
-                                                    p.GetIndex(),
-                                                    p),
-                                                Expression.Constant(null)))
-                                    .Aggregate((a, b) => Expression.AndAlso(a, b))
-                                : entityType.GetProperties()
-                                    .Select(
-                                        p =>
-                                            Expression.NotEqual(
-                                                _entityMaterializerSource.CreateReadValueExpression(
-                                                    valueBufferExpression,
-                                                    typeof(object),
-                                                    p.GetIndex(),
-                                                    p),
-                                                Expression.Constant(null)))
-                                    .Aggregate((a, b) => Expression.OrElse(a, b)),
-                            MaterializeEntity(
-                                entityType, materializationContextVariable, concreteEntityTypeVariable, instanceVariable, null)));
-                }
-
-                expressions.Add(instanceVariable);
-                return Expression.Block(variables, expressions);
-            }
-
-            private Expression MaterializeEntity(
-                IEntityType entityType,
-                ParameterExpression materializationContextVariable,
-                ParameterExpression concreteEntityTypeVariable,
-                ParameterExpression instanceVariable,
-                ParameterExpression entryVariable)
-            {
-                var expressions = new List<Expression>();
-                var variables = new List<ParameterExpression>();
-
-                var shadowValuesVariable = Expression.Variable(
-                    typeof(ValueBuffer),
-                    "shadowValueBuffer" + _currentEntityIndex);
-                variables.Add(shadowValuesVariable);
-                expressions.Add(
-                    Expression.Assign(
-                        shadowValuesVariable,
-                        Expression.Constant(ValueBuffer.Empty)));
-
-                var returnType = entityType.ClrType;
-                Expression materializationExpression;
-                var valueBufferExpression = Expression.Call(materializationContextVariable, MaterializationContext.GetValueBufferMethod);
-                var expressionContext = (returnType, materializationContextVariable, concreteEntityTypeVariable, shadowValuesVariable);
-                var concreteEntityTypes = entityType.GetConcreteDerivedTypesInclusive().ToList();
-                var firstEntityType = concreteEntityTypes[0];
-                if (concreteEntityTypes.Count == 1)
-                {
-                    materializationExpression = CreateFullMaterializeExpression(firstEntityType, expressionContext);
-                }
-                else
-                {
-                    var discriminatorProperty = firstEntityType.GetDiscriminatorProperty();
-                    var discriminatorValueVariable = Expression.Variable(
-                        discriminatorProperty.ClrType, "discriminator" + _currentEntityIndex);
-                    variables.Add(discriminatorValueVariable);
-
-                    expressions.Add(
-                        Expression.Assign(
-                            discriminatorValueVariable,
-                            _entityMaterializerSource.CreateReadValueExpression(
-                                valueBufferExpression,
-                                discriminatorProperty.ClrType,
-                                discriminatorProperty.GetIndex(),
-                                discriminatorProperty)));
-
-                    materializationExpression = Expression.Block(
-                        Expression.Throw(
-                            Expression.Call(
-                                _createUnableToDiscriminateException,
-                                Expression.Constant(entityType),
-                                Expression.Convert(discriminatorValueVariable, typeof(object)))),
-                        Expression.Constant(null, returnType));
-
-                    foreach (var concreteEntityType in concreteEntityTypes)
-                    {
-                        var discriminatorValue
-                            = Expression.Constant(
-                                concreteEntityType.GetDiscriminatorValue(),
-                                discriminatorProperty.ClrType);
-
-                        materializationExpression = Expression.Condition(
-                            Expression.Equal(discriminatorValueVariable, discriminatorValue),
-                            CreateFullMaterializeExpression(concreteEntityType, expressionContext),
-                            materializationExpression);
-                    }
-                }
-
-                expressions.Add(Expression.Assign(instanceVariable, materializationExpression));
-
-                if (_trackQueryResults
-                    && entityType.FindPrimaryKey() != null)
-                {
-                    _visitedEntityTypes.Add(entityType);
-
-                    expressions.Add(
-                        Expression.Assign(
-                            entryVariable, Expression.Call(
-                                QueryCompilationContext.QueryContextParameter,
-                                _startTrackingMethodInfo,
-                                concreteEntityTypeVariable,
-                                instanceVariable,
-                                shadowValuesVariable)));
-                }
-
-                expressions.Add(instanceVariable);
-
-                return Expression.Block(
-                    returnType,
-                    variables,
-                    expressions);
-            }
-
-            private BlockExpression CreateFullMaterializeExpression(
-                IEntityType concreteEntityType,
-                in (Type ReturnType,
-                    ParameterExpression MaterializationContextVariable,
-                    ParameterExpression ConcreteEntityTypeVariable,
-                    ParameterExpression ShadowValuesVariable) materializeExpressionContext)
-            {
-                var (returnType,
+            var materializationContextVariable = Variable(
+                typeof(MaterializationContext),
+                "materializationContext" + _currentEntityIndex);
+            variables.Add(materializationContextVariable);
+            expressions.Add(
+                Assign(
                     materializationContextVariable,
-                    concreteEntityTypeVariable,
-                    shadowValuesVariable) = materializeExpressionContext;
+                    New(
+                        MaterializationContextConstructor,
+                        shaper.ValueBufferExpression,
+                        MakeMemberAccess(QueryCompilationContext.QueryContextParameter, DbContextMemberInfo))));
 
-                var blockExpressions = new List<Expression>(3)
-                {
-                    Expression.Assign(
-                        concreteEntityTypeVariable,
-                        Expression.Constant(concreteEntityType))
-                };
+            var valueBufferExpression = Call(materializationContextVariable, MaterializationContext.GetValueBufferMethod);
 
-                var materializer = _entityMaterializerSource
-                    .CreateMaterializeExpression(concreteEntityType, "instance", materializationContextVariable);
+            var primaryKey = typeBase is IEntityType entityType ? entityType.FindPrimaryKey() : null;
 
-                if (_trackQueryResults
-                    && concreteEntityType.ShadowPropertyCount() > 0)
-                {
-                    var valueBufferExpression = Expression.Call(
-                        materializationContextVariable, MaterializationContext.GetValueBufferMethod);
-                    var shadowProperties = concreteEntityType.GetProperties().Where(p => p.IsShadowProperty());
-                    blockExpressions.Add(
-                        Expression.Assign(
-                            shadowValuesVariable,
-                            Expression.New(
-                                _valueBufferConstructor,
-                                Expression.NewArrayInit(
-                                    typeof(object),
-                                    shadowProperties.Select(
-                                        p => _entityMaterializerSource.CreateReadValueExpression(
-                                            valueBufferExpression,
+            var concreteEntityTypeVariable = Variable(
+                typeBase is IEntityType ? typeof(IEntityType) : typeof(IComplexType),
+                "entityType" + _currentEntityIndex);
+            variables.Add(concreteEntityTypeVariable);
+
+            var instanceVariable = Variable(clrType, "instance" + _currentEntityIndex);
+            variables.Add(instanceVariable);
+            expressions.Add(Assign(instanceVariable, Default(clrType)));
+
+            if (_queryStateManager
+                && primaryKey != null)
+            {
+                var entryVariable = Variable(typeof(InternalEntityEntry), "entry" + _currentEntityIndex);
+                var hasNullKeyVariable = Variable(typeof(bool), "hasNullKey" + _currentEntityIndex);
+                variables.Add(entryVariable);
+                variables.Add(hasNullKeyVariable);
+
+                expressions.Add(
+                    Assign(
+                        entryVariable,
+                        Call(
+                            QueryCompilationContext.QueryContextParameter,
+                            TryGetEntryMethodInfo,
+                            Constant(primaryKey),
+                            NewArrayInit(
+                                typeof(object),
+                                primaryKey.Properties
+                                    .Select(
+                                        p => valueBufferExpression.CreateValueBufferReadValueExpression(
                                             typeof(object),
                                             p.GetIndex(),
-                                            p))))));
+                                            p))),
+                            Constant(!shaper.IsNullable),
+                            hasNullKeyVariable)));
+
+                expressions.Add(
+                    IfThen(
+                        Not(hasNullKeyVariable),
+                        IfThenElse(
+                            NotEqual(entryVariable, Default(typeof(InternalEntityEntry))),
+                            Block(
+                                Assign(concreteEntityTypeVariable, MakeMemberAccess(entryVariable, EntityTypeMemberInfo)),
+                                Assign(
+                                    instanceVariable, Convert(
+                                        MakeMemberAccess(entryVariable, EntityMemberInfo),
+                                        clrType))),
+                            MaterializeEntity(
+                                shaper, materializationContextVariable, concreteEntityTypeVariable, instanceVariable,
+                                entryVariable))));
+            }
+            else
+            {
+                if (primaryKey != null)
+                {
+                    if (shaper.IsNullable)
+                    {
+                        expressions.Add(
+                            IfThen(
+                                primaryKey.Properties.Select(
+                                        p => NotEqual(
+                                            valueBufferExpression.CreateValueBufferReadValueExpression(typeof(object), p.GetIndex(), p),
+                                            Constant(null)))
+                                    .Aggregate(AndAlso),
+                                MaterializeEntity(
+                                    shaper, materializationContextVariable, concreteEntityTypeVariable,
+                                    instanceVariable,
+                                    null)));
+                    }
+                    else
+                    {
+                        var keyValuesVariable = Variable(typeof(object[]), "keyValues" + _currentEntityIndex);
+                        expressions.Add(
+                            IfThenElse(
+                                primaryKey.Properties.Select(
+                                        p => NotEqual(
+                                            valueBufferExpression.CreateValueBufferReadValueExpression(typeof(object), p.GetIndex(), p),
+                                            Constant(null)))
+                                    .Aggregate(AndAlso),
+                                MaterializeEntity(
+                                    shaper, materializationContextVariable, concreteEntityTypeVariable,
+                                    instanceVariable,
+                                    null),
+                                Block(
+                                    new[] { keyValuesVariable },
+                                    Assign(
+                                        keyValuesVariable,
+                                        NewArrayInit(
+                                            typeof(object),
+                                            primaryKey.Properties.Select(
+                                                p => valueBufferExpression.CreateValueBufferReadValueExpression(
+                                                    typeof(object), p.GetIndex(), p)))),
+                                    Call(
+                                        CreateNullKeyValueInNoTrackingQueryMethod,
+                                        Constant(typeBase),
+                                        Constant(primaryKey.Properties),
+                                        keyValuesVariable))));
+                    }
                 }
-
-                materializer = materializer.Type == returnType
-                    ? materializer
-                    : Expression.Convert(materializer, returnType);
-                blockExpressions.Add(materializer);
-
-                return Expression.Block(blockExpressions);
+                else
+                {
+                    expressions.Add(
+                        MaterializeEntity(
+                            shaper, materializationContextVariable, concreteEntityTypeVariable, instanceVariable,
+                            null));
+                }
             }
 
-            private static readonly MethodInfo _createUnableToDiscriminateException
-                = typeof(EntityMaterializerInjectingExpressionVisitor).GetTypeInfo()
-                    .GetDeclaredMethod(nameof(CreateUnableToDiscriminateException));
+            expressions.Add(instanceVariable);
+            return Block(variables, expressions);
+        }
 
-            [UsedImplicitly]
-            private static Exception CreateUnableToDiscriminateException(IEntityType entityType, object discriminator)
-                => new InvalidOperationException(CoreStrings.UnableToDiscriminate(entityType.DisplayName(), discriminator?.ToString()));
+        private Expression MaterializeEntity(
+            StructuralTypeShaperExpression shaper,
+            ParameterExpression materializationContextVariable,
+            ParameterExpression concreteEntityTypeVariable,
+            ParameterExpression instanceVariable,
+            ParameterExpression? entryVariable)
+        {
+            var typeBase = shaper.StructuralType;
+
+            var expressions = new List<Expression>();
+            var variables = new List<ParameterExpression>();
+
+            var shadowValuesVariable = Variable(
+                typeof(ISnapshot),
+                "shadowSnapshot" + _currentEntityIndex);
+            variables.Add(shadowValuesVariable);
+            expressions.Add(
+                Assign(
+                    shadowValuesVariable,
+                    Constant(Snapshot.Empty)));
+
+            var returnType = typeBase.ClrType;
+            var valueBufferExpression = Call(materializationContextVariable, MaterializationContext.GetValueBufferMethod);
+            var expressionContext = (returnType, materializationContextVariable, concreteEntityTypeVariable, shadowValuesVariable);
+            expressions.Add(
+                Assign(
+                    concreteEntityTypeVariable,
+                    ReplacingExpressionVisitor.Replace(
+                        shaper.MaterializationCondition.Parameters[0],
+                        valueBufferExpression,
+                        shaper.MaterializationCondition.Body)));
+
+            var (primaryKey, concreteEntityTypes) = typeBase is IEntityType entityType
+                ? (entityType.FindPrimaryKey(), entityType.GetConcreteDerivedTypesInclusive().Cast<ITypeBase>().ToArray())
+                : (null, [typeBase]);
+
+            var switchCases = new SwitchCase[concreteEntityTypes.Length];
+            for (var i = 0; i < concreteEntityTypes.Length; i++)
+            {
+                switchCases[i] = SwitchCase(
+                    CreateFullMaterializeExpression(concreteEntityTypes[i], expressionContext),
+                    Constant(concreteEntityTypes[i], typeBase is IEntityType ? typeof(IEntityType) : typeof(IComplexType)));
+            }
+
+            var materializationExpression = Switch(
+                concreteEntityTypeVariable,
+                Default(returnType),
+                switchCases);
+
+            expressions.Add(Assign(instanceVariable, materializationExpression));
+
+            if (_queryStateManager && primaryKey is not null)
+            {
+                if (typeBase is IEntityType entityType2)
+                {
+                    foreach (var et in entityType2.GetAllBaseTypes().Concat(entityType2.GetDerivedTypesInclusive()))
+                    {
+                        _visitedEntityTypes.Add(et);
+                    }
+                }
+
+                expressions.Add(
+                    Assign(
+                        entryVariable!,
+                        Condition(
+                            Equal(concreteEntityTypeVariable, Default(typeof(IEntityType))),
+                            Default(typeof(InternalEntityEntry)),
+                            Call(
+                                QueryCompilationContext.QueryContextParameter,
+                                StartTrackingMethodInfo,
+                                concreteEntityTypeVariable,
+                                instanceVariable,
+                                shadowValuesVariable))));
+            }
+
+            expressions.Add(instanceVariable);
+
+            return Block(
+                returnType,
+                variables,
+                expressions);
+        }
+
+        private BlockExpression CreateFullMaterializeExpression(
+            ITypeBase concreteTypeBase,
+            (Type ReturnType,
+                ParameterExpression MaterializationContextVariable,
+                ParameterExpression ConcreteEntityTypeVariable,
+                ParameterExpression ShadowValuesVariable) materializeExpressionContext)
+        {
+            var (returnType,
+                materializationContextVariable,
+                _,
+                shadowValuesVariable) = materializeExpressionContext;
+
+            var blockExpressions = new List<Expression>(2);
+
+            var materializer = _entityMaterializerSource
+                .CreateMaterializeExpression(
+                    new EntityMaterializerSourceParameters(
+                        concreteTypeBase, "instance", _queryTrackingBehavior), materializationContextVariable);
+
+            // TODO: Properly support shadow properties for complex types?
+            if (_queryStateManager
+                && concreteTypeBase is IRuntimeEntityType { ShadowPropertyCount: > 0 } runtimeEntityType)
+            {
+                var valueBufferExpression = Call(
+                    materializationContextVariable, MaterializationContext.GetValueBufferMethod);
+
+                var shadowProperties = ((IEnumerable<IPropertyBase>)runtimeEntityType.GetProperties())
+                    .Concat(runtimeEntityType.GetNavigations())
+                    .Concat(runtimeEntityType.GetSkipNavigations())
+                    .Where(n => n.IsShadowProperty())
+                    .OrderBy(e => e.GetShadowIndex());
+
+                blockExpressions.Add(
+                    Assign(
+                        shadowValuesVariable,
+                        ShadowValuesFactoryFactory.Instance.CreateConstructorExpression(runtimeEntityType,
+                            NewArrayInit(
+                                typeof(object),
+                                shadowProperties.Select(p =>
+                                    Convert(valueBufferExpression.CreateValueBufferReadValueExpression(
+                                        p.ClrType, p.GetIndex(), p), typeof(object)))))));
+            }
+
+            materializer = materializer.Type == returnType
+                ? materializer
+                : Convert(materializer, returnType);
+            blockExpressions.Add(materializer);
+
+            return Block(blockExpressions);
+        }
+
+        [UsedImplicitly]
+        private static Exception CreateNullKeyValueInNoTrackingQuery(
+            IEntityType entityType,
+            IReadOnlyList<IProperty> properties,
+            object?[] keyValues)
+        {
+            var index = -1;
+            for (var i = 0; i < keyValues.Length; i++)
+            {
+                if (keyValues[i] == null)
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            var property = properties[index];
+
+            throw new InvalidOperationException(
+                CoreStrings.InvalidKeyValue(entityType.DisplayName(), property.Name));
         }
     }
 }

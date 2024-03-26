@@ -1,92 +1,77 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
+using System.Diagnostics.CodeAnalysis;
 
-namespace Microsoft.EntityFrameworkCore.TestUtilities.QueryTestGeneration
+namespace Microsoft.EntityFrameworkCore.TestUtilities.QueryTestGeneration;
+
+public class InjectJoinWithSelfExpressionMutator(DbContext context) : ExpressionMutator(context)
 {
-    public class InjectJoinWithSelfExpressionMutator : ExpressionMutator
+    private ExpressionFinder _expressionFinder = null!;
+
+    public override bool IsValid(Expression expression)
     {
-        public InjectJoinWithSelfExpressionMutator(DbContext context)
-            : base(context)
+        _expressionFinder = new ExpressionFinder(this);
+        _expressionFinder.Visit(expression);
+
+        return _expressionFinder.FoundExpressions.Any();
+    }
+
+    public override Expression Apply(Expression expression, Random random)
+    {
+        var i = random.Next(_expressionFinder.FoundExpressions.Count);
+
+        var expr = _expressionFinder.FoundExpressions[i];
+        var elementType = expr.Type.GetGenericArguments()[0];
+
+        var join = QueryableMethods.Join.MakeGenericMethod(elementType, elementType, elementType, elementType);
+
+        var outerKeySelectorPrm = Expression.Parameter(elementType, "oks");
+        var innerKeySelectorPrm = Expression.Parameter(elementType, "iks");
+
+        var injector = new ExpressionInjector(
+            _expressionFinder.FoundExpressions[i],
+            e => Expression.Call(
+                join,
+                e,
+                e,
+                Expression.Lambda(outerKeySelectorPrm, outerKeySelectorPrm),
+                Expression.Lambda(innerKeySelectorPrm, innerKeySelectorPrm),
+                Expression.Lambda(outerKeySelectorPrm, outerKeySelectorPrm, innerKeySelectorPrm)));
+
+        return injector.Visit(expression);
+    }
+
+    private class ExpressionFinder(InjectJoinWithSelfExpressionMutator mutator) : ExpressionVisitor
+    {
+        private readonly bool _insideThenBy = false;
+
+        public List<Expression> FoundExpressions { get; } = [];
+
+        protected override Expression VisitMethodCall(MethodCallExpression node)
         {
-        }
-
-        private ExpressionFinder _expressionFinder;
-
-        public override bool IsValid(Expression expression)
-        {
-            _expressionFinder = new ExpressionFinder(this);
-            _expressionFinder.Visit(expression);
-
-            return _expressionFinder.FoundExpressions.Any();
-        }
-
-        public override Expression Apply(Expression expression, Random random)
-        {
-            var i = random.Next(_expressionFinder.FoundExpressions.Count);
-
-            var expr = _expressionFinder.FoundExpressions[i];
-            var elementType = expr.Type.GetGenericArguments()[0];
-
-            var join = JoinMethodInfo.MakeGenericMethod(elementType, elementType, elementType, elementType);
-
-            var outerKeySelectorPrm = Expression.Parameter(elementType, "oks");
-            var innerKeySelectorPrm = Expression.Parameter(elementType, "iks");
-
-            var injector = new ExpressionInjector(
-                _expressionFinder.FoundExpressions[i],
-                e => Expression.Call(
-                    join,
-                    e,
-                    e,
-                    Expression.Lambda(outerKeySelectorPrm, outerKeySelectorPrm),
-                    Expression.Lambda(innerKeySelectorPrm, innerKeySelectorPrm),
-                    Expression.Lambda(outerKeySelectorPrm, outerKeySelectorPrm, innerKeySelectorPrm)));
-
-            return injector.Visit(expression);
-        }
-
-        private class ExpressionFinder : ExpressionVisitor
-        {
-            private readonly bool _insideThenBy = false;
-
-            private readonly InjectJoinWithSelfExpressionMutator _mutator;
-
-            public ExpressionFinder(InjectJoinWithSelfExpressionMutator mutator)
+            if (node.Method.Name is nameof(Queryable.ThenBy)
+                or nameof(Queryable.ThenByDescending)
+                or nameof(EntityFrameworkQueryableExtensions.ThenInclude))
             {
-                _mutator = mutator;
+                return node;
             }
 
-            public List<Expression> FoundExpressions { get; } = new List<Expression>();
+            return base.VisitMethodCall(node);
+        }
 
-            protected override Expression VisitMethodCall(MethodCallExpression node)
+        [return: NotNullIfNotNull(nameof(node))]
+        public override Expression? Visit(Expression? node)
+        {
+            if (node != null
+                && !_insideThenBy
+                && IsQueryableResult(node)
+                && mutator.IsEntityType(node.Type.GetGenericArguments()[0]))
             {
-                if (node?.Method.Name == nameof(Queryable.ThenBy)
-                    || node?.Method.Name == nameof(Queryable.ThenByDescending)
-                    || node?.Method.Name == nameof(EntityFrameworkQueryableExtensions.ThenInclude))
-                {
-                    return node;
-                }
-
-                return base.VisitMethodCall(node);
+                FoundExpressions.Add(node);
             }
 
-            public override Expression Visit(Expression node)
-            {
-                if (node != null
-                    && !_insideThenBy
-                    && IsQueryableResult(node)
-                    && _mutator.IsEntityType(node.Type.GetGenericArguments()[0]))
-                {
-                    FoundExpressions.Add(node);
-                }
-
-                return base.Visit(node);
-            }
+            return base.Visit(node);
         }
     }
 }

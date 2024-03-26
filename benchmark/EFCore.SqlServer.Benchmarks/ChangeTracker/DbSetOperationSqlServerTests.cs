@@ -1,28 +1,23 @@
-// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.EntityFrameworkCore.Benchmarks.Models.Orders;
 
 #pragma warning disable CA1034 // Nested types should not be visible
 
-namespace Microsoft.EntityFrameworkCore.Benchmarks.ChangeTracker
-{
-    public class DbSetOperationSqlServerTests : DbSetOperationTests
-    {
-        public class AddDataVariations : AddDataVariationsBase
-        {
-            public override OrdersFixtureBase CreateFixture()
-            {
-                return new OrdersSqlServerFixture("Perf_ChangeTracker_DbSetOperation");
-            }
-        }
+namespace Microsoft.EntityFrameworkCore.Benchmarks.ChangeTracker;
 
-        public class ExistingDataVariations : ExistingDataVariationsBase
-        {
-            public override OrdersFixtureBase CreateFixture()
-            {
-                return new OrdersSqlServerFixture("Perf_ChangeTracker_DbSetOperation");
-            }
-        }
+public class DbSetOperationSqlServerTests : DbSetOperationTests
+{
+    public class AddDataVariations : AddDataVariationsBase
+    {
+        public override OrdersFixtureBase CreateFixture()
+            => new OrdersSqlServerFixture("Perf_ChangeTracker_DbSetOperation");
+    }
+
+    public class ExistingDataVariations : ExistingDataVariationsBase
+    {
+        public override OrdersFixtureBase CreateFixture()
+            => new OrdersSqlServerFixture("Perf_ChangeTracker_DbSetOperation");
     }
 }
